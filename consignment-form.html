@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Consign Your Items | Changing Places</title>
+    <meta name="description" content="Use this form to submit items for consignment with Changing Places in Urbandale, IA." />
+    <link rel="canonical" href="https://changing-places-dsm.com/consignment-form.html" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Poppins:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="images/favicon/favicon.ico" type="image/x-icon" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon-16x16.png" />
+    <link rel="manifest" href="/images/favicon/site.webmanifest" />
+  </head>
+
+  <body class="subpage">
+    <header>
+      <div class="container header-flex">
+        <a href="index.html" aria-label="Return to homepage"
+          ><img
+            src="images/logo.png"
+            alt="Changing Places Consignment Shop logo"
+            class="logo-img logo-scrolled"
+            loading="lazy"
+        /></a>
+        <button
+          class="menu-toggle"
+          id="menu-toggle"
+          aria-label="Toggle Menu"
+          aria-expanded="false"
+          aria-controls="primary-navigation"
+        >
+          &#9776;
+        </button>
+        <nav id="mobile-menu" aria-label="Primary">
+          <ul id="primary-navigation">
+            <li><a href="index.html#gallery">Gallery</a></li>
+            <li><a href="index.html#consign">Consign</a></li>
+            <li><a href="index.html#faq">FAQ</a></li>
+            <li><a href="index.html#about">About</a></li>
+            <li><a href="index.html#contact">Visit</a></li>
+            <li><a href="https://changingplaces.consignoraccess.com/login" class="button">Consignor Login</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="consign">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Start Consigning</p>
+            <h3>Tell Us About Your Items</h3>
+            <p>
+              Use the form below to share a few details and upload photos. We’ll review your submission and follow up shortly.
+            </p>
+          </div>
+
+          <form
+            action="consignment-form-handler.php"
+            method="POST"
+            enctype="multipart/form-data"
+            data-consign-form
+          >
+            <div class="form-honeypot" aria-hidden="true">
+              <label for="website">Website</label>
+              <input
+                type="text"
+                id="website"
+                name="website"
+                autocomplete="off"
+                tabindex="-1"
+              />
+            </div>
+
+            <label for="name">Your Full Name *</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              autocomplete="name"
+              maxlength="100"
+              required
+            />
+
+            <label for="phone">Phone Number *</label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              autocomplete="tel"
+              inputmode="tel"
+              maxlength="40"
+              required
+            />
+
+            <label for="email">Email Address *</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              autocomplete="email"
+              maxlength="254"
+              required
+            />
+
+            <label for="contact-method">Preferred Contact Method</label>
+            <select id="contact-method" name="contact-method">
+              <option value="" selected>No preference</option>
+              <option value="text">Text</option>
+              <option value="email">Email</option>
+            </select>
+
+            <label for="description">Tell Us About Your Items *</label>
+            <textarea
+              id="description"
+              name="description"
+              rows="10"
+              maxlength="5000"
+              required
+              placeholder="Photos are required, but additional details such as brand, condition, age, size, or original price can help us evaluate and price your item more accurately.
+
+Example: West Elm armchair, excellent condition, 4 years old, originally $1,200."
+            ></textarea>
+
+            <label for="photos">Upload Photos</label>
+            <input
+              type="file"
+              id="photos"
+              name="photos[]"
+              accept=".jpg,.jpeg,.png,.heic,image/jpeg,image/png,image/heic,image/heif"
+              multiple
+            />
+            <p class="note">
+              For security reasons, this form accepts photo uploads up to 20 MB total. Accepted formats: JPG, JPEG, PNG, and HEIC.
+              Need to send more photos or want the fastest approval? <a href="sms:6202558901" class="portal-link">Text</a> or <a href="mailto:ChangingPlacesDSM@gmail.com" class="portal-link">email</a> us your photos and item details.
+            </p>
+            <p
+              class="file-summary"
+              data-file-summary
+              aria-live="polite"
+              role="status"
+            ></p>
+
+            <label>
+              <input type="checkbox" name="agreement" required />
+              I understand that items must be clean and in good condition.
+            </label>
+            <button type="submit">Submit</button>
+            <p
+              class="form-status"
+              data-form-status
+              aria-live="polite"
+              role="status"
+            ></p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container">
+        <p>
+          &copy; <span data-current-year>2026</span> Changing Places Consignment Shop. All rights reserved.
+        </p>
+        <ul>
+          <li><a href="index.html#home">Home</a></li>
+          <li><a href="index.html#contact">Contact</a></li>
+          <li>
+            <a
+              href="https://www.facebook.com/ChangingPlacesDSM"
+              target="_blank"
+              rel="noopener"
+              aria-label="Facebook"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M22 12a10 10 0 1 0-11.5 9.87v-6.99h-2.2v-2.88h2.2V9.83c0-2.18 1.3-3.39 3.3-3.39.96 0 1.97.17 1.97.17v2.17h-1.11c-1.1 0-1.44.68-1.44 1.38v1.66h2.46l-.39 2.88h-2.07v6.99A10 10 0 0 0 22 12Z"
+                />
+              </svg>
+              Facebook
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://www.instagram.com/ChangingPlacesDSM"
+              target="_blank"
+              rel="noopener"
+              aria-label="Instagram"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.5A4.25 4.25 0 0 0 3.5 7.75v8.5A4.25 4.25 0 0 0 7.75 20.5h8.5A4.25 4.25 0 0 0 20.5 16.25v-8.5A4.25 4.25 0 0 0 16.25 3.5h-8.5Zm4.25 3.25a5.25 5.25 0 1 1 0 10.5a5.25 5.25 0 0 1 0-10.5Zm0 1.5a3.75 3.75 0 1 0 0 7.5a3.75 3.75 0 0 0 0-7.5Zm4.88-.38a.88.88 0 1 1 1.75 0a.88.88 0 0 1-1.75 0Z"
+                />
+              </svg>
+              Instagram
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://changingplaces.consignoraccess.com/login"
+              target="_blank"
+              rel="noopener"
+              aria-label="Consignor Portal"
+            >
+              <img
+                src="images/simpleconsign-logo.png"
+                alt="SimpleConsign Logo"
+                class="footer-icon"
+              />
+              Consignor Portal
+            </a>
+          </li>
+        </ul>
+      </div>
+    </footer>
+
+    <script>
+      try {
+        const currentYear = new Date().getFullYear();
+
+        if (Number.isFinite(currentYear) && currentYear >= 2026) {
+          document.querySelectorAll("[data-current-year]").forEach((year) => {
+            year.textContent = String(currentYear);
+          });
+        }
+      } catch (error) {
+        // Keep the static 2026 fallback year in the markup.
+      }
+
+      const toggle = document.getElementById("menu-toggle");
+      const menu = document.getElementById("primary-navigation");
+
+      if (toggle && menu) {
+        const closeMenu = () => {
+          menu.classList.remove("show");
+          toggle.setAttribute("aria-expanded", "false");
+        };
+
+        toggle.addEventListener("click", () => {
+          const isOpen = menu.classList.toggle("show");
+          toggle.setAttribute("aria-expanded", String(isOpen));
+        });
+
+        menu.querySelectorAll("a").forEach((link) => {
+          link.addEventListener("click", () => {
+            if (menu.classList.contains("show")) {
+              closeMenu();
+            }
+          });
+        });
+
+        window.addEventListener("resize", () => {
+          if (window.innerWidth > 768 && menu.classList.contains("show")) {
+            closeMenu();
+          }
+        });
+      }
+
+      const consignForm = document.querySelector("[data-consign-form]");
+      const formStatus = document.querySelector("[data-form-status]");
+
+      if (consignForm && formStatus) {
+        const hasFetchSupport = typeof window.fetch === "function";
+        const photosInput = consignForm.querySelector("#photos");
+        const fileSummary = consignForm.querySelector("[data-file-summary]");
+        const maxFiles = 20;
+        const maxFileSize = 10 * 1024 * 1024;
+        const maxTotalSize = 20 * 1024 * 1024;
+
+        if (hasFetchSupport) {
+          const submitButton = consignForm.querySelector('button[type="submit"]');
+          const formatBytes = (bytes) => {
+            if (bytes < 1024 * 1024) {
+              return `${(bytes / 1024).toFixed(1)} KB`;
+            }
+
+            return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+          };
+
+          const updateFileSummary = () => {
+            if (!photosInput || !fileSummary) {
+              return;
+            }
+
+            const files = Array.from(photosInput.files || []);
+
+            if (!files.length) {
+              fileSummary.textContent = "";
+              fileSummary.classList.remove("file-summary--error");
+              photosInput.setCustomValidity("");
+              return;
+            }
+
+            const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+            const hasTooManyFiles = files.length > maxFiles;
+            const hasOversizedFile = files.some((file) => file.size > maxFileSize);
+            const hasTooMuchTotal = totalSize > maxTotalSize;
+
+            fileSummary.textContent =
+              `${files.length} photo${files.length === 1 ? "" : "s"} selected` +
+              ` (${formatBytes(totalSize)} total).`;
+
+            if (hasTooManyFiles || hasOversizedFile || hasTooMuchTotal) {
+              fileSummary.textContent +=
+                " This selection is over the 20 MB upload limit.";
+              fileSummary.classList.add("file-summary--error");
+              photosInput.setCustomValidity("Please choose fewer or smaller photos under 20 MB total.");
+              return;
+            }
+
+            fileSummary.classList.remove("file-summary--error");
+            photosInput.setCustomValidity("");
+          };
+
+          updateFileSummary();
+          photosInput?.addEventListener("change", updateFileSummary);
+
+          consignForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            if (!consignForm.checkValidity()) {
+              consignForm.reportValidity();
+              return;
+            }
+
+            formStatus.textContent = "Submitting…";
+            formStatus.classList.remove(
+              "form-status--error",
+              "form-status--success",
+            );
+            submitButton.disabled = true;
+
+            try {
+              const response = await fetch(consignForm.action, {
+                method: consignForm.method,
+                body: new FormData(consignForm),
+                headers: {
+                  Accept: "application/json",
+                },
+              });
+
+              const data = await response.json().catch(() => null);
+
+              const didSucceed =
+                data && (data.success === "true" || data.success === true);
+
+              if (!response.ok || !didSucceed) {
+                throw new Error(
+                  (data && data.message) || "Submission failed"
+                );
+              }
+
+              consignForm.reset();
+              updateFileSummary();
+              formStatus.textContent =
+                (data && data.message) ||
+                "Thanks! We have your details and will be in touch soon.";
+              formStatus.classList.add("form-status--success");
+            } catch (error) {
+              formStatus.textContent =
+                (error instanceof Error && error.message)
+                  ? error.message
+                  : "Something went wrong. Please try again or contact us directly.";
+              formStatus.classList.add("form-status--error");
+            } finally {
+              submitButton.disabled = false;
+            }
+          });
+        }
+      }
+    </script>
+  </body>
+</html>
