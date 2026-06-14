@@ -4,9 +4,49 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>Consign Your Items | Changing Places</title>
-    <meta name="description" content="Use this form to submit items for consignment with Changing Places in Urbandale, IA." />
+    <title>Consign Furniture &amp; Home Decor | Changing Places Consignment Shop</title>
+    <meta name="description" content="Submit furniture and home decor photos for consignment review by Changing Places Consignment Shop in Urbandale, IA." />
     <link rel="canonical" href="https://changing-places-dsm.com/consignment-form.html" />
+
+    <meta property="og:title" content="Consign Furniture &amp; Home Decor | Changing Places Consignment Shop" />
+    <meta property="og:description" content="Send item details and photos for consignment review by Changing Places Consignment Shop in Urbandale, Iowa." />
+    <meta property="og:image" content="https://changing-places-dsm.com/images/banner.jpg" />
+    <meta property="og:image:alt" content="A styled furniture display at Changing Places Consignment Shop" />
+    <meta property="og:image:width" content="1536" />
+    <meta property="og:image:height" content="1024" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://changing-places-dsm.com/consignment-form.html" />
+    <meta property="og:site_name" content="Changing Places Consignment Shop" />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Consign Furniture &amp; Home Decor | Changing Places Consignment Shop" />
+    <meta name="twitter:description" content="Send item details and photos for consignment review by Changing Places Consignment Shop in Urbandale, Iowa." />
+    <meta name="twitter:image" content="https://changing-places-dsm.com/images/banner.jpg" />
+    <meta name="twitter:image:alt" content="A styled furniture display at Changing Places Consignment Shop" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": "https://changing-places-dsm.com/consignment-form.html#webpage",
+        "url": "https://changing-places-dsm.com/consignment-form.html",
+        "name": "Consign Furniture & Home Decor | Changing Places Consignment Shop",
+        "description": "Submit furniture and home decor photos for consignment review by Changing Places Consignment Shop in Urbandale, Iowa.",
+        "isPartOf": {
+          "@type": "WebSite",
+          "@id": "https://changing-places-dsm.com/#website",
+          "name": "Changing Places Consignment Shop",
+          "url": "https://changing-places-dsm.com/"
+        },
+        "about": {
+          "@type": "FurnitureStore",
+          "@id": "https://changing-places-dsm.com/#store",
+          "name": "Changing Places Consignment Shop"
+        }
+      }
+    </script>
+
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Poppins:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="icon" href="images/favicon/favicon.ico" type="image/x-icon" />
@@ -21,7 +61,7 @@
       <div class="container header-flex">
         <a href="index.html" aria-label="Return to homepage"
           ><img
-            src="images/logo.png"
+            src="images/logo.jpg"
             alt="Changing Places Consignment Shop logo"
             class="logo-img logo-scrolled"
             loading="lazy"
@@ -55,7 +95,7 @@
             <p class="eyebrow">Start Consigning</p>
             <h3>Tell Us About Your Items</h3>
             <p>
-              Use the form below to share a few details and upload photos. We’ll review your submission and follow up shortly.
+              Use the form below to share a few details and upload photos. We'll review your submission and follow up shortly.
             </p>
           </div>
 
@@ -333,7 +373,7 @@ Example: West Elm armchair, excellent condition, 4 years old, originally $1,200.
               return;
             }
 
-            formStatus.textContent = "Submitting…";
+            formStatus.textContent = "Submitting...";
             formStatus.classList.remove(
               "form-status--error",
               "form-status--success",
