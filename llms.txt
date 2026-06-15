@@ -70,7 +70,6 @@ Customers should visit in person for current inventory because items change freq
 ## Key Pages
 
 - [Homepage](https://changing-places-dsm.com/): Store overview, inventory highlights, consignment process, FAQs, location, hours, and contact details.
-- [Consignment Form](https://changing-places-dsm.com/consignment-form.html): Form for customers to submit item details and photos for review.
 
 ## External Resources
 
