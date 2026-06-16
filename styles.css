@@ -319,6 +319,23 @@ nav a.active {
   background: #e6e3dd;
 }
 
+.widget-fallback {
+  margin-top: 1rem;
+  color: #66625c;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.widget-fallback a {
+  color: #2e5c50;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.widget-fallback a:hover {
+  text-decoration: underline;
+}
+
 /* ========== Team Grid ========== */
 .team-grid {
   display: grid;
