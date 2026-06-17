@@ -294,7 +294,8 @@ nav a.active {
 }
 
 .portal-note strong {
-  color: #2e5c50;
+  color: #4f8f42;
+  font-weight: 700;
 }
 
 .portal-link {
