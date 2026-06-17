@@ -47,7 +47,7 @@ main section {
 }
 
 .eyebrow {
-  color: #b46b4d;
+  color: #8a4c36;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -56,7 +56,7 @@ main section {
 }
 
 .hero .eyebrow {
-  color: #f5c7aa;
+  color: #fff;
 }
 
 /* ========== Layout ========== */
@@ -238,6 +238,8 @@ nav a.active {
   text-align: center;
 }
 
+.section-heading h1,
+.section-heading h2,
 .section-heading h3 {
   font-size: clamp(2.2rem, 3.6vw, 3.35rem);
   margin-bottom: 0;
@@ -263,7 +265,7 @@ nav a.active {
   padding-bottom: clamp(4rem, 8vw, 7rem);
 }
 
-.consign h4,
+.consign h3,
 .faq-group-title {
   margin-top: 1.25rem;
   font-size: 1.2rem;
@@ -272,11 +274,11 @@ nav a.active {
   letter-spacing: 0.3px;
 }
 
-.consign h4 + p {
+.consign h3 + p {
   margin-top: 0.35rem;
 }
 
-.consign h4:not(:first-of-type) {
+.consign h3:not(:first-of-type) {
   margin-top: 2rem;
   padding-top: 1.5rem;
   border-top: 1px solid rgba(46, 92, 80, 0.18);
@@ -294,7 +296,7 @@ nav a.active {
 }
 
 .portal-note strong {
-  color: #4f8f42;
+  color: #2e5c50;
   font-weight: 700;
 }
 
@@ -508,6 +510,60 @@ nav a.active {
   stroke-linejoin: round;
 }
 
+/* ========== Privacy Page ========== */
+.narrow-container {
+  max-width: 52rem;
+}
+
+.privacy-hero {
+  background-color: #f2eee7;
+}
+
+.privacy-hero .container {
+  padding-top: clamp(4rem, 8vw, 7rem);
+  padding-bottom: clamp(3rem, 6vw, 5rem);
+}
+
+.privacy-content .container {
+  padding-top: clamp(3rem, 7vw, 5rem);
+  padding-bottom: clamp(4rem, 8vw, 7rem);
+}
+
+.privacy-content h2 {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(46, 92, 80, 0.18);
+  color: #2e5c50;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.privacy-content h2:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.privacy-content p {
+  color: #4f4a45;
+}
+
+.privacy-content p + p {
+  margin-top: 0.75rem;
+}
+
+.privacy-content a {
+  color: #2e5c50;
+  font-weight: 700;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.privacy-content a:hover {
+  text-decoration: underline;
+}
+
 /* ========== Footer ========== */
 footer {
   background-color: #2e5c50;
@@ -550,14 +606,9 @@ footer svg {
 /* ========== Backgrounds ========== */
 .about,
 .faq,
+.privacy-hero,
 .preview {
-  background-image:
-    linear-gradient(rgba(242, 238, 231, 0.9), rgba(242, 238, 231, 0.9)),
-    url("images/pattern-background-10.png");
-  background-repeat: repeat;
-  background-attachment: fixed;
-  background-position: center;
-  background-size: auto, 52rem auto;
+  background: #f2eee7;
 }
 
 /* ========== Responsive / Mobile Adjustments ========== */
@@ -642,7 +693,7 @@ footer svg {
 
   nav#mobile-menu a {
     display: block;
-    padding: 0.45rem 1rem;
+    padding: 0.75rem 1rem;
   }
 
   nav#mobile-menu a.button {
@@ -676,15 +727,17 @@ footer svg {
     text-align: left;
   }
 
+  .section-heading h1,
+  .section-heading h2,
   .section-heading h3 {
     line-height: 1.25;
   }
 
   .about,
   .faq,
+  .privacy-hero,
   .preview {
-    background-attachment: scroll;
-    background-size: auto, 36rem auto;
+    background: #f2eee7;
   }
 
   .lightwidget-widget {
