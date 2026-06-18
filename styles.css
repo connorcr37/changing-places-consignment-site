@@ -127,7 +127,8 @@ nav a:hover {
   color: #2e5c50;
 }
 
-nav a:focus-visible {
+a:focus-visible,
+button:focus-visible {
   outline: 0.125rem solid #2e5c50;
   outline-offset: 0.25rem;
 }
@@ -489,6 +490,9 @@ nav a.active {
 }
 
 .contact-detail a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   color: #2e5c50;
   font-weight: 600;
   text-decoration: none;
@@ -584,6 +588,9 @@ footer ul {
 }
 
 footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   color: #fff;
   text-decoration: none;
   overflow-wrap: anywhere;

@@ -25,6 +25,7 @@
     <meta name="twitter:description" content="Curated secondhand furniture and home decor in Urbandale, Iowa, serving the Des Moines area." />
     <meta name="twitter:image" content="https://changing-places-dsm.com/images/banner.jpg" />
     <meta name="twitter:image:alt" content="A styled furniture display at Changing Places Consignment Shop" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-src https://cdn.lightwidget.com https://www.google.com; img-src 'self' data: https://changing-places-dsm.com https://*.google.com https://*.googleusercontent.com https://*.cdninstagram.com https://*.fbcdn.net; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://cdn.lightwidget.com https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com https://*.cloudflareinsights.com; upgrade-insecure-requests" />
 
     <script type="application/ld+json">
       {
@@ -109,10 +110,66 @@
           },
           {
             "@type": "Question",
+            "name": "How much will you list my items for?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Changing Places prices each item based on current resale trends, customer demand, brand, style, condition, and the store's experience with what sells."
+            }
+          },
+          {
+            "@type": "Question",
             "name": "How do I get paid?",
             "acceptedAnswer": {
               "@type": "Answer",
               "text": "Consignor payouts are processed on the 5th of the month after an item sells. Payments under $200 are made in cash, payments of $200 or more are made by check, and payouts are picked up in store."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do you offer pickup for consigned items?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Changing Places does not offer in-house pickup for consigned items, but can recommend a trusted full-service moving company. Many customers also rent a pickup truck, cargo van, or moving truck from U-Haul, Home Depot, or Menards for larger items."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do your price tags work?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Price tags show the date an item arrived, the original price, and any scheduled markdowns for items $60 or more. Markdowns are applied automatically at checkout."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I put an item on hold?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Items are sold on a first-come, first-served basis. Changing Places generally cannot hold items for future purchase or future markdown dates."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "If I buy an item today, do I need to take it home today?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Purchased items can usually be stored for 7 to 10 days after purchase. Long-term storage is not available because space is limited."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do you offer delivery?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Changing Places does not offer in-house delivery, but can recommend a trusted full-service moving company. Many customers also rent a pickup truck, cargo van, or moving truck from U-Haul, Home Depot, or Menards for larger items."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can you let me know when a specific item comes in?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Because inventory moves quickly, Changing Places is not able to track requests or provide individual updates when specific items come in. The best way to see what's new is to stop in often and follow the store on Facebook and Instagram."
             }
           }
         ]
@@ -120,6 +177,7 @@
     </script>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&amp;family=Poppins:wght@400;500;600;700&amp;display=swap" />
+    <link rel="preload" as="image" href="/images/banner.jpg" fetchpriority="high" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="icon" href="images/favicon/favicon.ico" type="image/x-icon" />
     <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/apple-touch-icon.png" />
@@ -131,7 +189,7 @@
   <body>
     <header>
       <div class="container header-flex">
-        <a href="#home" aria-label="Go to top"><img src="images/logo.jpg" alt="Changing Places Consignment Shop logo" class="logo-img" loading="lazy" /></a>
+        <a href="#home" aria-label="Go to top"><img src="images/logo.jpg" alt="Changing Places Consignment Shop logo" class="logo-img" /></a>
         <button class="menu-toggle" id="menu-toggle" aria-label="Toggle Menu" aria-expanded="false" aria-controls="primary-navigation">
           &#9776;
         </button>
@@ -153,7 +211,7 @@
         <div class="hero-copy">
           <p class="eyebrow">Des Moines Area Consignment</p>
           <h1>Where Preloved Becomes Beloved</h1>
-          <p>Carefully curated secondhand furniture and home décor with style and character.</p>
+          <p>Carefully curated secondhand furniture and home decor with style and character.</p>
           <div class="hero-actions">
             <a class="hero-button hero-button--primary" href="#gallery" data-analytics-event="hero_latest_highlights">Latest Highlights</a>
             <a class="hero-button hero-button--secondary" href="#consign" data-analytics-event="hero_start_consigning">Start Consigning</a>
@@ -185,7 +243,7 @@
             <h2>Consign With Us</h2>
           </div>
           <h3>Getting Started</h3>
-          <p>Thinking about consigning? It's easy. Text photos of your gently used furniture or home décor to <a
+          <p>Thinking about consigning? It's easy. Text photos of your gently used furniture or home decor to <a
               href="sms:6202558901" class="portal-link" data-analytics-event="sms_consign_intro">620-255-8901</a>. Once we've reviewed your items, we'll let you know
             what we're able to accept and schedule a drop-off during store hours. Items should arrive clean, in good
             condition, and ready for the sales floor &mdash; free of dirt, dust, stains, odors, and pet hair.</p>
@@ -228,7 +286,7 @@
                 <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-accepted-items">What types of items do you accept?</button>
                 <div class="faq-answer" id="faq-answer-accepted-items">
                   <p>
-                    We accept furniture, rugs, mirrors, wall art, and home décor. At the moment, we aren't accepting armoires
+                    We accept furniture, rugs, mirrors, wall art, and home decor. At the moment, we aren't accepting armoires
                     due to low demand.
                   </p>
                 </div>
@@ -478,7 +536,7 @@
         <ul>
           <li><a href="#home" data-analytics-event="footer_home">Home</a></li>
           <li><a href="#contact" data-analytics-event="footer_contact">Contact</a></li>
-          <li><a href="privacy.html" data-analytics-event="footer_privacy">Privacy</a></li>
+          <li><a href="/privacy" data-analytics-event="footer_privacy">Privacy</a></li>
           <li>
             <a
               href="https://www.facebook.com/ChangingPlacesDSM"
@@ -610,6 +668,41 @@
         button.addEventListener("click", () => {
           const isOpen = button.classList.toggle("active");
           button.setAttribute("aria-expanded", String(isOpen));
+        });
+      });
+
+      document.querySelectorAll("[data-analytics-event]").forEach((element) => {
+        element.addEventListener("click", () => {
+          const eventName = element.getAttribute("data-analytics-event");
+          if (!eventName) return;
+
+          const payload = {
+            event_category: "site_interaction",
+            event_label: (element.textContent || element.getAttribute("aria-label") || "").trim(),
+            link_url: element.getAttribute("href") || "",
+            page_path: window.location.pathname,
+          };
+
+          window.dataLayer = window.dataLayer || [];
+          window.dataLayer.push({ event: eventName, ...payload });
+
+          if (typeof window.gtag === "function") {
+            window.gtag("event", eventName, payload);
+          }
+
+          if (typeof window.plausible === "function") {
+            window.plausible(eventName, { props: payload });
+          }
+
+          if (window.umami && typeof window.umami.track === "function") {
+            window.umami.track(eventName, payload);
+          }
+
+          window.dispatchEvent(
+            new CustomEvent("siteAnalyticsEvent", {
+              detail: { eventName, ...payload },
+            })
+          );
         });
       });
 
