@@ -490,9 +490,6 @@ nav a.active {
 }
 
 .contact-detail a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.75rem;
   color: #2e5c50;
   font-weight: 600;
   text-decoration: none;
