@@ -512,6 +512,48 @@ nav a.active {
   stroke-linejoin: round;
 }
 
+.visit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.storefront,
+.map {
+  min-width: 0;
+}
+
+.storefront {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(46, 92, 80, 0.16);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 0.8rem 2rem rgba(30, 32, 30, 0.08);
+}
+
+.map {
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 0.8rem 2rem rgba(30, 32, 30, 0.08);
+}
+
+.storefront img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 19rem;
+  object-fit: cover;
+}
+
+.map iframe {
+  display: block;
+  height: 100%;
+  min-height: 19rem;
+}
+
 /* ========== Privacy Page ========== */
 .narrow-container {
   max-width: 52rem;
@@ -765,6 +807,20 @@ footer svg {
   .contact-details {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  .visit-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .storefront img {
+    height: auto;
+    min-height: 0;
+  }
+
+  .map iframe {
+    min-height: 16rem;
   }
 
   footer ul {
