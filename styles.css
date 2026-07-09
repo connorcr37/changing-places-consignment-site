@@ -533,9 +533,19 @@ nav a.active {
   box-shadow: 0 0.8rem 2rem rgba(30, 32, 30, 0.08);
 }
 
+.storefront::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(9, 20, 17, 0.04), rgba(9, 20, 17, 0.2));
+  pointer-events: none;
+}
+
 .map {
   overflow: hidden;
+  border: 1px solid rgba(46, 92, 80, 0.16);
   border-radius: 8px;
+  background: #f2eee7;
   box-shadow: 0 0.8rem 2rem rgba(30, 32, 30, 0.08);
 }
 
