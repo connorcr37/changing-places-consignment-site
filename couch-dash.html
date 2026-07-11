@@ -8,7 +8,7 @@
     <meta name="robots" content="noindex" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&amp;family=Poppins:wght@400;500;600;700&amp;display=swap" />
     <link rel="stylesheet" href="game.css" />
-    <script src="game.js" defer></script>
+    <script src="game.js?v=brenda-7" defer></script>
     <link rel="icon" href="images/favicon/favicon.ico" type="image/x-icon" />
   </head>
   <body>
@@ -24,13 +24,14 @@
       <section class="game-card" aria-labelledby="game-heading">
         <h2 id="game-heading" class="visually-hidden">Corey's Couch Dash game</h2>
         <div class="scoreboard" aria-live="polite">
-          <span>Distance <strong id="score">00000</strong></span>
+          <span>Score <strong id="score">00000</strong></span>
           <span>Tags <strong id="tags">0</strong></span>
           <span>Best <strong id="best">00000</strong></span>
         </div>
 
         <div class="canvas-wrap" id="canvas-wrap">
-          <canvas id="game" width="960" height="420" role="img" aria-label="A side-scrolling game where Corey and Steph carry a couch and jump over obstacles.">
+          <span id="boost-status" class="visually-hidden" role="status" aria-live="polite"></span>
+          <canvas id="game" width="960" height="420" role="img" aria-label="A side-scrolling game where Corey and Steph carry a couch, jump over obstacles, and get bonus help from Brenda.">
             Your browser does not support the Couch Dash game.
           </canvas>
           <div class="game-message" id="game-message">
@@ -47,7 +48,7 @@
         </div>
       </section>
 
-      <p class="game-note">No couches—or customers—were harmed in the making of this game.</p>
+      <p class="game-note">No couches — or customers — were harmed in the making of this game.</p>
     </main>
   </body>
 </html>

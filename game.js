@@ -9,6 +9,7 @@
   const scoreNode = document.getElementById("score");
   const tagsNode = document.getElementById("tags");
   const bestNode = document.getElementById("best");
+  const boostStatusNode = document.getElementById("boost-status");
 
   const W = canvas.width;
   const H = canvas.height;
@@ -30,12 +31,16 @@
   let elapsed = 0;
   let distance = 0;
   let tagCount = 0;
+  let tagPoints = 0;
   let sandyEncounters = 0;
   let lastSandyProp = null;
   let speed = 270;
   let spawnIn = 1.7;
   let tagIn = 2.2;
   let helperIn = 4.5;
+  let brendaIn = 10;
+  let brenda = null;
+  let brendaBoost = 0;
   let obstacles = [];
   let collectibles = [];
   let dust = [];
@@ -49,12 +54,17 @@
     elapsed = 0;
     distance = 0;
     tagCount = 0;
+    tagPoints = 0;
     sandyEncounters = 0;
     lastSandyProp = null;
     speed = 270;
     spawnIn = 1.65;
     tagIn = 2;
     helperIn = 3.5 + Math.random() * 4;
+    brendaIn = 9 + Math.random() * 4;
+    brenda = null;
+    brendaBoost = 0;
+    boostStatusNode.textContent = "";
     obstacles = [];
     collectibles = [];
     dust = [];
@@ -83,7 +93,7 @@
       return;
     }
     if (state === "running" && player.grounded) {
-      player.vy = jumpVelocity;
+      player.vy = brendaBoost > 0 ? jumpVelocity * 1.12 : jumpVelocity;
       player.grounded = false;
       for (let i = 0; i < 5; i++) dust.push({ x: player.x + 35, y: ground - 4, life: 0.45, vx: -45 - Math.random() * 75 });
     }
@@ -108,7 +118,7 @@
 
   function gameOver() {
     state = "over";
-    const score = Math.floor(distance) + tagCount * 50;
+    const score = Math.floor(distance) + tagPoints;
     if (score > best) {
       best = score;
       localStorage.setItem("couchDashBest", String(best));
@@ -117,7 +127,7 @@
     } else {
       messageTitle.textContent = "Couch traffic jam!";
     }
-    messageCopy.textContent = `You made it ${Math.floor(distance)} feet and saved ${tagCount} price tag${tagCount === 1 ? "" : "s"}.`;
+    messageCopy.textContent = `Score ${score}: ${Math.floor(distance)} feet + ${tagPoints} tag bonus. You saved ${tagCount} price tag${tagCount === 1 ? "" : "s"}.`;
     startButton.textContent = "Try again";
     message.hidden = false;
   }
@@ -214,6 +224,9 @@
     spawnIn -= dt;
     tagIn -= dt;
     helperIn -= dt;
+    brendaIn -= dt;
+    brendaBoost = Math.max(0, brendaBoost - dt);
+    if (brendaBoost === 0 && boostStatusNode.textContent) boostStatusNode.textContent = "";
 
     if (spawnIn <= 0) {
       spawnObstacle();
@@ -221,7 +234,7 @@
     }
     if (tagIn <= 0) {
       spawnTag();
-      tagIn = 2.1 + Math.random() * 2.1;
+      tagIn = brendaBoost > 0 ? 0.85 + Math.random() * 0.65 : 2.1 + Math.random() * 2.1;
     }
     if (helperIn <= 0 && wallHelpers.length < 2) {
       const helperProps = ["art", "pillow", "vase", "basket", "plant", "mirror", "table-lamp"];
@@ -234,6 +247,15 @@
         phase: Math.random() * 6,
       });
       helperIn = 6 + Math.random() * 8;
+    }
+    if (brendaIn <= 0 && !brenda) {
+      brenda = { life: 6, total: 6, phase: 0 };
+      brendaBoost = 6;
+      wallHelpers = [];
+      helperIn = Math.max(helperIn, 7);
+      boostStatusNode.textContent = "Brenda Boost active. Price tags are worth double and jumps are stronger.";
+      tagIn = Math.min(tagIn, 0.55);
+      brendaIn = 20 + Math.random() * 8;
     }
 
     player.vy += gravity * dt;
@@ -248,10 +270,16 @@
     collectibles.forEach((item) => { item.x -= speed * dt; item.phase += dt * 5; });
     dust.forEach((p) => { p.x += p.vx * dt; p.life -= dt; });
     wallHelpers.forEach((helper) => { helper.x -= speed * 0.32 * dt; helper.phase += dt * 4; });
+    if (brenda) {
+      brenda.life -= dt;
+      brenda.phase += dt * 8;
+      if (brenda.life <= 0) brenda = null;
+    }
     obstacles = obstacles.filter((item) => item.x + item.w > -20);
     collectibles = collectibles.filter((item) => {
       if (intersects(player, item, 18)) {
         tagCount++;
+        tagPoints += brendaBoost > 0 ? 100 : 50;
         updateScore();
         return false;
       }
@@ -268,8 +296,8 @@
   }
 
   function updateScore() {
-    scoreNode.textContent = String(Math.floor(distance)).padStart(5, "0");
-    tagsNode.textContent = String(tagCount);
+    scoreNode.textContent = String(Math.floor(distance) + tagPoints).padStart(5, "0");
+    tagsNode.textContent = brendaBoost > 0 ? `${tagCount} ×2` : String(tagCount);
   }
 
   function roundedRect(x, y, w, h, r, fill) {
@@ -277,6 +305,29 @@
     ctx.roundRect(x, y, w, h, r);
     ctx.fillStyle = fill;
     ctx.fill();
+  }
+
+  function drawSpeechBubble(x, y, w, h, tailX, tailY) {
+    const r = 16;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + w - 14, y + h);
+    ctx.lineTo(tailX, tailY);
+    ctx.lineTo(x + w - 40, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fillStyle = "#fffdf6";
+    ctx.fill();
+    ctx.strokeStyle = colors.clay;
+    ctx.lineWidth = 4;
+    ctx.stroke();
   }
 
   function drawWallHelper(helper) {
@@ -461,7 +512,7 @@
       ctx.fill();
     }
 
-    wallHelpers.forEach(drawWallHelper);
+    if (!brenda) wallHelpers.forEach(drawWallHelper);
 
     ctx.fillStyle = colors.sand;
     ctx.fillRect(0, ground, W, H - ground);
@@ -476,9 +527,111 @@
       ctx.stroke();
     }
 
+    if (!brenda) {
+      ctx.fillStyle = colors.dark;
+      ctx.font = "700 17px Poppins, sans-serif";
+      ctx.fillText("LOADING BAY →", 760, 205);
+    }
+  }
+
+  function drawBrenda() {
+    if (!brenda) return;
+    const enter = Math.min(1, (brenda.total - brenda.life) / 0.45);
+    const exit = brenda.life < 0.55 ? 1 - brenda.life / 0.55 : 0;
+    const eased = 1 - Math.pow(1 - enter, 3);
+    const x = W - 72 + (1 - eased) * 120 + exit * 125;
+    const base = ground;
+    const bob = Math.sin(brenda.phase) * 2;
+    const wave = Math.sin(brenda.phase * 1.35) * 5;
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, enter * 1.5, brenda.life * 2);
+
+    // A connected comic bubble keeps the callout visually attached to Brenda.
+    drawSpeechBubble(x - 250, 130, 232, 66, x - 8, base - 88);
+    ctx.fillStyle = colors.clay;
+    ctx.font = "800 16px Poppins, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("LET'S MOVE THAT COUCH!", x - 134, 158);
     ctx.fillStyle = colors.dark;
-    ctx.font = "700 17px Poppins, sans-serif";
-    ctx.fillText("LOADING BAY →", 760, 205);
+    ctx.font = "700 11px Poppins, sans-serif";
+    ctx.fillText("BRENDA BOOST · TAGS ×2", x - 134, 180);
+
+    // Her smaller scale makes the short, high-energy silhouette intentional.
+    ctx.save();
+    ctx.translate(x, base);
+    ctx.scale(0.84, 0.84);
+    ctx.translate(-x, -base);
+
+    // Sound-wave marks sell her big voice without requiring audio.
+    ctx.strokeStyle = "#d5a856";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    [
+      [-28, -4, -52, -18], [-31, 7, -58, 7], [-28, 18, -52, 32],
+      [28, -4, 52, -18], [31, 7, 58, 7], [28, 18, 52, 32],
+    ].forEach(([x1, y1, x2, y2]) => {
+      ctx.beginPath();
+      ctx.moveTo(x + x1, base - 93 + y1);
+      ctx.lineTo(x + x2, base - 93 + y2);
+      ctx.stroke();
+    });
+
+    // Wavy highlighted hair, expressive hands, and a yellow striped top echo
+    // the supplied photos while staying in the game's illustrated style.
+    ctx.fillStyle = "#8b654b";
+    [[-12, -75], [-15, -65], [-9, -84], [8, -84], [14, -74], [15, -63]].forEach(([dx, dy]) => {
+      ctx.beginPath();
+      ctx.arc(x + dx, base + dy + bob, 9, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.fillStyle = "#e8c6a6";
+    ctx.beginPath();
+    ctx.arc(x, base - 70 + bob, 15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#332b28";
+    ctx.beginPath();
+    ctx.arc(x - 5, base - 72 + bob, 1.5, 0, Math.PI * 2);
+    ctx.arc(x + 5, base - 72 + bob, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#8a4c36";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, base - 66 + bob, 6, 0.15, Math.PI - 0.15);
+    ctx.stroke();
+
+    roundedRect(x - 18, base - 55 + bob, 36, 36, 9, "#e5b82f");
+    ctx.fillStyle = "#fffdf6";
+    ctx.fillRect(x - 17, base - 48 + bob, 34, 6);
+    ctx.fillRect(x - 17, base - 34 + bob, 34, 6);
+
+    ctx.strokeStyle = "#e8c6a6";
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(x - 14, base - 48 + bob);
+    ctx.lineTo(x - 29, base - 68 + wave);
+    ctx.moveTo(x + 14, base - 48 + bob);
+    ctx.lineTo(x + 31, base - 72 - wave);
+    ctx.stroke();
+    [x - 30, x + 32].forEach((handX) => {
+      ctx.fillStyle = "#e8c6a6";
+      ctx.beginPath();
+      ctx.arc(handX, base - 72 + (handX < x ? wave : -wave), 5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.strokeStyle = "#315f91";
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(x - 8, base - 20);
+    ctx.lineTo(x - 10 + wave * 0.2, base - 2);
+    ctx.moveTo(x + 8, base - 20);
+    ctx.lineTo(x + 11 - wave * 0.2, base - 2);
+    ctx.stroke();
+    roundedRect(x - 16 + wave * 0.2, base - 5, 12, 6, 2, "#e8c6a6");
+    roundedRect(x + 6 - wave * 0.2, base - 5, 12, 6, 2, "#e8c6a6");
+    ctx.restore();
+    ctx.restore();
   }
 
   function drawMover(x, y, shirt, hair, step, pants = colors.charcoal, beard = false, tall = false, longHair = false, shoes = "#242424", baldStubble = false, smiling = true) {
@@ -1361,6 +1514,7 @@
     drawShowroom();
     collectibles.forEach(drawTag);
     obstacles.forEach(drawObstacle);
+    drawBrenda();
     dust.forEach((p) => {
       ctx.globalAlpha = Math.max(0, p.life * 1.8);
       ctx.fillStyle = "#b9a795";
