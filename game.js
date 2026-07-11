@@ -516,27 +516,25 @@
 
     // A wall-mounted loading-bay placard occupies every fourth gap between
     // framed pictures and scrolls with the showroom instead of the HUD.
-    if (!brenda) {
-      const signScroll = (distance * 6) % 960;
-      for (let signCenter = 720 - signScroll; signCenter < W + 180; signCenter += 960) {
-        if (signCenter < -180) continue;
-        roundedRect(signCenter - 82, 166, 164, 46, 9, "#d8cec2");
-        roundedRect(signCenter - 77, 171, 154, 36, 6, "#fffdf6");
-        ctx.fillStyle = colors.forest;
-        ctx.font = "700 14px Poppins, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("LOADING BAY", signCenter - 9, 195);
-        ctx.strokeStyle = colors.forest;
-        ctx.lineWidth = 3;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(signCenter + 47, 189);
-        ctx.lineTo(signCenter + 66, 189);
-        ctx.lineTo(signCenter + 59, 183);
-        ctx.moveTo(signCenter + 66, 189);
-        ctx.lineTo(signCenter + 59, 195);
-        ctx.stroke();
-      }
+    const signScroll = (distance * 6) % 960;
+    for (let signCenter = 720 - signScroll; signCenter < W + 180; signCenter += 960) {
+      if (signCenter < -180) continue;
+      roundedRect(signCenter - 82, 166, 164, 46, 9, "#d8cec2");
+      roundedRect(signCenter - 77, 171, 154, 36, 6, "#fffdf6");
+      ctx.fillStyle = colors.forest;
+      ctx.font = "700 14px Poppins, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("LOADING BAY", signCenter - 9, 195);
+      ctx.strokeStyle = colors.forest;
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(signCenter + 47, 189);
+      ctx.lineTo(signCenter + 66, 189);
+      ctx.lineTo(signCenter + 59, 183);
+      ctx.moveTo(signCenter + 66, 189);
+      ctx.lineTo(signCenter + 59, 195);
+      ctx.stroke();
     }
 
     ctx.fillStyle = colors.sand;
