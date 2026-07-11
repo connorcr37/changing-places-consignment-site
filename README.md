@@ -2,11 +2,12 @@
 
 Static website for Changing Places Consignment Shop, a curated furniture and home decor consignment store in Urbandale, Iowa.
 
-The site is intentionally lightweight: plain HTML, CSS, image assets, and SEO metadata.
+The site is intentionally lightweight: plain HTML, CSS, one shared JavaScript file, image assets, and SEO metadata.
 
 ## Production
 
 The production domain is `https://changing-places-dsm.com/`.
 
-- `CNAME` points GitHub Pages-compatible deployments at the custom domain.
+- Site files are stored in GitHub and served through a Cloudflare Worker.
+- `_headers` is the source of production security headers.
 - `robots.txt`, `sitemap.xml`, canonical URLs, Open Graph tags, and the web manifest use the production domain.

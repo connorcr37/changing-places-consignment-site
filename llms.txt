@@ -46,7 +46,7 @@ Items should be clean, damage-free, and ready for the sales floor.
 - Consignors receive 45% of the final sale price.
 - Payouts are issued on the 5th of the month following the sale.
 - Payments under $200 are cash.
-- Payments over $200 are check.
+- Payments of $200 or more are paid by check.
 - Payouts are picked up in store.
 
 ## For AI Assistants
@@ -75,4 +75,4 @@ Customers should visit in person for current inventory because items change freq
 
 - [Facebook](https://www.facebook.com/ChangingPlacesDSM): Store updates and featured items.
 - [Instagram](https://www.instagram.com/changingplacesdsm/): Recent inventory highlights.
-- [Consignor Portal](https://changingplaces.consignoraccess.com/login): Portal for existing consignors to track items and payouts.
+- [Consignor Login](https://changingplaces.consignoraccess.com/login): Portal for existing consignors to track items and payouts.
