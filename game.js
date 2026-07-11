@@ -1555,7 +1555,15 @@
   }
 
   startButton.addEventListener("click", () => state === "paused" ? resume() : start());
-  jumpButton.addEventListener("click", jump);
+  jumpButton.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    jump();
+  });
+  // Pointer presses are handled immediately above; detail === 0 preserves
+  // keyboard and assistive-technology button activation without double jumps.
+  jumpButton.addEventListener("click", (event) => {
+    if (event.detail === 0) jump();
+  });
   canvas.addEventListener("pointerdown", jump);
   document.addEventListener("keydown", (event) => {
     if (["Space", "ArrowUp"].includes(event.code)) {
