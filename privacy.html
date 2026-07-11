@@ -4,12 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-src https://cdn.lightwidget.com https://www.google.com; img-src 'self' data: https://changing-places-dsm.com https://*.google.com https://*.googleusercontent.com https://*.cdninstagram.com https://*.fbcdn.net; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://cdn.lightwidget.com https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com https://*.cloudflareinsights.com; upgrade-insecure-requests" />
-
   <title>Privacy Policy | Changing Places Consignment Shop</title>
   <meta name="description"
-    content="Privacy policy for Changing Places Consignment Shop, including contact links, third-party embeds, social links, and website analytics readiness." />
+    content="Privacy policy for Changing Places Consignment Shop, including contact options, third-party embeds, and social links." />
   <meta name="author" content="Changing Places Consignment Shop" />
   <link rel="canonical" href="https://changing-places-dsm.com/privacy" />
 
@@ -24,6 +21,7 @@
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&amp;family=Poppins:wght@400;500;600;700&amp;display=swap" />
   <link rel="stylesheet" href="styles.css" />
+  <script src="site.js" defer></script>
   <link rel="icon" href="images/favicon/favicon.ico" type="image/x-icon" />
   <link rel="apple-touch-icon" sizes="180x180" href="images/favicon/apple-touch-icon.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="images/favicon/favicon-32x32.png" />
@@ -32,6 +30,7 @@
 </head>
 
 <body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   <header>
     <div class="container header-flex">
       <a href="/" aria-label="Go to homepage"><img src="images/logo.jpg" alt="Changing Places Consignment Shop logo"
@@ -42,26 +41,25 @@
       </button>
       <nav id="mobile-menu" aria-label="Primary">
         <ul id="primary-navigation">
-          <li><a href="/#gallery" data-analytics-event="nav_gallery">Gallery</a></li>
-          <li><a href="/#consign" data-analytics-event="nav_consign">Consign</a></li>
-          <li><a href="/#faq" data-analytics-event="nav_faq">FAQ</a></li>
-          <li><a href="/#about" data-analytics-event="nav_about">About</a></li>
-          <li><a href="/#contact" data-analytics-event="nav_visit">Visit</a></li>
+          <li><a href="/#gallery">Gallery</a></li>
+          <li><a href="/#consign">Consign</a></li>
+          <li><a href="/#faq">FAQ</a></li>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/#contact">Visit</a></li>
           <li><a href="https://changingplaces.consignoraccess.com/login" class="button" target="_blank" rel="noopener"
-              aria-label="Consignor Login opens in a new tab"
-              data-analytics-event="consignor_login_header">Consignor Login</a></li>
+              aria-label="Consignor Login opens in a new tab">Consignor Login</a></li>
         </ul>
       </nav>
     </div>
   </header>
 
-  <main class="privacy-page">
+  <main id="main-content">
     <section class="privacy-hero">
       <div class="container">
         <div class="section-heading">
           <p class="eyebrow">Website Privacy</p>
           <h1>Privacy Policy</h1>
-          <p>Last updated June 17, 2026.</p>
+          <p>Last updated July 11, 2026.</p>
         </div>
       </div>
     </section>
@@ -103,13 +101,6 @@
           handled through the SimpleConsign portal is processed through that separate service and is subject to SimpleConsign's
           own privacy practices and terms.</p>
 
-        <h2>Analytics And Event Hooks</h2>
-        <p>This site uses Cloudflare Web Analytics or Browser Insights to understand aggregate website performance,
-          reliability, and basic traffic patterns.</p>
-        <p>Some links and buttons may include event hooks or labels for actions such as phone, text, email, social, map, and
-          portal clicks. These hooks may be used for conversion tracking when an analytics provider is enabled. Analytics
-          information is used in aggregate to improve the website and understand which contact options visitors use.</p>
-
         <h2>Cookies</h2>
         <p>The core website does not set its own marketing cookies.</p>
         <p>Embedded third-party services may set cookies or use similar technologies when their content loads or when you follow
@@ -127,21 +118,25 @@
 
         <h2>Contact</h2>
         <p>Questions about this Privacy Policy can be sent to <a
-            href="mailto:ChangingPlacesDSM@gmail.com" data-analytics-event="email_privacy_contact">ChangingPlacesDSM@gmail.com</a>.</p>
+            href="mailto:ChangingPlacesDSM@gmail.com">ChangingPlacesDSM@gmail.com</a>.</p>
       </div>
     </section>
   </main>
 
   <footer>
+    <svg class="footer-wave" viewBox="0 0 1440 96" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <path class="footer-wave-sand" d="M0 39C170 9 338 21 505 45c198 29 365 34 548 2 151-26 271-30 387-8v57H0Z" />
+      <path class="footer-wave-sage" d="M0 53c166-29 334-17 501 7 200 28 368 30 554-2 150-26 269-25 385-3v41H0Z" />
+      <path class="footer-wave-forest" d="M0 67c166-26 332-14 499 8 202 27 372 25 558-7 149-25 268-18 383 3v25H0Z" />
+    </svg>
     <div class="container">
       <p>&copy; <span data-current-year>2026</span> Changing Places Consignment Shop. All rights reserved.</p>
       <ul>
-        <li><a href="/" data-analytics-event="footer_home">Home</a></li>
-        <li><a href="/#contact" data-analytics-event="footer_contact">Contact</a></li>
-        <li><a href="/privacy" data-analytics-event="footer_privacy">Privacy</a></li>
+        <li><a href="/">Home</a></li>
+        <li><a href="/#contact">Contact</a></li>
+        <li><a href="/privacy">Privacy</a></li>
         <li>
-          <a href="https://www.facebook.com/ChangingPlacesDSM" target="_blank" rel="noopener" aria-label="Facebook"
-            data-analytics-event="facebook_footer">
+          <a href="https://www.facebook.com/ChangingPlacesDSM" target="_blank" rel="noopener" aria-label="Facebook">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
               <path
                 d="M22 12a10 10 0 1 0-11.5 9.87v-6.99h-2.2v-2.88h2.2V9.83c0-2.18 1.3-3.39 3.3-3.39.96 0 1.97.17 1.97.17v2.17h-1.11c-1.1 0-1.44.68-1.44 1.38v1.66h2.46l-.39 2.88h-2.07v6.99A10 10 0 0 0 22 12Z" />
@@ -150,8 +145,7 @@
           </a>
         </li>
         <li>
-          <a href="https://www.instagram.com/ChangingPlacesDSM" target="_blank" rel="noopener" aria-label="Instagram"
-            data-analytics-event="instagram_footer">
+          <a href="https://www.instagram.com/ChangingPlacesDSM" target="_blank" rel="noopener" aria-label="Instagram">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
               <path
                 d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.5A4.25 4.25 0 0 0 3.5 7.75v8.5A4.25 4.25 0 0 0 7.75 20.5h8.5A4.25 4.25 0 0 0 20.5 16.25v-8.5A4.25 4.25 0 0 0 16.25 3.5h-8.5Zm4.25 3.25a5.25 5.25 0 1 1 0 10.5a5.25 5.25 0 0 1 0-10.5Zm0 1.5a3.75 3.75 0 1 0 0 7.5a3.75 3.75 0 0 0 0-7.5Zm4.88-.38a.88.88 0 1 1 1.75 0a.88.88 0 0 1-1.75 0Z" />
@@ -161,112 +155,14 @@
         </li>
         <li>
           <a href="https://changingplaces.consignoraccess.com/login" target="_blank" rel="noopener"
-            aria-label="Consignor Portal opens in a new tab" data-analytics-event="consignor_login_footer">
+            aria-label="Consignor Login opens in a new tab">
             <img src="images/simpleconsign-logo.png" alt="SimpleConsign Logo" class="footer-icon" />
-            Consignor Portal
+            Consignor Login
           </a>
         </li>
       </ul>
     </div>
   </footer>
-
-  <script>
-    try {
-      const currentYear = new Date().getFullYear();
-
-      if (Number.isFinite(currentYear) && currentYear >= 2026) {
-        document.querySelectorAll("[data-current-year]").forEach((year) => {
-          year.textContent = String(currentYear);
-        });
-      }
-    } catch (error) {
-      // Keep the static 2026 fallback year in the markup.
-    }
-
-    const toggle = document.getElementById("menu-toggle");
-    const menu = document.getElementById("primary-navigation");
-
-    if (toggle && menu) {
-      const closeMenu = () => {
-        menu.classList.remove("show");
-        toggle.setAttribute("aria-expanded", "false");
-      };
-
-      toggle.addEventListener("click", () => {
-        const isOpen = menu.classList.toggle("show");
-        toggle.setAttribute("aria-expanded", String(isOpen));
-      });
-
-      menu.querySelectorAll("a").forEach((link) => {
-        link.addEventListener("click", () => {
-          if (menu.classList.contains("show")) {
-            closeMenu();
-          }
-        });
-      });
-
-      window.addEventListener("resize", () => {
-        if (window.innerWidth > 768 && menu.classList.contains("show")) {
-          closeMenu();
-        }
-      });
-    }
-
-    document.querySelectorAll("[data-analytics-event]").forEach((element) => {
-      element.addEventListener("click", () => {
-        const eventName = element.getAttribute("data-analytics-event");
-        if (!eventName) return;
-
-        const payload = {
-          event_category: "site_interaction",
-          event_label: (element.textContent || element.getAttribute("aria-label") || "").trim(),
-          link_url: element.getAttribute("href") || "",
-          page_path: window.location.pathname,
-        };
-
-        window.dataLayer = window.dataLayer || [];
-        window.dataLayer.push({ event: eventName, ...payload });
-
-        if (typeof window.gtag === "function") {
-          window.gtag("event", eventName, payload);
-        }
-
-        if (typeof window.plausible === "function") {
-          window.plausible(eventName, { props: payload });
-        }
-
-        if (window.umami && typeof window.umami.track === "function") {
-          window.umami.track(eventName, payload);
-        }
-
-        window.dispatchEvent(
-          new CustomEvent("siteAnalyticsEvent", {
-            detail: { eventName, ...payload },
-          })
-        );
-      });
-    });
-
-    const logo = document.querySelector(".logo-img");
-
-    if (logo) {
-      const handleLogoScroll = () => {
-        if (window.innerWidth > 768) {
-          if (window.scrollY > 80) {
-            logo.classList.add("logo-scrolled");
-          } else {
-            logo.classList.remove("logo-scrolled");
-          }
-        } else {
-          logo.classList.remove("logo-scrolled");
-        }
-      };
-
-      window.addEventListener("scroll", handleLogoScroll);
-      window.addEventListener("resize", handleLogoScroll);
-      window.addEventListener("load", handleLogoScroll);
-    }
-  </script>
 </body>
 
 </html>
