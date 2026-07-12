@@ -294,7 +294,16 @@ kbd {
   grid-template-columns: repeat(10, minmax(0, 1fr));
 }
 
-.tier-test-buttons button { padding-inline: 0.25rem; }
+.test-panel .tier-test-buttons button {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
 
 .test-panel button {
   padding: 0.35rem 0.55rem;
