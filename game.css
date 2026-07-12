@@ -222,6 +222,22 @@ kbd {
   .game-shell { width: min(100% - 1rem, 74rem); padding-top: 1rem; }
   .game-intro { margin-top: 2.5rem; }
   .game-card { border-radius: 1rem; }
+  .scoreboard {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
+    padding: 0.65rem 0.4rem;
+    font-size: clamp(0.62rem, 2.8vw, 0.78rem);
+  }
+  .scoreboard span {
+    justify-content: center;
+    min-width: 0;
+    gap: 0.25rem;
+    padding: 0.3rem 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .scoreboard strong { letter-spacing: 0.03em; }
   .controls { flex-direction: column; }
   .controls p { display: none; }
   .jump-button { width: min(16rem, 80%); }
