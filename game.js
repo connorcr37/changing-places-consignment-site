@@ -160,7 +160,7 @@
   let best = Number(localStorage.getItem("couchDashBest") || 0);
   const player = { x: 112, y: ground - 88, w: 190, h: 88, vy: 0, grounded: true };
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  let soundEnabled = localStorage.getItem("couchDashSound") === "on";
+  let soundEnabled = localStorage.getItem("couchDashSound") !== "off";
   let audioContext = null;
   let audioMasterGain = null;
   let noiseBuffer = null;
