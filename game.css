@@ -349,6 +349,34 @@ kbd {
   .sound-button { width: min(16rem, 80%); }
 }
 
+@media (max-width: 22.5rem) {
+  .game-message { padding: 0.3rem 0.5rem; }
+
+  .message-kicker {
+    font-size: 0.55rem;
+    line-height: 1.1;
+    letter-spacing: 0.08em;
+  }
+
+  .message-title {
+    margin: 0.08rem 0 0.12rem !important;
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  #message-copy {
+    font-size: 0.68rem;
+    line-height: 1.2;
+  }
+
+  #start-button {
+    margin-top: 0.38rem;
+    padding: 0.42rem 0.85rem;
+    font-size: 0.72rem;
+    box-shadow: 0 0.18rem 0 var(--forest-dark);
+  }
+}
+
 @media (max-width: 52rem) {
   .fullscreen-button.is-available { display: inline-block; }
 }

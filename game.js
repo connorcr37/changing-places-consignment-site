@@ -163,6 +163,7 @@
   let soundEnabled = localStorage.getItem("couchDashSound") !== "off";
   let audioContext = null;
   let audioMasterGain = null;
+  let audioLimiter = null;
   let noiseBuffer = null;
   let musicTimer = null;
   let musicStep = 0;
@@ -222,9 +223,16 @@
     if (!audioContext) {
       audioContext = new AudioContextClass();
       audioMasterGain = audioContext.createGain();
+      audioLimiter = audioContext.createDynamicsCompressor();
       audioMasterGain.gain.setValueAtTime(0.0001, audioContext.currentTime);
-      audioMasterGain.gain.linearRampToValueAtTime(0.82, audioContext.currentTime + 0.012);
-      audioMasterGain.connect(audioContext.destination);
+      audioMasterGain.gain.linearRampToValueAtTime(0.78, audioContext.currentTime + 0.018);
+      audioLimiter.threshold.setValueAtTime(-18, audioContext.currentTime);
+      audioLimiter.knee.setValueAtTime(16, audioContext.currentTime);
+      audioLimiter.ratio.setValueAtTime(6, audioContext.currentTime);
+      audioLimiter.attack.setValueAtTime(0.006, audioContext.currentTime);
+      audioLimiter.release.setValueAtTime(0.16, audioContext.currentTime);
+      audioMasterGain.connect(audioLimiter);
+      audioLimiter.connect(audioContext.destination);
       noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate, audioContext.sampleRate);
       const noise = noiseBuffer.getChannelData(0);
       for (let index = 0; index < noise.length; index++) noise[index] = Math.random() * 2 - 1;
@@ -243,6 +251,7 @@
     const closingMaster = audioMasterGain;
     audioContext = null;
     audioMasterGain = null;
+    audioLimiter = null;
     noiseBuffer = null;
     if (!closingMaster) {
       closingAudio.close().catch(() => {});
@@ -283,21 +292,27 @@
   function scheduleNoiseAt(audio, startAt, duration, volume, highpass) {
     if (!noiseBuffer) return;
     const source = audio.createBufferSource();
-    const filter = audio.createBiquadFilter();
+    const highpassFilter = audio.createBiquadFilter();
+    const lowpassFilter = audio.createBiquadFilter();
     const gain = audio.createGain();
     source.buffer = noiseBuffer;
-    filter.type = "highpass";
-    filter.frequency.setValueAtTime(highpass, startAt);
-    const attack = Math.min(0.006, duration * 0.25);
+    highpassFilter.type = "highpass";
+    highpassFilter.frequency.setValueAtTime(highpass, startAt);
+    highpassFilter.Q.setValueAtTime(0.7, startAt);
+    lowpassFilter.type = "lowpass";
+    lowpassFilter.frequency.setValueAtTime(6500, startAt);
+    lowpassFilter.Q.setValueAtTime(0.55, startAt);
+    const attack = Math.min(0.012, duration * 0.3);
     gain.gain.setValueAtTime(0, startAt);
     gain.gain.linearRampToValueAtTime(volume, startAt + attack);
     gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
-    gain.gain.linearRampToValueAtTime(0, startAt + duration + 0.004);
-    source.connect(filter);
-    filter.connect(gain);
+    gain.gain.linearRampToValueAtTime(0, startAt + duration + 0.008);
+    source.connect(highpassFilter);
+    highpassFilter.connect(lowpassFilter);
+    lowpassFilter.connect(gain);
     gain.connect(audioOutput(audio));
     source.start(startAt, Math.random() * 0.7);
-    source.stop(startAt + duration + 0.006);
+    source.stop(startAt + duration + 0.012);
   }
 
   function scheduleMusicStep(audio, step, startAt) {
@@ -317,10 +332,10 @@
       });
     }
     if (beat % 2 === 1) {
-      scheduleNoiseAt(audio, startAt, 0.025, 0.0014, 4800);
+      scheduleNoiseAt(audio, startAt, 0.055, 0.00075, 3200);
     }
     if (station.kick.includes(beat)) scheduleToneAt(audio, startAt, 82, 44, 0.12, "sine", 0.013);
-    if (station.snare.includes(beat)) scheduleNoiseAt(audio, startAt, 0.075, 0.006, 1700);
+    if (station.snare.includes(beat)) scheduleNoiseAt(audio, startAt, 0.11, 0.0038, 1200);
     const melodyNote = station.melody[step];
     if (melodyNote) {
       const melodyFrequency = noteFrequency(melodyNote);
@@ -332,6 +347,14 @@
     const audio = ensureAudio();
     if (!audio || audio.state !== "running") return;
     const eighthNote = 60 / shopRadios[activeRadio].tempo / 2;
+    const safeStart = audio.currentTime + 0.025;
+    if (nextMusicTime < safeStart) {
+      if (nextMusicTime < audio.currentTime) {
+        const missedSteps = Math.ceil((audio.currentTime - nextMusicTime) / eighthNote);
+        musicStep = (musicStep + missedSteps) % 32;
+      }
+      nextMusicTime = safeStart;
+    }
     while (nextMusicTime < audio.currentTime + 0.18) {
       scheduleMusicStep(audio, musicStep, nextMusicTime);
       musicStep = (musicStep + 1) % 32;
