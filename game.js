@@ -4,6 +4,7 @@
   const startButton = document.getElementById("start-button");
   const jumpButton = document.getElementById("jump-button");
   const fullscreenButton = document.getElementById("fullscreen-button");
+  const soundButton = document.getElementById("sound-button");
   const gameCard = document.querySelector(".game-card");
   const message = document.getElementById("game-message");
   const messageTitle = document.getElementById("message-title");
@@ -12,6 +13,11 @@
   const tagsNode = document.getElementById("tags");
   const bestNode = document.getElementById("best");
   const boostStatusNode = document.getElementById("boost-status");
+  const testPanel = document.getElementById("test-panel");
+  const tierTestButtons = document.getElementById("tier-test-buttons");
+  const testStatus = document.getElementById("test-status");
+  const radioTestStatus = document.getElementById("radio-test-status");
+  const testMode = new URLSearchParams(location.search).has("test");
 
   const W = canvas.width;
   const H = canvas.height;
@@ -72,6 +78,12 @@
     ["black-hole-cart"],
     ["friendly-kaiju"],
     ["solar-system-mobile", "black-hole-cart", "friendly-kaiju", "saturn", "mini-sun", "portal"],
+    ["parade-float"],
+    ["roller-coaster"],
+    ["iceberg-penguins"],
+    ["fire-breathing-dragon"],
+    ["floating-city"],
+    ["universe-snow-globe", "floating-city", "fire-breathing-dragon", "iceberg-penguins", "roller-coaster", "parade-float"],
   ];
   const sandyPropWidths = {
     throne: 108, bathtub: 118, piano: 125, canoe: 140, giraffe: 105,
@@ -91,17 +103,19 @@
     thundercloud: 190, "time-machine": 185, portal: 175,
     "mini-sun": 160, saturn: 200, "black-hole-cart": 180,
     "friendly-kaiju": 190, "solar-system-mobile": 220,
+    "parade-float": 225, "roller-coaster": 235, "iceberg-penguins": 230,
+    "fire-breathing-dragon": 225, "floating-city": 240, "universe-snow-globe": 235,
   };
   const hoveringSandyProps = new Set([
     "helicopter", "hot-air-balloon", "rocket", "flying-saucer",
     "space-shuttle", "satellite", "starship", "space-station",
     "alien-mothership", "galaxy-cruiser",
-    "thundercloud", "portal", "mini-sun", "saturn",
+    "thundercloud", "portal", "mini-sun", "saturn", "floating-city",
   ]);
   const illuminatedSandyProps = new Set([
     "flying-saucer", "space-shuttle", "moon-rover", "satellite",
     "starship", "space-station", "moon-base", "alien-mothership",
-    "galaxy-cruiser",
+    "galaxy-cruiser", "floating-city", "universe-snow-globe",
   ]);
   const reactiveSandyProps = new Set(sandyPropTiers.slice(7).flat());
   const absurdSandyProps = new Set(sandyPropTiers.slice(24).flat());
@@ -113,6 +127,8 @@
     thundercloud: 1.25, "time-machine": 1.25, portal: 1.36,
     "mini-sun": 1.45, saturn: 1.2, "black-hole-cart": 1.35,
     "friendly-kaiju": 1.28, "solar-system-mobile": 1.18,
+    "parade-float": 1.18, "roller-coaster": 1.16, "iceberg-penguins": 1.2,
+    "fire-breathing-dragon": 1.22, "floating-city": 1.16, "universe-snow-globe": 1.2,
   };
 
   function sandyItemScale(tier, prop) {
@@ -128,6 +144,7 @@
   let tagCount = 0;
   let tagPoints = 0;
   let sandyEncounters = 0;
+  let selectedSandyTestTier = null;
   let lastSandyProp = null;
   let speed = 270;
   let spawnIn = 1.7;
@@ -142,15 +159,299 @@
   let wallHelpers = [];
   let best = Number(localStorage.getItem("couchDashBest") || 0);
   const player = { x: 112, y: ground - 88, w: 190, h: 88, vy: 0, grounded: true };
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  let soundEnabled = localStorage.getItem("couchDashSound") === "on";
+  let audioContext = null;
+  let audioMasterGain = null;
+  let noiseBuffer = null;
+  let musicTimer = null;
+  let musicStep = 0;
+  let nextMusicTime = 0;
+  const shopRadios = {
+    boardwalk: {
+      name: "Boardwalk Beat",
+      tempo: 116,
+      chords: [[60, 64, 67, 69], [57, 60, 64, 67], [53, 57, 60, 62], [55, 59, 62, 65]],
+      bass: [36, 33, 29, 31],
+      melody: [72, null, 76, 79, null, 76, 74, null, 69, null, 72, 76, 74, null, 72, null, 69, 72, null, 74, 72, 69, 67, null, 71, null, 74, 77, 76, 74, 71, null],
+      plucks: [1, 3, 5, 7], kick: [0, 4], snare: [2, 6],
+      chordType: "triangle", bassType: "triangle", melodyType: "sine",
+      chordVolume: 0.0034, bassVolume: 0.009, melodyVolume: 0.0046,
+    },
+    gogo: {
+      name: "Go-Go Showroom",
+      tempo: 124,
+      chords: [[57, 61, 64, 66], [54, 57, 61, 64], [50, 54, 57, 59], [52, 56, 59, 62]],
+      bass: [33, 30, 26, 28],
+      melody: [73, 76, null, 78, 76, 73, 71, null, 69, 73, 76, null, 78, 76, 73, 69, 69, null, 73, 74, 76, 74, 73, null, 71, 74, 78, 76, 74, 71, 69, null],
+      plucks: [1, 3, 5, 7], kick: [0, 3, 4, 7], snare: [2, 6],
+      chordType: "square", bassType: "triangle", melodyType: "triangle",
+      chordVolume: 0.0024, bassVolume: 0.0095, melodyVolume: 0.0048,
+    },
+    garage: {
+      name: "Garage Sale Stomp",
+      tempo: 132,
+      chords: [[64, 67, 71, 73], [62, 67, 71, 74], [57, 61, 64, 69], [64, 67, 71, 73]],
+      bass: [40, 38, 33, 40],
+      melody: [76, null, 79, 81, 79, null, 76, 74, 76, 79, null, 83, 81, 79, 76, null, 73, 76, 78, null, 81, 78, 76, 73, 76, null, 79, 81, 83, 81, 79, null],
+      plucks: [0, 2, 4, 6], kick: [0, 2, 4, 6], snare: [2, 6],
+      chordType: "sawtooth", bassType: "square", melodyType: "square",
+      chordVolume: 0.0018, bassVolume: 0.0065, melodyVolume: 0.0028,
+    },
+    sunset: {
+      name: "Sunset Stereo",
+      tempo: 108,
+      chords: [[55, 59, 62, 64], [52, 55, 59, 62], [48, 52, 55, 57], [50, 54, 57, 60]],
+      bass: [31, 28, 24, 26],
+      melody: [71, 74, 79, null, 78, 74, 71, null, 67, 71, 74, 76, 74, null, 71, 69, 67, 69, 71, 74, null, 71, 69, 67, 69, 72, 74, 78, 76, 74, 72, null],
+      plucks: [1, 5], kick: [0, 4], snare: [2, 6],
+      chordType: "sine", bassType: "triangle", melodyType: "triangle",
+      chordVolume: 0.004, bassVolume: 0.008, melodyVolume: 0.0042,
+    },
+  };
+  let activeRadio = localStorage.getItem("couchDashRadio") || "boardwalk";
+  if (!shopRadios[activeRadio]) activeRadio = "boardwalk";
+
+  function updateSoundButton() {
+    soundButton.textContent = `Sound: ${soundEnabled ? "On" : "Off"}`;
+    soundButton.setAttribute("aria-pressed", String(soundEnabled));
+  }
+
+  function ensureAudio() {
+    if (!soundEnabled || !AudioContextClass) return null;
+    if (!audioContext) {
+      audioContext = new AudioContextClass();
+      audioMasterGain = audioContext.createGain();
+      audioMasterGain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      audioMasterGain.gain.linearRampToValueAtTime(0.82, audioContext.currentTime + 0.012);
+      audioMasterGain.connect(audioContext.destination);
+      noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate, audioContext.sampleRate);
+      const noise = noiseBuffer.getChannelData(0);
+      for (let index = 0; index < noise.length; index++) noise[index] = Math.random() * 2 - 1;
+    }
+    if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+    return audioContext;
+  }
+
+  function audioOutput(audio) {
+    return audioMasterGain && audioMasterGain.context === audio ? audioMasterGain : audio.destination;
+  }
+
+  function retireAudioContext() {
+    if (!audioContext) return;
+    const closingAudio = audioContext;
+    const closingMaster = audioMasterGain;
+    audioContext = null;
+    audioMasterGain = null;
+    noiseBuffer = null;
+    if (!closingMaster) {
+      closingAudio.close().catch(() => {});
+      return;
+    }
+    const now = closingAudio.currentTime;
+    closingMaster.gain.cancelScheduledValues(now);
+    closingMaster.gain.setValueAtTime(closingMaster.gain.value, now);
+    closingMaster.gain.linearRampToValueAtTime(0, now + 0.04);
+    window.setTimeout(() => closingAudio.close().catch(() => {}), 60);
+  }
+
+  function scheduleToneAt(audio, startAt, frequency, endFrequency, duration, type, volume) {
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, startAt);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(24, endFrequency), startAt + duration);
+    gain.gain.setValueAtTime(0.0001, startAt);
+    gain.gain.exponentialRampToValueAtTime(volume, startAt + Math.min(0.015, duration * 0.2));
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    oscillator.connect(gain);
+    gain.connect(audioOutput(audio));
+    oscillator.start(startAt);
+    oscillator.stop(startAt + duration + 0.02);
+  }
+
+  function tone(frequency, endFrequency, duration, type = "sine", volume = 0.035, delay = 0) {
+    const audio = ensureAudio();
+    if (!audio) return;
+    scheduleToneAt(audio, audio.currentTime + delay, frequency, endFrequency, duration, type, volume);
+  }
+
+  function noteFrequency(note) {
+    return 440 * Math.pow(2, (note - 69) / 12);
+  }
+
+  function scheduleNoiseAt(audio, startAt, duration, volume, highpass) {
+    if (!noiseBuffer) return;
+    const source = audio.createBufferSource();
+    const filter = audio.createBiquadFilter();
+    const gain = audio.createGain();
+    source.buffer = noiseBuffer;
+    filter.type = "highpass";
+    filter.frequency.setValueAtTime(highpass, startAt);
+    const attack = Math.min(0.006, duration * 0.25);
+    gain.gain.setValueAtTime(0, startAt);
+    gain.gain.linearRampToValueAtTime(volume, startAt + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    gain.gain.linearRampToValueAtTime(0, startAt + duration + 0.004);
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioOutput(audio));
+    source.start(startAt, Math.random() * 0.7);
+    source.stop(startAt + duration + 0.006);
+  }
+
+  function scheduleMusicStep(audio, step, startAt) {
+    const station = shopRadios[activeRadio];
+    const bar = Math.floor(step / 8);
+    const beat = step % 8;
+    const chord = station.chords[bar];
+    if (beat % 2 === 0) {
+      const bassNote = station.bass[bar] + (beat === 4 ? 7 : 0);
+      const bassFrequency = noteFrequency(bassNote);
+      scheduleToneAt(audio, startAt, bassFrequency, bassFrequency * 0.985, 0.3, station.bassType, station.bassVolume);
+    }
+    if (station.plucks.includes(beat)) {
+      chord.slice(0, 3).forEach((note, index) => {
+        const frequency = noteFrequency(note + 12);
+        scheduleToneAt(audio, startAt + index * 0.012, frequency, frequency * 0.995, 0.18, station.chordType, station.chordVolume);
+      });
+    }
+    if (beat % 2 === 1) {
+      scheduleNoiseAt(audio, startAt, 0.025, 0.0014, 4800);
+    }
+    if (station.kick.includes(beat)) scheduleToneAt(audio, startAt, 82, 44, 0.12, "sine", 0.013);
+    if (station.snare.includes(beat)) scheduleNoiseAt(audio, startAt, 0.075, 0.006, 1700);
+    const melodyNote = station.melody[step];
+    if (melodyNote) {
+      const melodyFrequency = noteFrequency(melodyNote);
+      scheduleToneAt(audio, startAt, melodyFrequency, melodyFrequency * 1.006, 0.19, station.melodyType, station.melodyVolume);
+    }
+  }
+
+  function pumpMusic() {
+    const audio = ensureAudio();
+    if (!audio || audio.state !== "running") return;
+    const eighthNote = 60 / shopRadios[activeRadio].tempo / 2;
+    while (nextMusicTime < audio.currentTime + 0.18) {
+      scheduleMusicStep(audio, musicStep, nextMusicTime);
+      musicStep = (musicStep + 1) % 32;
+      nextMusicTime += eighthNote;
+    }
+  }
+
+  function startMusic() {
+    const audio = ensureAudio();
+    if (!audio || musicTimer) return;
+    musicStep = 0;
+    nextMusicTime = audio.currentTime + 0.06;
+    pumpMusic();
+    musicTimer = setInterval(pumpMusic, 75);
+  }
+
+  function stopMusic() {
+    if (!musicTimer) return;
+    clearInterval(musicTimer);
+    musicTimer = null;
+  }
+
+  function updateRadioTestControls() {
+    radioTestStatus.textContent = `Playing: ${shopRadios[activeRadio].name}`;
+    testPanel.querySelectorAll("[data-test-radio]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.testRadio === activeRadio));
+    });
+  }
+
+  function updateSandyTestControls() {
+    testPanel.querySelectorAll("[data-test-tier]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(Number(button.dataset.testTier) - 1 === selectedSandyTestTier));
+    });
+  }
+
+  function selectShopRadio(stationKey) {
+    if (!shopRadios[stationKey]) return;
+    activeRadio = stationKey;
+    localStorage.setItem("couchDashRadio", stationKey);
+    soundEnabled = true;
+    localStorage.setItem("couchDashSound", "on");
+    updateSoundButton();
+    stopMusic();
+    retireAudioContext();
+    playSound("enabled");
+    startMusic();
+    updateRadioTestControls();
+  }
+
+  function playSound(kind, item = null) {
+    if (!soundEnabled) return;
+    if (kind === "enabled") {
+      tone(440, 660, 0.11, "sine", 0.025);
+      tone(660, 880, 0.12, "sine", 0.02, 0.08);
+    } else if (kind === "jump") {
+      tone(210, 510, 0.15, "triangle", 0.026);
+    } else if (kind === "tag") {
+      tone(720, 920, 0.12, "sine", 0.035);
+      tone(960, 1180, 0.13, "sine", 0.025, 0.07);
+    } else if (kind === "brenda") {
+      [0, 0.1, 0.2].forEach((delay, index) => tone(440 + index * 180, 520 + index * 210, 0.16, "triangle", 0.032, delay));
+    } else if (kind === "crash") {
+      tone(145, 48, 0.38, "sawtooth", 0.052);
+      tone(88, 42, 0.3, "square", 0.025, 0.05);
+    } else if (kind === "sandy" && item) {
+      if (item.prop === "parade-float") {
+        [0, 0.08, 0.16].forEach((delay, index) => tone(523 + index * 136, 590 + index * 146, 0.13, "triangle", 0.018, delay));
+      } else if (item.prop === "roller-coaster") {
+        tone(210, 470, 0.3, "square", 0.014);
+        tone(470, 190, 0.34, "triangle", 0.013, 0.12);
+      } else if (item.prop === "iceberg-penguins") {
+        tone(980, 1320, 0.31, "sine", 0.013);
+      } else if (item.prop === "fire-breathing-dragon") {
+        tone(118, 48, 0.48, "sawtooth", 0.027);
+      } else if (item.prop === "floating-city") {
+        tone(185, 370, 0.42, "sine", 0.014);
+        tone(277, 554, 0.42, "sine", 0.011, 0.08);
+      } else if (item.prop === "universe-snow-globe") {
+        [196, 294, 440, 659].forEach((frequency, index) => tone(frequency, frequency * 1.5, 0.55, "sine", 0.01, index * 0.07));
+      } else if (item.prop === "steam-locomotive") {
+        tone(105, 78, 0.2, "square", 0.03);
+        tone(132, 92, 0.18, "square", 0.022, 0.14);
+      } else if (item.prop === "thundercloud") {
+        tone(92, 38, 0.45, "sawtooth", 0.04);
+      } else if (item.prop === "friendly-kaiju") {
+        tone(78, 34, 0.52, "sawtooth", 0.04);
+      } else if (item.tier >= 17 && item.tier < 24) {
+        tone(290, 760, 0.28, "sine", 0.025);
+        tone(620, 380, 0.22, "triangle", 0.018, 0.1);
+      } else if (item.tier >= 24) {
+        tone(185, 118, 0.24, "triangle", 0.025);
+        tone(370, 530, 0.18, "sine", 0.018, 0.09);
+      }
+    }
+  }
+
+  function toggleSound() {
+    if (!AudioContextClass) return;
+    soundEnabled = !soundEnabled;
+    localStorage.setItem("couchDashSound", soundEnabled ? "on" : "off");
+    updateSoundButton();
+    if (soundEnabled) {
+      playSound("enabled");
+      startMusic();
+    } else {
+      stopMusic();
+      retireAudioContext();
+    }
+  }
 
   bestNode.textContent = String(best).padStart(5, "0");
+  if (!AudioContextClass) soundButton.hidden = true;
+  updateSoundButton();
 
   function reset() {
-    elapsed = 0;
+    elapsed = selectedSandyTestTier === null ? 0 : selectedSandyTestTier * 4;
     distance = 0;
     tagCount = 0;
     tagPoints = 0;
-    sandyEncounters = 0;
+    sandyEncounters = selectedSandyTestTier === null ? 0 : selectedSandyTestTier;
     lastSandyProp = null;
     speed = 270;
     spawnIn = 1.65;
@@ -172,8 +473,16 @@
 
   function start() {
     reset();
+    ensureAudio();
+    startMusic();
     state = "running";
     message.hidden = true;
+    if (selectedSandyTestTier !== null) {
+      const obstacle = spawnSandy(selectedSandyTestTier);
+      spawnIn = 2.2;
+      testStatus.textContent = `Tier ${selectedSandyTestTier + 1}: ${obstacle.prop.replaceAll("-", " ")} (${obstacle.w}px)`;
+      updateSandyTestControls();
+    }
     last = performance.now();
     requestAnimationFrame(loop);
   }
@@ -190,6 +499,7 @@
     if (state === "running" && player.grounded) {
       player.vy = brendaBoost > 0 ? jumpVelocity * 1.12 : jumpVelocity;
       player.grounded = false;
+      playSound("jump");
       for (let i = 0; i < 5; i++) dust.push({ x: player.x + 35, y: ground - 4, life: 0.45, vx: -45 - Math.random() * 75 });
     }
   }
@@ -213,6 +523,7 @@
 
   function gameOver() {
     state = "over";
+    playSound("crash");
     const score = Math.floor(distance) + tagPoints;
     if (score > best) {
       best = score;
@@ -225,6 +536,30 @@
     messageCopy.textContent = `Score ${score}: ${Math.floor(distance)} feet + ${tagPoints} tag bonus. You saved ${tagCount} price tag${tagCount === 1 ? "" : "s"}.`;
     startButton.textContent = "Try again";
     message.hidden = false;
+  }
+
+  function spawnSandy(tierIndex = Math.min(sandyEncounters, sandyPropTiers.length - 1), x = W + 40) {
+    const safeTierIndex = Math.max(0, Math.min(tierIndex, sandyPropTiers.length - 1));
+    const isFirstFinaleEncounter = safeTierIndex === sandyPropTiers.length - 1 && sandyEncounters === sandyPropTiers.length - 1;
+    const tier = isFirstFinaleEncounter ? [sandyPropTiers[safeTierIndex][0]] : sandyPropTiers[safeTierIndex];
+    const nonRepeatingChoices = tier.filter((candidate) => candidate !== lastSandyProp);
+    const propChoices = nonRepeatingChoices.length ? nonRepeatingChoices : tier;
+    const prop = propChoices[Math.floor(Math.random() * propChoices.length)];
+    lastSandyProp = prop;
+    sandyEncounters = Math.max(sandyEncounters, safeTierIndex + 1);
+    const obstacle = {
+      type: "sandy",
+      prop,
+      x,
+      y: ground - 84,
+      w: Math.round((sandyPropWidths[prop] || 98) * sandyItemScale(safeTierIndex, prop)),
+      h: 84,
+      tier: safeTierIndex,
+      phase: Math.random() * 6,
+    };
+    obstacles.push(obstacle);
+    playSound("sandy", obstacle);
+    return obstacle;
   }
 
   function spawnObstacle() {
@@ -254,23 +589,7 @@
         phase: Math.random() * 6,
       });
     } else if (roll < 0.7 && !obstacles.some((item) => item.type === "sandy")) {
-      const tierIndex = Math.min(sandyEncounters, sandyPropTiers.length - 1);
-      const tier = sandyPropTiers[tierIndex];
-      const nonRepeatingChoices = tier.filter((candidate) => candidate !== lastSandyProp);
-      const propChoices = nonRepeatingChoices.length ? nonRepeatingChoices : tier;
-      const prop = propChoices[Math.floor(Math.random() * propChoices.length)];
-      lastSandyProp = prop;
-      sandyEncounters++;
-      obstacles.push({
-        type: "sandy",
-        prop,
-        x: W + 40,
-        y: ground - 84,
-        w: Math.round((sandyPropWidths[prop] || 98) * sandyItemScale(tierIndex, prop)),
-        h: 84,
-        tier: tierIndex,
-        phase: Math.random() * 6,
-      });
+      spawnSandy();
     } else if (roll < 0.84) {
       const lampKinds = ["floor", "table", "arc", "tripod"];
       const variant = lampKinds[Math.floor(Math.random() * lampKinds.length)];
@@ -306,7 +625,9 @@
 
   function update(dt) {
     elapsed += dt;
-    speed = Math.min(500, 270 + elapsed * 3.3 + Math.min(sandyEncounters, sandyPropTiers.length) * 1.1);
+    const lateIntensity = Math.max(0, Math.min(1, (sandyEncounters - 24) / 20));
+    const speedCap = 500 + lateIntensity * 15;
+    speed = Math.min(speedCap, 270 + elapsed * 3.3 + Math.min(sandyEncounters, sandyPropTiers.length) * 1.1);
     distance += speed * dt / 34;
     spawnIn -= dt;
     tagIn -= dt;
@@ -318,7 +639,9 @@
     if (spawnIn <= 0) {
       spawnObstacle();
       const tierPressure = Math.min(sandyEncounters, sandyPropTiers.length) * 0.0035;
-      spawnIn = Math.max(0.94, 1.65 - elapsed * 0.0035 - tierPressure) + Math.random() * 0.7;
+      const spawnFloor = 0.94 - lateIntensity * 0.01;
+      const spawnVariation = 0.7 - lateIntensity * 0.08;
+      spawnIn = Math.max(spawnFloor, 1.65 - elapsed * 0.0035 - tierPressure) + Math.random() * spawnVariation;
     }
     if (tagIn <= 0) {
       spawnTag();
@@ -338,6 +661,7 @@
     }
     if (brendaIn <= 0 && !brenda) {
       brenda = { life: 6, total: 6, phase: 0 };
+      playSound("brenda");
       brendaBoost = 6;
       wallHelpers = [];
       helperIn = Math.max(helperIn, 7);
@@ -368,6 +692,7 @@
       if (intersects(player, item, 18)) {
         tagCount++;
         tagPoints += brendaBoost > 0 ? 100 : 50;
+        playSound("tag");
         updateScore();
         return false;
       }
@@ -1971,6 +2296,201 @@
         roundedRect(x + 79, y + 75, 48, 6, 3, "#7d5136");
         return done();
       }
+      case "parade-float": {
+        roundedRect(x + 4, y + 52, 195, 24, 8, "#6f4775");
+        ctx.fillStyle = "#f1c15b";
+        for (let scallop = 0; scallop < 9; scallop++) {
+          ctx.beginPath();
+          ctx.arc(x + 17 + scallop * 22, y + 72, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        const bloomX = x + 101;
+        const bloomY = y + 33 + Math.sin(phase * 0.7) * 2;
+        ["#d66c57", "#f1c15b", "#8fc9d2", "#85a079", "#d77aa4", "#fff5df"].forEach((fill, petal) => {
+          const angle = phase * 0.08 + petal * Math.PI / 3;
+          ctx.fillStyle = fill;
+          ctx.beginPath();
+          ctx.ellipse(bloomX + Math.cos(angle) * 25, bloomY + Math.sin(angle) * 18, 19, 10, angle, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.fillStyle = "#d5a856";
+        ctx.beginPath();
+        ctx.arc(bloomX, bloomY, 15, 0, Math.PI * 2);
+        ctx.fill();
+        wheel(x + 37, y + 78, 7);
+        wheel(x + 169, y + 78, 7);
+        return done();
+      }
+      case "roller-coaster": {
+        ctx.strokeStyle = "#b54f3f";
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(x + 2, y + 58);
+        ctx.bezierCurveTo(x + 42, y - 5, x + 68, y + 8, x + 100, y + 49);
+        ctx.bezierCurveTo(x + 137, y + 84, x + 160, y + 5, x + 207, y + 31);
+        ctx.stroke();
+        ctx.strokeStyle = "#7d5136";
+        ctx.lineWidth = 4;
+        [27, 68, 112, 157, 194].forEach((support, index) => {
+          ctx.beginPath();
+          ctx.moveTo(x + support, y + 30 + (index % 2) * 17);
+          ctx.lineTo(x + support, y + 78);
+          ctx.stroke();
+        });
+        [0, 1, 2].forEach((car) => {
+          const carX = x + 48 + car * 39;
+          const carY = y + 25 + Math.sin(phase * 1.2 + car) * 8;
+          ctx.save();
+          ctx.translate(carX, carY);
+          ctx.rotate(Math.sin(phase * 0.7 + car) * 0.12);
+          roundedRect(-17, -7, 34, 19, 5, car % 2 ? "#d5a856" : "#315f91");
+          ctx.fillStyle = "#efbf9d";
+          [-8, 8].forEach((rider) => {
+            ctx.beginPath();
+            ctx.arc(rider, -10, 5, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          ctx.restore();
+        });
+        return done();
+      }
+      case "iceberg-penguins": {
+        ctx.fillStyle = "#cfe9ec";
+        ctx.beginPath();
+        ctx.moveTo(x + 2, y + 68);
+        ctx.lineTo(x + 31, y + 40);
+        ctx.lineTo(x + 57, y + 44);
+        ctx.lineTo(x + 91, y + 4);
+        ctx.lineTo(x + 120, y + 38);
+        ctx.lineTo(x + 155, y + 28);
+        ctx.lineTo(x + 204, y + 68);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#8fc9d2";
+        ctx.beginPath();
+        ctx.moveTo(x + 2, y + 68);
+        ctx.lineTo(x + 204, y + 68);
+        ctx.lineTo(x + 181, y + 79);
+        ctx.lineTo(x + 25, y + 79);
+        ctx.closePath();
+        ctx.fill();
+        [[54, 43], [119, 45], [155, 51]].forEach(([penguinX, penguinY], index) => {
+          ctx.fillStyle = "#202124";
+          ctx.beginPath();
+          ctx.ellipse(x + penguinX, y + penguinY + Math.sin(phase + index) * 2, 8, 13, index === 2 ? 0.25 : 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#fffdf6";
+          ctx.beginPath();
+          ctx.ellipse(x + penguinX, y + penguinY + 3, 4, 7, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#df8f43";
+          ctx.beginPath();
+          ctx.moveTo(x + penguinX - 2, y + penguinY - 5);
+          ctx.lineTo(x + penguinX + 5, y + penguinY - 2);
+          ctx.lineTo(x + penguinX - 2, y + penguinY + 1);
+          ctx.closePath();
+          ctx.fill();
+        });
+        return done();
+      }
+      case "fire-breathing-dragon": {
+        const flap = Math.sin(phase * 0.9) * 9;
+        ctx.fillStyle = "#527861";
+        ctx.beginPath();
+        ctx.moveTo(x + 42, y + 58);
+        ctx.quadraticCurveTo(x + 72, y + 15, x + 127, y + 35);
+        ctx.quadraticCurveTo(x + 158, y + 45, x + 182, y + 25);
+        ctx.lineTo(x + 199, y + 35);
+        ctx.lineTo(x + 179, y + 49);
+        ctx.lineTo(x + 141, y + 53);
+        ctx.lineTo(x + 115, y + 72);
+        ctx.lineTo(x + 54, y + 72);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#85a079";
+        ctx.beginPath();
+        ctx.moveTo(x + 92, y + 38);
+        ctx.lineTo(x + 49, y + 2 + flap);
+        ctx.lineTo(x + 105, y + 23);
+        ctx.moveTo(x + 121, y + 39);
+        ctx.lineTo(x + 145, y + 1 - flap);
+        ctx.lineTo(x + 139, y + 47);
+        ctx.fill();
+        ctx.strokeStyle = "#374f47";
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(x + 70, y + 66);
+        ctx.lineTo(x + 58, y + 79);
+        ctx.moveTo(x + 125, y + 65);
+        ctx.lineTo(x + 139, y + 79);
+        ctx.stroke();
+        ctx.fillStyle = "#fffdf6";
+        ctx.beginPath();
+        ctx.arc(x + 180, y + 32, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = colors.dark;
+        ctx.beginPath();
+        ctx.arc(x + 181, y + 32, 2, 0, Math.PI * 2);
+        ctx.fill();
+        return done();
+      }
+      case "floating-city": {
+        ctx.fillStyle = "#6f7779";
+        ctx.beginPath();
+        ctx.moveTo(x + 3, y + 55);
+        ctx.lineTo(x + 207, y + 55);
+        ctx.lineTo(x + 162, y + 78);
+        ctx.lineTo(x + 54, y + 78);
+        ctx.closePath();
+        ctx.fill();
+        const towers = [[18, 29, 28, 27], [51, 15, 31, 40], [87, 3, 35, 52], [127, 22, 27, 33], [160, 9, 32, 46]];
+        towers.forEach(([tx, ty, tw, th], index) => {
+          roundedRect(x + tx, y + ty, tw, th, 3, index % 2 ? "#8fa6aa" : "#b9c5c8");
+          ctx.fillStyle = index % 2 ? "#85e0a3" : "#f1c15b";
+          for (let row = 0; row < 2; row++) {
+            for (let col = 0; col < 2; col++) ctx.fillRect(x + tx + 6 + col * 10, y + ty + 8 + row * 12, 4, 5);
+          }
+        });
+        ctx.fillStyle = "#85a079";
+        ctx.fillRect(x + 4, y + 50, 201, 7);
+        return done();
+      }
+      case "universe-snow-globe": {
+        const cx = x + 105;
+        const cy = y + 36;
+        const gradient = ctx.createRadialGradient(cx - 16, cy - 17, 4, cx, cy, 51);
+        gradient.addColorStop(0, "rgba(143,201,210,.72)");
+        gradient.addColorStop(0.45, "rgba(67,57,104,.78)");
+        gradient.addColorStop(1, "rgba(20,18,35,.94)");
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 51, 0, Math.PI * 2);
+        ctx.fill();
+        for (let star = 0; star < 18; star++) {
+          const angle = star * 2.41 + phase * (0.03 + (star % 3) * 0.012);
+          const radius = 7 + (star * 17) % 41;
+          ctx.globalAlpha = 0.45 + (Math.sin(phase + star) + 1) * 0.25;
+          ctx.fillStyle = star % 4 ? "#fff5df" : "#85e0a3";
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius, 1.2 + star % 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 0.75;
+        ctx.strokeStyle = "#d77aa4";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, 38, 14, phase * 0.12, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = "rgba(255,255,255,.62)";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 50, 3.55, 5.1);
+        ctx.stroke();
+        roundedRect(x + 52, y + 68, 106, 12, 5, "#7d5136");
+        roundedRect(x + 66, y + 61, 78, 12, 4, "#9b6b45");
+        return done();
+      }
       default:
         ctx.restore();
         return false;
@@ -2027,6 +2547,43 @@
       ctx.lineTo(x + 65, y + 66 + flicker);
       ctx.lineTo(x + 75, y + 66);
       ctx.closePath();
+      ctx.fill();
+    }
+    if (item.prop === "iceberg-penguins") {
+      ctx.globalAlpha = 0.24;
+      ctx.fillStyle = "#8fc9d2";
+      ctx.beginPath();
+      ctx.ellipse(x + 71, ground - 2, 94, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.32;
+      for (let crystal = 0; crystal < 5; crystal++) {
+        const drift = (item.phase * 4 + crystal * 27) % 112;
+        ctx.fillStyle = "#cfe9ec";
+        ctx.beginPath();
+        ctx.arc(x - 70 + drift, ground - 4 - (crystal % 2) * 3, 2 + crystal % 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (item.prop === "floating-city") {
+      ctx.globalAlpha = 0.12 + (Math.sin(item.phase * 0.55) + 1) * 0.04;
+      ctx.fillStyle = "#f1c15b";
+      [[87, 47], [151, 111]].forEach(([top, bottom]) => {
+        ctx.beginPath();
+        ctx.moveTo(x + top, y + 48);
+        ctx.lineTo(x + bottom - 25, ground);
+        ctx.lineTo(x + bottom + 25, ground);
+        ctx.closePath();
+        ctx.fill();
+      });
+    }
+    if (item.prop === "universe-snow-globe") {
+      const glow = ctx.createRadialGradient(x + 105, y + 36, 20, x + 105, y + 36, 94);
+      glow.addColorStop(0, "rgba(111,71,117,.22)");
+      glow.addColorStop(1, "rgba(111,71,117,0)");
+      ctx.globalAlpha = 0.8;
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(x + 105, y + 36, 94, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
@@ -2170,6 +2727,49 @@
       ctx.moveTo(x + 17, y + 39);
       ctx.quadraticCurveTo(x + 36, y + 20, x + 66, y + 34);
       ctx.stroke();
+    }
+    if (item.prop === "parade-float") {
+      const confettiColors = ["#d66c57", "#f1c15b", "#315f91", "#85a079", "#d77aa4"];
+      for (let confetti = 0; confetti < 13; confetti++) {
+        const fall = (item.phase * 8 + confetti * 17) % 76;
+        const confettiX = x + 8 + (confetti * 37) % 196 + Math.sin(item.phase + confetti) * 7;
+        ctx.save();
+        ctx.translate(confettiX, y - 20 + fall);
+        ctx.rotate(item.phase + confetti);
+        ctx.globalAlpha = 0.75;
+        ctx.fillStyle = confettiColors[confetti % confettiColors.length];
+        ctx.fillRect(-2, -4, 4, 8);
+        ctx.restore();
+      }
+    }
+    if (item.prop === "fire-breathing-dragon") {
+      const breath = 28 + Math.abs(Math.sin(item.phase * 1.4)) * 24;
+      ctx.globalAlpha = 0.82;
+      ctx.fillStyle = "#f1c15b";
+      ctx.beginPath();
+      ctx.moveTo(x + 198, y + 35);
+      ctx.quadraticCurveTo(x + 211 + breath * 0.45, y + 23, x + 207 + breath, y + 40);
+      ctx.quadraticCurveTo(x + 218 + breath * 0.35, y + 49, x + 198, y + 40);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#d66c57";
+      ctx.beginPath();
+      ctx.moveTo(x + 201, y + 36);
+      ctx.lineTo(x + 206 + breath * 0.7, y + 39);
+      ctx.lineTo(x + 202, y + 41);
+      ctx.closePath();
+      ctx.fill();
+    }
+    if (item.prop === "universe-snow-globe") {
+      for (let streak = 0; streak < 6; streak++) {
+        const angle = item.phase * 0.18 + streak * Math.PI / 3;
+        ctx.globalAlpha = 0.28 + streak * 0.06;
+        ctx.strokeStyle = streak % 2 ? "#8fc9d2" : "#d77aa4";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x + 105, y + 36, 61 + streak * 5, angle, angle + 0.4);
+        ctx.stroke();
+      }
     }
     if (illuminatedSandyProps.has(item.prop)) {
       const lightCount = Math.max(3, Math.min(7, Math.round((item.w - 60) / 25)));
@@ -2904,9 +3504,13 @@
     const tRex = obstacles.find((item) => item.prop === "t-rex" && item.x < W && item.x + item.w > 0);
     const thundercloud = obstacles.find((item) => item.prop === "thundercloud" && item.x < W && item.x + item.w > 0);
     const kaiju = obstacles.find((item) => item.prop === "friendly-kaiju" && item.x < W && item.x + item.w > 0);
+    const rollerCoaster = obstacles.find((item) => item.prop === "roller-coaster" && item.x < W && item.x + item.w > 0);
+    const dragon = obstacles.find((item) => item.prop === "fire-breathing-dragon" && item.x < W && item.x + item.w > 0);
     const thunderFlash = thundercloud && Math.sin(thundercloud.phase * 1.7) > 0.62;
     const kaijuStomp = kaiju && Math.sin(kaiju.phase) > 0.72;
-    const rumble = thunderFlash ? 3.2 : locomotive ? 2.6 : kaijuStomp ? 1.8 : (tRex && Math.sin(tRex.phase) > 0.65 ? 1.2 : 0);
+    const rollerRattle = rollerCoaster && Math.sin(rollerCoaster.phase * 1.2) > 0.25;
+    const dragonRoar = dragon && Math.sin(dragon.phase * 1.4) > 0.82;
+    const rumble = thunderFlash ? 3.2 : locomotive ? 2.6 : kaijuStomp ? 1.8 : rollerRattle ? 1.35 : dragonRoar ? 1.1 : (tRex && Math.sin(tRex.phase) > 0.65 ? 1.2 : 0);
     ctx.save();
     if (rumble) ctx.translate(Math.sin(elapsed * 73) * rumble, Math.cos(elapsed * 91) * rumble * 0.55);
     drawShowroom();
@@ -2955,6 +3559,7 @@
         const enter = gameCard.requestFullscreen || gameCard.webkitRequestFullscreen;
         if (!enter) return;
         await enter.call(gameCard);
+        pause();
         try {
           if (screen.orientation?.lock) await screen.orientation.lock("landscape");
         } catch (_) {
@@ -2972,6 +3577,49 @@
     fullscreenButton.addEventListener("click", toggleFullscreen);
     document.addEventListener("fullscreenchange", updateFullscreenButton);
     document.addEventListener("webkitfullscreenchange", updateFullscreenButton);
+  }
+
+  soundButton.addEventListener("click", toggleSound);
+
+  console.info("Couch Dash tester: append '?test' to the URL to open the tier and shop radio controls.");
+
+  if (testMode) {
+    testPanel.hidden = false;
+    sandyPropTiers.forEach((props, tierIndex) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.testTier = String(tierIndex + 1);
+      button.textContent = String(tierIndex + 1);
+      button.setAttribute("aria-label", `Test Sandy tier ${tierIndex + 1}`);
+      button.title = `Tier ${tierIndex + 1}: ${props.map((prop) => prop.replaceAll("-", " ")).join(", ")}`;
+      tierTestButtons.append(button);
+    });
+    updateSandyTestControls();
+    updateRadioTestControls();
+    testPanel.addEventListener("click", (event) => {
+      const radioButton = event.target.closest("[data-test-radio]");
+      if (radioButton) {
+        selectShopRadio(radioButton.dataset.testRadio);
+        return;
+      }
+      const button = event.target.closest("[data-test-tier]");
+      if (!button) return;
+      const tierNumber = Number(button.dataset.testTier);
+      const tierIndex = Math.max(0, Math.min(tierNumber - 1, sandyPropTiers.length - 1));
+      selectedSandyTestTier = tierIndex;
+      updateSandyTestControls();
+      if (state !== "running") {
+        start();
+        return;
+      }
+      obstacles = [];
+      collectibles = [];
+      sandyEncounters = tierIndex;
+      elapsed = Math.max(elapsed, tierIndex * 4);
+      const obstacle = spawnSandy(tierIndex, Math.min(W * 0.68, W - 330));
+      spawnIn = 2.2;
+      testStatus.textContent = `Tier ${tierIndex + 1}: ${obstacle.prop.replaceAll("-", " ")} (${obstacle.w}px)`;
+    });
   }
 
   startButton.addEventListener("click", () => state === "paused" ? resume() : start());
@@ -2994,7 +3642,16 @@
       state === "paused" ? resume() : pause();
     }
   });
-  document.addEventListener("visibilitychange", () => { if (document.hidden) pause(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      pause();
+      stopMusic();
+      if (audioContext?.state === "running") audioContext.suspend().catch(() => {});
+    } else if (soundEnabled) {
+      ensureAudio();
+      startMusic();
+    }
+  });
 
   draw();
 })();
