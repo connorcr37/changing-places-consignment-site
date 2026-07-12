@@ -153,7 +153,8 @@ canvas {
 #message-copy { color: var(--muted); }
 
 #start-button,
-.jump-button {
+.jump-button,
+.fullscreen-button {
   border: 0;
   border-radius: 999px;
   color: #fff;
@@ -170,10 +171,12 @@ canvas {
 }
 
 #start-button:hover,
-.jump-button:hover { background: #397365; }
+.jump-button:hover,
+.fullscreen-button:hover { background: #397365; }
 
 #start-button:active,
-.jump-button:active { transform: translateY(0.2rem); box-shadow: 0 0.1rem 0 var(--forest-dark); }
+.jump-button:active,
+.fullscreen-button:active { transform: translateY(0.2rem); box-shadow: 0 0.1rem 0 var(--forest-dark); }
 
 .controls {
   display: flex;
@@ -190,6 +193,47 @@ canvas {
   touch-action: manipulation;
   user-select: none;
   -webkit-touch-callout: none;
+}
+
+.fullscreen-button {
+  display: none;
+  min-width: 7rem;
+  padding: 0.75rem 1.2rem;
+  color: var(--forest-dark);
+  background: #fff;
+  border: 2px solid var(--forest);
+  box-shadow: 0 0.22rem 0 var(--forest-dark);
+  touch-action: manipulation;
+}
+
+.fullscreen-button:hover { color: #fff; }
+.rotate-hint { display: none; }
+
+.game-card:fullscreen,
+.game-card:-webkit-full-screen {
+  width: 100vw;
+  height: 100dvh;
+  border: 0;
+  border-radius: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: #fff;
+}
+
+.game-card:fullscreen .canvas-wrap,
+.game-card:-webkit-full-screen .canvas-wrap {
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #f8f1e8;
+}
+
+.game-card:fullscreen canvas,
+.game-card:-webkit-full-screen canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .controls p { margin: 0; color: var(--muted); font-size: 0.85rem; }
@@ -239,9 +283,28 @@ kbd {
   }
   .scoreboard strong { letter-spacing: 0.03em; }
   .controls { flex-direction: column; }
-  .controls p { display: none; }
+  .controls > p:not(.rotate-hint) { display: none; }
   .jump-button { width: min(16rem, 80%); }
+  .fullscreen-button.is-available { width: min(16rem, 80%); }
 }
+
+@media (max-width: 52rem) {
+  .fullscreen-button.is-available { display: inline-block; }
+}
+
+@media (max-width: 48rem) and (orientation: portrait) {
+  .rotate-hint {
+    display: block;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-align: center;
+  }
+  .rotate-hint span { color: var(--clay); font-size: 1.15em; font-weight: 800; }
+}
+
+.game-card:fullscreen .rotate-hint,
+.game-card:-webkit-full-screen .rotate-hint { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }

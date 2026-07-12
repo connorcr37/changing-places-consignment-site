@@ -3,6 +3,8 @@
   const ctx = canvas.getContext("2d");
   const startButton = document.getElementById("start-button");
   const jumpButton = document.getElementById("jump-button");
+  const fullscreenButton = document.getElementById("fullscreen-button");
+  const gameCard = document.querySelector(".game-card");
   const message = document.getElementById("game-message");
   const messageTitle = document.getElementById("message-title");
   const messageCopy = document.getElementById("message-copy");
@@ -25,6 +27,55 @@
     sand: "#e9dfd3",
     charcoal: "#2b2b2b",
   };
+  const sandyPropTiers = [
+    ["lamp", "art"],
+    ["chair", "plant"],
+    ["pillows", "clock"],
+    ["goose", "throne", "bathtub"],
+    ["piano", "canoe", "giraffe"],
+    ["aquarium", "jukebox", "wedding-cake"],
+    ["dining-table", "carousel", "t-rex"],
+    ["grandfather-clock", "four-poster-bed"],
+    ["hot-tub"],
+    ["motorcycle"],
+    ["food-truck"],
+    ["sailboat"],
+    ["monster-truck"],
+    ["helicopter"],
+    ["submarine"],
+    ["steam-locomotive"],
+    ["hot-air-balloon"],
+    ["rocket"],
+    ["flying-saucer"],
+    ["space-shuttle"],
+    ["moon-rover"],
+    ["satellite"],
+    ["starship"],
+    ["space-station", "moon-base", "alien-mothership", "galaxy-cruiser"],
+  ];
+  const sandyPropWidths = {
+    throne: 108, bathtub: 118, piano: 125, canoe: 140, giraffe: 105,
+    aquarium: 122, jukebox: 108, "wedding-cake": 112, "dining-table": 142,
+    carousel: 128, "t-rex": 150, "grandfather-clock": 112,
+    "four-poster-bed": 150, "hot-tub": 152, motorcycle: 142,
+    "food-truck": 180, sailboat: 182, "monster-truck": 184,
+    helicopter: 194, submarine: 190, "steam-locomotive": 204,
+    "hot-air-balloon": 164, rocket: 154, "flying-saucer": 184,
+    "space-shuttle": 204, "moon-rover": 178, satellite: 184,
+    starship: 220, "space-station": 220, "moon-base": 212,
+    "alien-mothership": 230, "galaxy-cruiser": 230,
+  };
+  const hoveringSandyProps = new Set([
+    "helicopter", "hot-air-balloon", "rocket", "flying-saucer",
+    "space-shuttle", "satellite", "starship", "space-station",
+    "alien-mothership", "galaxy-cruiser",
+  ]);
+  const illuminatedSandyProps = new Set([
+    "flying-saucer", "space-shuttle", "moon-rover", "satellite",
+    "starship", "space-station", "moon-base", "alien-mothership",
+    "galaxy-cruiser",
+  ]);
+  const reactiveSandyProps = new Set(sandyPropTiers.slice(7).flat());
 
   let state = "ready";
   let last = 0;
@@ -135,7 +186,17 @@
   function spawnObstacle() {
     const roll = Math.random();
     const customerKinds = ["old-man", "young-man", "old-woman", "young-woman", "child"];
-    if (roll < 0.38) {
+    if (roll < 0.07 && elapsed > 12) {
+      obstacles.push({
+        type: "family",
+        x: W + 40,
+        y: ground - 70,
+        w: 92,
+        h: 70,
+        palette: Math.floor(Math.random() * 4),
+        phase: Math.random() * 6,
+      });
+    } else if (roll < 0.38) {
       const variant = customerKinds[Math.floor(Math.random() * customerKinds.length)];
       const isChild = variant === "child";
       obstacles.push({
@@ -149,30 +210,11 @@
         phase: Math.random() * 6,
       });
     } else if (roll < 0.7 && !obstacles.some((item) => item.type === "sandy")) {
-      const sandyPropTiers = [
-        ["lamp", "art"],
-        ["chair", "plant"],
-        ["pillows", "clock"],
-        ["goose", "throne", "bathtub"],
-        ["piano", "canoe", "giraffe"],
-        ["aquarium", "jukebox", "wedding-cake"],
-        ["dining-table", "carousel", "t-rex"],
-      ][Math.min(sandyEncounters, 6)];
-      const propChoices = sandyPropTiers.filter((candidate) => candidate !== lastSandyProp);
+      const tierIndex = Math.min(sandyEncounters, sandyPropTiers.length - 1);
+      const tier = sandyPropTiers[tierIndex];
+      const nonRepeatingChoices = tier.filter((candidate) => candidate !== lastSandyProp);
+      const propChoices = nonRepeatingChoices.length ? nonRepeatingChoices : tier;
       const prop = propChoices[Math.floor(Math.random() * propChoices.length)];
-      const propWidths = {
-        throne: 108,
-        bathtub: 118,
-        piano: 125,
-        canoe: 140,
-        giraffe: 105,
-        aquarium: 122,
-        jukebox: 108,
-        "wedding-cake": 112,
-        "dining-table": 142,
-        carousel: 128,
-        "t-rex": 150,
-      };
       lastSandyProp = prop;
       sandyEncounters++;
       obstacles.push({
@@ -180,8 +222,9 @@
         prop,
         x: W + 40,
         y: ground - 84,
-        w: propWidths[prop] || 98,
+        w: sandyPropWidths[prop] || 98,
         h: 84,
+        tier: tierIndex,
         phase: Math.random() * 6,
       });
     } else if (roll < 0.84) {
@@ -219,7 +262,7 @@
 
   function update(dt) {
     elapsed += dt;
-    speed = Math.min(450, 270 + elapsed * 3.3);
+    speed = Math.min(480, 270 + elapsed * 3.3 + Math.min(sandyEncounters, 24) * 1.1);
     distance += speed * dt / 34;
     spawnIn -= dt;
     tagIn -= dt;
@@ -230,7 +273,8 @@
 
     if (spawnIn <= 0) {
       spawnObstacle();
-      spawnIn = Math.max(1.05, 1.65 - elapsed * 0.0035) + Math.random() * 0.75;
+      const tierPressure = Math.min(sandyEncounters, 24) * 0.004;
+      spawnIn = Math.max(0.98, 1.65 - elapsed * 0.0035 - tierPressure) + Math.random() * 0.7;
     }
     if (tagIn <= 0) {
       spawnTag();
@@ -853,6 +897,552 @@
     }
   }
 
+  function drawFamily(item) {
+    const basePalette = item.palette % 4;
+    drawCustomer({
+      x: item.x,
+      y: item.y,
+      w: 34,
+      h: 70,
+      variant: "young-man",
+      palette: basePalette,
+      phase: item.phase,
+    });
+    drawCustomer({
+      x: item.x + 58,
+      y: item.y,
+      w: 34,
+      h: 70,
+      variant: "young-woman",
+      palette: (basePalette + 2) % 4,
+      phase: item.phase + 0.9,
+    });
+    drawCustomer({
+      x: item.x + 31,
+      y: item.y + 18,
+      w: 30,
+      h: 52,
+      variant: "child",
+      palette: (basePalette + 1) % 4,
+      phase: item.phase + 1.8,
+    });
+  }
+
+  function drawSandySpectacle(prop, x, y) {
+    const wheel = (cx, cy, r = 8) => {
+      ctx.fillStyle = colors.dark;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#b9c5c8";
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.42, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    const window = (cx, cy, r = 6) => {
+      ctx.fillStyle = "#bfe2e6";
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#315f68";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    };
+    const flame = (fx, fy) => {
+      ctx.fillStyle = "#f1c15b";
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(fx - 8, fy + 15);
+      ctx.lineTo(fx + 8, fy + 15);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#d66c57";
+      ctx.beginPath();
+      ctx.moveTo(fx, fy + 3);
+      ctx.lineTo(fx - 4, fy + 13);
+      ctx.lineTo(fx + 4, fy + 13);
+      ctx.closePath();
+      ctx.fill();
+    };
+
+    switch (prop) {
+      case "grandfather-clock":
+        roundedRect(x + 8, y + 2, 49, 76, 7, "#7d5136");
+        roundedRect(x + 14, y + 9, 37, 28, 18, "#fff4d7");
+        ctx.strokeStyle = colors.dark;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x + 32, y + 23, 11, 0, Math.PI * 2);
+        ctx.moveTo(x + 32, y + 23);
+        ctx.lineTo(x + 32, y + 15);
+        ctx.moveTo(x + 32, y + 23);
+        ctx.lineTo(x + 39, y + 27);
+        ctx.stroke();
+        ctx.fillStyle = "#d5a856";
+        ctx.beginPath();
+        ctx.arc(x + 32, y + 58, 7, 0, Math.PI * 2);
+        ctx.fill();
+        return true;
+      case "four-poster-bed":
+        roundedRect(x + 5, y + 39, 112, 31, 8, "#8e6f91");
+        roundedRect(x + 12, y + 29, 105, 24, 9, "#fff5df");
+        ctx.fillStyle = "#7d5136";
+        [4, 112].forEach((px) => ctx.fillRect(x + px, y + 6, 7, 73));
+        ctx.fillRect(x + 4, y + 7, 115, 6);
+        ctx.fillStyle = "rgba(229,184,47,.35)";
+        ctx.fillRect(x + 12, y + 13, 99, 18);
+        return true;
+      case "hot-tub":
+        roundedRect(x + 2, y + 35, 120, 40, 14, "#83a7aa");
+        roundedRect(x + 8, y + 28, 108, 28, 14, "#bfe2e6");
+        ctx.fillStyle = "rgba(255,255,255,.8)";
+        [23, 47, 72, 96].forEach((bx, i) => {
+          ctx.beginPath();
+          ctx.arc(x + bx, y + 39 + (i % 2) * 5, 4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        return true;
+      case "motorcycle":
+        wheel(x + 25, y + 67, 12);
+        wheel(x + 101, y + 67, 12);
+        ctx.strokeStyle = "#b54f3f";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(x + 25, y + 67);
+        ctx.lineTo(x + 55, y + 43);
+        ctx.lineTo(x + 76, y + 67);
+        ctx.lineTo(x + 101, y + 67);
+        ctx.moveTo(x + 55, y + 43);
+        ctx.lineTo(x + 87, y + 38);
+        ctx.stroke();
+        roundedRect(x + 45, y + 32, 39, 17, 8, "#d66c57");
+        return true;
+      case "food-truck":
+        roundedRect(x - 2, y + 19, 143, 52, 8, "#d77a61");
+        roundedRect(x + 12, y + 28, 65, 27, 4, "#fff5df");
+        roundedRect(x + 90, y + 28, 36, 23, 4, "#bfe2e6");
+        ctx.fillStyle = "#fffdf6";
+        ctx.font = "700 11px Poppins, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("SNACKS", x + 45, y + 46);
+        wheel(x + 29, y + 73, 9);
+        wheel(x + 116, y + 73, 9);
+        return true;
+      case "sailboat":
+        ctx.fillStyle = "#315f91";
+        ctx.beginPath();
+        ctx.moveTo(x - 4, y + 57);
+        ctx.lineTo(x + 139, y + 57);
+        ctx.quadraticCurveTo(x + 113, y + 80, x + 27, y + 77);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#7d5136";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(x + 68, y + 7);
+        ctx.lineTo(x + 68, y + 59);
+        ctx.stroke();
+        ctx.fillStyle = "#fff5df";
+        ctx.beginPath();
+        ctx.moveTo(x + 64, y + 10);
+        ctx.lineTo(x + 13, y + 53);
+        ctx.lineTo(x + 64, y + 53);
+        ctx.closePath();
+        ctx.fill();
+        return true;
+      case "monster-truck":
+        wheel(x + 31, y + 66, 17);
+        wheel(x + 125, y + 66, 17);
+        roundedRect(x + 7, y + 31, 138, 31, 8, "#5f8f64");
+        roundedRect(x + 50, y + 14, 69, 31, 8, "#47714e");
+        roundedRect(x + 60, y + 20, 24, 17, 4, "#bfe2e6");
+        roundedRect(x + 89, y + 20, 22, 17, 4, "#bfe2e6");
+        return true;
+      case "helicopter":
+        ctx.fillStyle = "#d66c57";
+        ctx.beginPath();
+        ctx.ellipse(x + 73, y + 45, 52, 25, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x + 25, y + 42);
+        ctx.lineTo(x - 4, y + 25);
+        ctx.lineTo(x + 8, y + 53);
+        ctx.closePath();
+        ctx.fill();
+        roundedRect(x + 67, y + 28, 31, 22, 10, "#bfe2e6");
+        ctx.strokeStyle = colors.dark;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(x + 70, y + 19);
+        ctx.lineTo(x + 70, y + 8);
+        ctx.moveTo(x + 15, y + 7);
+        ctx.lineTo(x + 126, y + 7);
+        ctx.moveTo(x + 38, y + 67);
+        ctx.lineTo(x + 107, y + 67);
+        ctx.stroke();
+        return true;
+      case "submarine":
+        ctx.fillStyle = "#d5a856";
+        ctx.beginPath();
+        ctx.ellipse(x + 78, y + 49, 76, 28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        roundedRect(x + 65, y + 16, 37, 23, 7, "#c3973f");
+        ctx.fillRect(x + 83, y + 7, 7, 16);
+        [42, 72, 103].forEach((px) => window(x + px, y + 48, 6));
+        ctx.fillStyle = "#c3973f";
+        ctx.beginPath();
+        ctx.moveTo(x + 150, y + 48);
+        ctx.lineTo(x + 168, y + 32);
+        ctx.lineTo(x + 168, y + 64);
+        ctx.closePath();
+        ctx.fill();
+        return true;
+      case "steam-locomotive":
+        roundedRect(x + 26, y + 25, 118, 46, 8, "#374f47");
+        roundedRect(x + 8, y + 43, 42, 28, 8, "#2f403b");
+        roundedRect(x + 96, y + 9, 46, 42, 6, "#b54f3f");
+        ctx.fillStyle = colors.dark;
+        ctx.fillRect(x + 30, y + 7, 17, 34);
+        ctx.beginPath();
+        ctx.moveTo(x + 24, y + 8);
+        ctx.lineTo(x + 54, y + 8);
+        ctx.lineTo(x + 48, y + 1);
+        ctx.lineTo(x + 30, y + 1);
+        ctx.closePath();
+        ctx.fill();
+        [31, 75, 122].forEach((px) => wheel(x + px, y + 72, 10));
+        return true;
+      case "hot-air-balloon":
+        ctx.fillStyle = "#d66c57";
+        ctx.beginPath();
+        ctx.ellipse(x + 63, y + 28, 42, 30, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#f1c15b";
+        ctx.fillRect(x + 56, y + 1, 14, 55);
+        ctx.strokeStyle = "#7d5136";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x + 43, y + 49);
+        ctx.lineTo(x + 50, y + 68);
+        ctx.moveTo(x + 82, y + 49);
+        ctx.lineTo(x + 75, y + 68);
+        ctx.stroke();
+        roundedRect(x + 48, y + 65, 29, 16, 4, "#9b6b45");
+        return true;
+      case "rocket":
+        ctx.fillStyle = "#e8ecec";
+        ctx.beginPath();
+        ctx.moveTo(x + 65, y + 1);
+        ctx.quadraticCurveTo(x + 99, y + 25, x + 83, y + 68);
+        ctx.lineTo(x + 47, y + 68);
+        ctx.quadraticCurveTo(x + 31, y + 25, x + 65, y + 1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#d66c57";
+        ctx.beginPath();
+        ctx.moveTo(x + 47, y + 52);
+        ctx.lineTo(x + 31, y + 72);
+        ctx.lineTo(x + 50, y + 68);
+        ctx.moveTo(x + 83, y + 52);
+        ctx.lineTo(x + 99, y + 72);
+        ctx.lineTo(x + 80, y + 68);
+        ctx.fill();
+        window(x + 65, y + 33, 8);
+        flame(x + 65, y + 66);
+        return true;
+      case "flying-saucer":
+        ctx.fillStyle = "#8fa6aa";
+        ctx.beginPath();
+        ctx.ellipse(x + 80, y + 51, 79, 23, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#bfe2e6";
+        ctx.beginPath();
+        ctx.arc(x + 80, y + 42, 29, Math.PI, Math.PI * 2);
+        ctx.fill();
+        [24, 52, 80, 108, 136].forEach((px, i) => {
+          ctx.fillStyle = i % 2 ? "#d66c57" : "#f1c15b";
+          ctx.beginPath();
+          ctx.arc(x + px, y + 58, 4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        return true;
+      case "space-shuttle":
+        ctx.fillStyle = "#f0f2f2";
+        ctx.beginPath();
+        ctx.moveTo(x + 8, y + 53);
+        ctx.lineTo(x + 144, y + 20);
+        ctx.quadraticCurveTo(x + 170, y + 31, x + 146, y + 48);
+        ctx.lineTo(x + 55, y + 68);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#315f91";
+        ctx.beginPath();
+        ctx.moveTo(x + 72, y + 52);
+        ctx.lineTo(x + 42, y + 78);
+        ctx.lineTo(x + 112, y + 59);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#d66c57";
+        ctx.fillRect(x + 17, y + 48, 20, 15);
+        [127, 139, 151].forEach((px) => window(x + px, y + 34, 3));
+        return true;
+      case "moon-rover":
+        roundedRect(x + 23, y + 33, 116, 35, 8, "#d9dddd");
+        roundedRect(x + 68, y + 17, 48, 28, 7, "#bfe2e6");
+        [37, 71, 112, 141].forEach((px) => wheel(x + px, y + 70, 10));
+        ctx.strokeStyle = "#7b8f93";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x + 34, y + 34);
+        ctx.lineTo(x + 20, y + 12);
+        ctx.stroke();
+        ctx.fillStyle = "#315f91";
+        ctx.beginPath();
+        ctx.ellipse(x + 16, y + 9, 13, 5, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        return true;
+      case "satellite":
+        roundedRect(x + 63, y + 26, 48, 35, 7, "#d9dddd");
+        ctx.fillStyle = "#315f91";
+        ctx.fillRect(x + 3, y + 19, 55, 48);
+        ctx.fillRect(x + 116, y + 19, 55, 48);
+        ctx.strokeStyle = "#86b7c1";
+        ctx.lineWidth = 2;
+        [16, 30, 44, 129, 143, 157].forEach((px) => {
+          ctx.beginPath();
+          ctx.moveTo(x + px, y + 20);
+          ctx.lineTo(x + px, y + 66);
+          ctx.stroke();
+        });
+        ctx.strokeStyle = "#7b8f93";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x + 87, y + 26);
+        ctx.lineTo(x + 87, y + 8);
+        ctx.stroke();
+        return true;
+      case "starship":
+        ctx.fillStyle = "#cad4d6";
+        ctx.beginPath();
+        ctx.moveTo(x - 4, y + 47);
+        ctx.lineTo(x + 176, y + 19);
+        ctx.lineTo(x + 202, y + 42);
+        ctx.lineTo(x + 176, y + 61);
+        ctx.lineTo(x + 35, y + 68);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#6f4775";
+        ctx.beginPath();
+        ctx.moveTo(x + 70, y + 43);
+        ctx.lineTo(x + 34, y + 76);
+        ctx.lineTo(x + 131, y + 55);
+        ctx.closePath();
+        ctx.fill();
+        [150, 163, 176].forEach((px) => window(x + px, y + 39, 3));
+        return true;
+      case "space-station":
+        ctx.strokeStyle = "#a9b8bb";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(x + 27, y + 43);
+        ctx.lineTo(x + 189, y + 43);
+        ctx.moveTo(x + 108, y + 8);
+        ctx.lineTo(x + 108, y + 78);
+        ctx.stroke();
+        ctx.fillStyle = "#315f91";
+        ctx.fillRect(x + 2, y + 23, 54, 40);
+        ctx.fillRect(x + 160, y + 23, 54, 40);
+        ctx.fillStyle = "#d9dddd";
+        ctx.beginPath();
+        ctx.arc(x + 108, y + 43, 26, 0, Math.PI * 2);
+        ctx.fill();
+        [98, 108, 118].forEach((px) => window(x + px, y + 43, 3));
+        return true;
+      case "moon-base":
+        ctx.fillStyle = "#d9dddd";
+        ctx.beginPath();
+        ctx.arc(x + 54, y + 61, 43, Math.PI, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + 131, y + 61, 56, Math.PI, Math.PI * 2);
+        ctx.fill();
+        roundedRect(x + 82, y + 48, 26, 26, 4, "#7b8f93");
+        [29, 52, 77, 112, 137, 161].forEach((px) => window(x + px, y + 54, 4));
+        ctx.fillStyle = "#9b9f9f";
+        ctx.fillRect(x + 5, y + 66, 181, 10);
+        return true;
+      case "alien-mothership":
+        ctx.fillStyle = "#6f7f83";
+        ctx.beginPath();
+        ctx.ellipse(x + 109, y + 49, 108, 28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#9fc7c9";
+        ctx.beginPath();
+        ctx.ellipse(x + 109, y + 38, 61, 27, 0, Math.PI, Math.PI * 2);
+        ctx.fill();
+        [20, 48, 76, 109, 142, 170, 198].forEach((px, i) => {
+          ctx.fillStyle = i % 2 ? "#85e0a3" : "#d5a856";
+          ctx.beginPath();
+          ctx.arc(x + px, y + 59, 5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.fillStyle = "rgba(133,224,163,.25)";
+        ctx.beginPath();
+        ctx.moveTo(x + 85, y + 66);
+        ctx.lineTo(x + 65, y + 82);
+        ctx.lineTo(x + 153, y + 82);
+        ctx.lineTo(x + 133, y + 66);
+        ctx.closePath();
+        ctx.fill();
+        return true;
+      case "galaxy-cruiser":
+        roundedRect(x + 13, y + 27, 186, 43, 20, "#4f6680");
+        ctx.fillStyle = "#7f96ac";
+        ctx.beginPath();
+        ctx.moveTo(x + 199, y + 27);
+        ctx.lineTo(x + 222, y + 48);
+        ctx.lineTo(x + 199, y + 70);
+        ctx.closePath();
+        ctx.fill();
+        roundedRect(x + 55, y + 12, 87, 27, 12, "#9fc7c9");
+        [39, 67, 95, 123, 151, 179].forEach((px) => window(x + px, y + 48, 4));
+        ctx.fillStyle = "#d66c57";
+        ctx.fillRect(x + 3, y + 34, 17, 11);
+        ctx.fillStyle = "#f1c15b";
+        ctx.fillRect(x - 5, y + 52, 25, 9);
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  function drawSandyEffectUnderlay(item, x, y) {
+    ctx.save();
+    if (hoveringSandyProps.has(item.prop)) {
+      const pulse = 0.72 + Math.sin(item.phase * 0.7) * 0.12;
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = "#315f68";
+      ctx.beginPath();
+      ctx.ellipse(x + (item.w - 52) / 2, ground - 3, (item.w - 54) * pulse / 2, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (item.prop === "alien-mothership") {
+      const beamPulse = 0.17 + (Math.sin(item.phase * 0.55) + 1) * 0.06;
+      ctx.globalAlpha = beamPulse;
+      ctx.fillStyle = "#85e0a3";
+      ctx.beginPath();
+      ctx.moveTo(x + 83, y + 59);
+      ctx.lineTo(x + 48, ground);
+      ctx.lineTo(x + 170, ground);
+      ctx.lineTo(x + 135, y + 59);
+      ctx.closePath();
+      ctx.fill();
+    }
+    if (["space-shuttle", "starship", "galaxy-cruiser"].includes(item.prop)) {
+      const flicker = 8 + Math.abs(Math.sin(item.phase * 1.8)) * 10;
+      ctx.globalAlpha = 0.72;
+      ctx.fillStyle = "#f1c15b";
+      ctx.beginPath();
+      ctx.moveTo(x + 5, y + 47);
+      ctx.lineTo(x - flicker, y + 40);
+      ctx.lineTo(x + 5, y + 59);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 0.8;
+      ctx.fillStyle = "#d66c57";
+      ctx.beginPath();
+      ctx.moveTo(x + 4, y + 49);
+      ctx.lineTo(x - flicker * 0.55, y + 46);
+      ctx.lineTo(x + 4, y + 56);
+      ctx.closePath();
+      ctx.fill();
+    }
+    if (item.prop === "rocket") {
+      const flicker = 13 + Math.abs(Math.sin(item.phase * 1.8)) * 11;
+      ctx.globalAlpha = 0.75;
+      ctx.fillStyle = "#f1c15b";
+      ctx.beginPath();
+      ctx.moveTo(x + 55, y + 66);
+      ctx.lineTo(x + 65, y + 66 + flicker);
+      ctx.lineTo(x + 75, y + 66);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawSandyEffectOverlay(item, x, y) {
+    ctx.save();
+    if (item.prop === "steam-locomotive") {
+      [0, 1, 2].forEach((puff) => {
+        const rise = (item.phase * 2 + puff * 12) % 34;
+        ctx.globalAlpha = Math.max(0.12, 0.65 - rise / 48);
+        ctx.fillStyle = "#d9dddd";
+        ctx.beginPath();
+        ctx.arc(x + 39 + Math.sin(item.phase + puff) * 5, y + 2 - rise, 7 + rise * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+    if (item.prop === "helicopter") {
+      ctx.strokeStyle = "#2f403b";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      const sweep = Math.sin(item.phase * 1.7) * 48;
+      ctx.moveTo(x + 70 - sweep, y + 7);
+      ctx.lineTo(x + 70 + sweep, y + 7);
+      ctx.stroke();
+    }
+    if (item.prop === "satellite") {
+      ctx.strokeStyle = "rgba(133,224,163,.7)";
+      ctx.lineWidth = 2;
+      [10, 18, 26].forEach((radius, index) => {
+        ctx.globalAlpha = 0.25 + ((Math.sin(item.phase * 0.8 - index) + 1) * 0.25);
+        ctx.beginPath();
+        ctx.arc(x + 87, y + 8, radius, Math.PI * 1.12, Math.PI * 1.88);
+        ctx.stroke();
+      });
+    }
+    if (item.prop === "submarine") {
+      [0, 1, 2].forEach((bubble) => {
+        const drift = (item.phase * 2 + bubble * 13) % 34;
+        ctx.globalAlpha = 0.3 + bubble * 0.12;
+        ctx.strokeStyle = "#8fc9d2";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x + 168 + drift * 0.35, y + 44 - drift, 3 + bubble, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+    }
+    if (item.prop === "space-station") {
+      const orbit = item.phase * 0.45;
+      ctx.fillStyle = "#85e0a3";
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      ctx.arc(x + 108 + Math.cos(orbit) * 34, y + 43 + Math.sin(orbit) * 22, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (item.prop === "moon-base") {
+      ctx.globalAlpha = 0.35 + (Math.sin(item.phase * 0.8) + 1) * 0.3;
+      ctx.fillStyle = "#d66c57";
+      ctx.beginPath();
+      ctx.arc(x + 131, y + 24, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (illuminatedSandyProps.has(item.prop)) {
+      const lightCount = Math.max(3, Math.min(7, Math.round((item.w - 60) / 25)));
+      const usableWidth = Math.max(50, item.w - 78);
+      for (let light = 0; light < lightCount; light++) {
+        const lit = Math.sin(item.phase * 1.35 - light * 1.4) > -0.15;
+        ctx.globalAlpha = lit ? 0.95 : 0.25;
+        ctx.fillStyle = light % 2 ? "#85e0a3" : "#f1c15b";
+        ctx.beginPath();
+        ctx.arc(x + 18 + (usableWidth * light) / Math.max(1, lightCount - 1), y + 61, lit ? 3.2 : 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
   function drawSandy(item) {
     const bob = Math.sin(item.phase) * 2;
     const x = item.x + 22;
@@ -883,6 +1473,9 @@
     ctx.stroke();
 
     const propX = item.x + 52;
+    let propY = y;
+    if (hoveringSandyProps.has(item.prop)) propY += Math.sin(item.phase * 0.62) * 4 - 5;
+    if (item.prop === "monster-truck") propY -= Math.abs(Math.sin(item.phase)) * 4;
     if (item.prop === "art") {
       ctx.strokeStyle = "#8a6449";
       ctx.lineWidth = 6;
@@ -1327,6 +1920,8 @@
         ctx.arc(propX + spotX, y + spotY, 4, 0, Math.PI * 2);
         ctx.fill();
       });
+    } else if (drawSandySpectacle(item.prop, propX, propY)) {
+      // Higher tiers are drawn by the escalating spectacle renderer.
     } else {
       roundedRect(propX + 3, y + 36, 38, 31, 8, "#77958d");
       roundedRect(propX + 9, y + 17, 29, 30, 8, "#91aaa4");
@@ -1344,7 +1939,7 @@
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(x + 12, y + 39);
-    ctx.lineTo(propX + 5, y + 45);
+    ctx.lineTo(propX + 5, propY + 45);
     ctx.stroke();
   }
 
@@ -1494,8 +2089,20 @@
   function drawObstacle(item) {
     if (item.type === "shopper") {
       drawCustomer(item);
+    } else if (item.type === "family") {
+      drawFamily(item);
     } else if (item.type === "sandy") {
-      drawSandy(item);
+      if (reactiveSandyProps.has(item.prop)) {
+        const propX = item.x + 52;
+        let propY = item.y + Math.sin(item.phase) * 2;
+        if (hoveringSandyProps.has(item.prop)) propY += Math.sin(item.phase * 0.62) * 4 - 5;
+        if (item.prop === "monster-truck") propY -= Math.abs(Math.sin(item.phase)) * 4;
+        drawSandyEffectUnderlay(item, propX, propY);
+        drawSandy(item);
+        drawSandyEffectOverlay(item, propX, propY);
+      } else {
+        drawSandy(item);
+      }
     } else if (item.type === "lamp") {
       drawLampObstacle(item);
     } else if (item.type === "chair") {
@@ -1530,6 +2137,11 @@
   }
 
   function draw() {
+    const locomotive = obstacles.find((item) => item.prop === "steam-locomotive" && item.x < W && item.x + item.w > 0);
+    const tRex = obstacles.find((item) => item.prop === "t-rex" && item.x < W && item.x + item.w > 0);
+    const rumble = locomotive ? 2.6 : (tRex && Math.sin(tRex.phase) > 0.65 ? 1.2 : 0);
+    ctx.save();
+    if (rumble) ctx.translate(Math.sin(elapsed * 73) * rumble, Math.cos(elapsed * 91) * rumble * 0.55);
     drawShowroom();
     collectibles.forEach(drawTag);
     obstacles.forEach(drawObstacle);
@@ -1543,6 +2155,7 @@
       ctx.globalAlpha = 1;
     });
     drawPlayer();
+    ctx.restore();
   }
 
   function loop(now) {
@@ -1552,6 +2165,46 @@
     update(dt);
     draw();
     if (state === "running") requestAnimationFrame(loop);
+  }
+
+  function fullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement;
+  }
+
+  function updateFullscreenButton() {
+    const active = fullscreenElement() === gameCard;
+    fullscreenButton.textContent = active ? "Exit full screen" : "Full screen";
+    fullscreenButton.setAttribute("aria-pressed", String(active));
+    if (!active && screen.orientation?.unlock) screen.orientation.unlock();
+  }
+
+  async function toggleFullscreen() {
+    try {
+      if (fullscreenElement()) {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) await exit.call(document);
+        if (screen.orientation?.unlock) screen.orientation.unlock();
+      } else {
+        const enter = gameCard.requestFullscreen || gameCard.webkitRequestFullscreen;
+        if (!enter) return;
+        await enter.call(gameCard);
+        try {
+          if (screen.orientation?.lock) await screen.orientation.lock("landscape");
+        } catch (_) {
+          // Orientation lock is optional; the portrait rotation hint remains available.
+        }
+      }
+    } catch (_) {
+      // Some browsers reject fullscreen outside their supported device modes.
+    }
+    updateFullscreenButton();
+  }
+
+  if (gameCard.requestFullscreen || gameCard.webkitRequestFullscreen) {
+    fullscreenButton.classList.add("is-available");
+    fullscreenButton.addEventListener("click", toggleFullscreen);
+    document.addEventListener("fullscreenchange", updateFullscreenButton);
+    document.addEventListener("webkitfullscreenchange", updateFullscreenButton);
   }
 
   startButton.addEventListener("click", () => state === "paused" ? resume() : start());
