@@ -52,6 +52,26 @@
     ["satellite"],
     ["starship"],
     ["space-station", "moon-base", "alien-mothership", "galaxy-cruiser"],
+    ["school-bus"],
+    ["fire-truck"],
+    ["tiny-house"],
+    ["wind-turbine"],
+    ["ferris-wheel"],
+    ["lighthouse"],
+    ["castle"],
+    ["whale-aquarium"],
+    ["cruise-ship"],
+    ["dinosaur-skeleton"],
+    ["volcano-dolly"],
+    ["tornado-jar"],
+    ["thundercloud"],
+    ["time-machine"],
+    ["portal"],
+    ["mini-sun"],
+    ["saturn"],
+    ["black-hole-cart"],
+    ["friendly-kaiju"],
+    ["solar-system-mobile", "black-hole-cart", "friendly-kaiju", "saturn", "mini-sun", "portal"],
   ];
   const sandyPropWidths = {
     throne: 108, bathtub: 118, piano: 125, canoe: 140, giraffe: 105,
@@ -64,11 +84,19 @@
     "space-shuttle": 204, "moon-rover": 178, satellite: 184,
     starship: 220, "space-station": 220, "moon-base": 212,
     "alien-mothership": 230, "galaxy-cruiser": 230,
+    "school-bus": 210, "fire-truck": 220, "tiny-house": 190,
+    "wind-turbine": 150, "ferris-wheel": 210, lighthouse: 150,
+    castle: 230, "whale-aquarium": 230, "cruise-ship": 240,
+    "dinosaur-skeleton": 230, "volcano-dolly": 190, "tornado-jar": 170,
+    thundercloud: 190, "time-machine": 185, portal: 175,
+    "mini-sun": 160, saturn: 200, "black-hole-cart": 180,
+    "friendly-kaiju": 190, "solar-system-mobile": 220,
   };
   const hoveringSandyProps = new Set([
     "helicopter", "hot-air-balloon", "rocket", "flying-saucer",
     "space-shuttle", "satellite", "starship", "space-station",
     "alien-mothership", "galaxy-cruiser",
+    "thundercloud", "portal", "mini-sun", "saturn",
   ]);
   const illuminatedSandyProps = new Set([
     "flying-saucer", "space-shuttle", "moon-rover", "satellite",
@@ -76,6 +104,22 @@
     "galaxy-cruiser",
   ]);
   const reactiveSandyProps = new Set(sandyPropTiers.slice(7).flat());
+  const absurdSandyProps = new Set(sandyPropTiers.slice(24).flat());
+  const absurdPropScale = {
+    "school-bus": 1.12, "fire-truck": 1.08, "tiny-house": 1.24,
+    "wind-turbine": 1.55, "ferris-wheel": 1.12, lighthouse: 1.53,
+    castle: 1.08, "whale-aquarium": 1.1, "cruise-ship": 1.08,
+    "dinosaur-skeleton": 1.1, "volcano-dolly": 1.28, "tornado-jar": 1.32,
+    thundercloud: 1.25, "time-machine": 1.25, portal: 1.36,
+    "mini-sun": 1.45, saturn: 1.2, "black-hole-cart": 1.35,
+    "friendly-kaiju": 1.28, "solar-system-mobile": 1.18,
+  };
+
+  function sandyItemScale(tier, prop) {
+    if (tier < 24 || !absurdSandyProps.has(prop)) return 1;
+    const tierGrowth = 1 + Math.min(19, tier - 24) * 0.006;
+    return (absurdPropScale[prop] || 1) * tierGrowth;
+  }
 
   let state = "ready";
   let last = 0;
@@ -222,7 +266,7 @@
         prop,
         x: W + 40,
         y: ground - 84,
-        w: sandyPropWidths[prop] || 98,
+        w: Math.round((sandyPropWidths[prop] || 98) * sandyItemScale(tierIndex, prop)),
         h: 84,
         tier: tierIndex,
         phase: Math.random() * 6,
@@ -262,7 +306,7 @@
 
   function update(dt) {
     elapsed += dt;
-    speed = Math.min(480, 270 + elapsed * 3.3 + Math.min(sandyEncounters, 24) * 1.1);
+    speed = Math.min(500, 270 + elapsed * 3.3 + Math.min(sandyEncounters, sandyPropTiers.length) * 1.1);
     distance += speed * dt / 34;
     spawnIn -= dt;
     tagIn -= dt;
@@ -273,8 +317,8 @@
 
     if (spawnIn <= 0) {
       spawnObstacle();
-      const tierPressure = Math.min(sandyEncounters, 24) * 0.004;
-      spawnIn = Math.max(0.98, 1.65 - elapsed * 0.0035 - tierPressure) + Math.random() * 0.7;
+      const tierPressure = Math.min(sandyEncounters, sandyPropTiers.length) * 0.0035;
+      spawnIn = Math.max(0.94, 1.65 - elapsed * 0.0035 - tierPressure) + Math.random() * 0.7;
     }
     if (tagIn <= 0) {
       spawnTag();
@@ -1316,6 +1360,623 @@
     }
   }
 
+  function drawSandyAbsurdity(prop, x, y, phase) {
+    ctx.save();
+    const done = () => { ctx.restore(); return true; };
+    const wheel = (cx, cy, r = 9) => {
+      ctx.fillStyle = colors.dark;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#b9c5c8";
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    const windowPane = (px, py, w = 22, h = 16) => roundedRect(px, py, w, h, 3, "#bfe2e6");
+    const orbitDot = (cx, cy, radius, angle, size, fill) => {
+      ctx.fillStyle = fill;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius * 0.42, size, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    switch (prop) {
+      case "school-bus": {
+        roundedRect(x, y + 25, 174, 46, 8, "#e1b34f");
+        ctx.fillStyle = "#c89432";
+        ctx.fillRect(x + 7, y + 57, 165, 8);
+        [14, 42, 70, 98, 126].forEach((px, index) => {
+          windowPane(x + px, y + 32, 22, 17);
+          ctx.fillStyle = ["#6f4775", "#d66c57", "#527861"][index % 3];
+          ctx.beginPath();
+          ctx.arc(x + px + 11, y + 47, 4, Math.PI, Math.PI * 2);
+          ctx.fill();
+        });
+        roundedRect(x + 151, y + 31, 17, 28, 3, "#f6e5c9");
+        wheel(x + 35, y + 72, 11);
+        wheel(x + 139, y + 72, 11);
+        ctx.save();
+        ctx.translate(x + 8, y + 43);
+        ctx.rotate(Math.sin(phase * 0.7) * 0.25 - 0.35);
+        roundedRect(-19, -8, 21, 16, 3, "#b54f3f");
+        ctx.fillStyle = "#fff";
+        ctx.font = "700 7px Poppins";
+        ctx.textAlign = "center";
+        ctx.fillText("STOP", -9, 2);
+        ctx.restore();
+        return done();
+      }
+      case "fire-truck": {
+        roundedRect(x, y + 31, 181, 40, 7, "#c84f43");
+        roundedRect(x + 125, y + 18, 52, 46, 7, "#d66c57");
+        windowPane(x + 136, y + 25, 28, 18);
+        ctx.fillStyle = "#d9dddd";
+        ctx.fillRect(x + 14, y + 39, 91, 20);
+        ctx.strokeStyle = "#f5ead8";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(x + 15, y + 27);
+        ctx.lineTo(x + 118, y + 3 + Math.sin(phase) * 2);
+        ctx.stroke();
+        for (let rung = 0; rung < 6; rung++) {
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x + 28 + rung * 15, y + 23);
+          ctx.lineTo(x + 30 + rung * 15, y + 31);
+          ctx.stroke();
+        }
+        wheel(x + 38, y + 72, 12);
+        wheel(x + 145, y + 72, 12);
+        ["#e8f8ff", "#d66c57"].forEach((fill, index) => {
+          ctx.globalAlpha = Math.sin(phase * 1.8 + index * Math.PI) > 0 ? 1 : 0.25;
+          ctx.fillStyle = fill;
+          ctx.beginPath();
+          ctx.arc(x + 140 + index * 20, y + 14, 5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        return done();
+      }
+      case "tiny-house": {
+        roundedRect(x + 8, y + 27, 138, 49, 4, "#d7a687");
+        ctx.fillStyle = "#6f4775";
+        ctx.beginPath();
+        ctx.moveTo(x - 2, y + 31);
+        ctx.lineTo(x + 76, y - 2);
+        ctx.lineTo(x + 157, y + 31);
+        ctx.closePath();
+        ctx.fill();
+        roundedRect(x + 62, y + 47, 29, 29, 3, "#7d5136");
+        windowPane(x + 18, y + 40, 29, 22);
+        windowPane(x + 105, y + 40, 27, 22);
+        ctx.fillStyle = "#efc5a6";
+        ctx.beginPath();
+        ctx.arc(x + 118, y + 53, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#efc5a6";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x + 122, y + 55);
+        ctx.lineTo(x + 134 + Math.sin(phase) * 5, y + 45);
+        ctx.stroke();
+        wheel(x + 31, y + 78, 7);
+        wheel(x + 124, y + 78, 7);
+        return done();
+      }
+      case "wind-turbine": {
+        ctx.fillStyle = "#d9dddd";
+        ctx.beginPath();
+        ctx.moveTo(x + 60, y + 78);
+        ctx.lineTo(x + 71, y + 19);
+        ctx.lineTo(x + 79, y + 78);
+        ctx.closePath();
+        ctx.fill();
+        ctx.save();
+        ctx.translate(x + 72, y + 20);
+        ctx.rotate(phase * 0.38);
+        ctx.fillStyle = "#f5ead8";
+        for (let blade = 0; blade < 3; blade++) {
+          ctx.rotate((Math.PI * 2) / 3);
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.quadraticCurveTo(18, -9, 44, -4);
+          ctx.lineTo(12, 7);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.fillStyle = "#7b8f93";
+        ctx.beginPath();
+        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        return done();
+      }
+      case "ferris-wheel": {
+        const cx = x + 91;
+        const cy = y + 39;
+        ctx.strokeStyle = "#527861";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 48, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 2;
+        for (let spoke = 0; spoke < 8; spoke++) {
+          const angle = phase * 0.12 + spoke * Math.PI / 4;
+          const sx = cx + Math.cos(angle) * 46;
+          const sy = cy + Math.sin(angle) * 46;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(sx, sy);
+          ctx.stroke();
+          roundedRect(sx - 7, sy - 2, 14, 12, 3, spoke % 2 ? "#d66c57" : "#d5a856");
+        }
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(x + 59, y + 80);
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(x + 124, y + 80);
+        ctx.stroke();
+        return done();
+      }
+      case "lighthouse": {
+        const sweep = Math.sin(phase * 0.45) * 55;
+        ctx.globalAlpha = 0.18;
+        ctx.fillStyle = "#f8e082";
+        ctx.beginPath();
+        ctx.moveTo(x + 65, y + 18);
+        ctx.lineTo(x + 65 + sweep, y - 7);
+        ctx.lineTo(x + 65 + sweep * 1.3, y + 34);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "#f5ead8";
+        ctx.beginPath();
+        ctx.moveTo(x + 42, y + 77);
+        ctx.lineTo(x + 51, y + 18);
+        ctx.lineTo(x + 79, y + 18);
+        ctx.lineTo(x + 90, y + 77);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#c84f43";
+        [30, 54].forEach((stripe) => ctx.fillRect(x + 46 + (stripe - 30) * 0.15, y + stripe, 38 - (stripe - 30) * 0.3, 10));
+        roundedRect(x + 47, y + 7, 36, 18, 5, "#315f68");
+        ctx.fillStyle = "#7d5136";
+        ctx.beginPath();
+        ctx.moveTo(x + 42, y + 8);
+        ctx.lineTo(x + 65, y - 4);
+        ctx.lineTo(x + 88, y + 8);
+        ctx.closePath();
+        ctx.fill();
+        return done();
+      }
+      case "castle": {
+        roundedRect(x + 31, y + 31, 139, 47, 3, "#a9a6a0");
+        [5, 74, 154].forEach((tower, index) => {
+          roundedRect(x + tower, y + 18 + (index % 2) * 7, 43, 60 - (index % 2) * 7, 3, "#b9b5ad");
+          ctx.fillStyle = "#8b8780";
+          for (let tooth = 0; tooth < 3; tooth++) ctx.fillRect(x + tower + tooth * 16, y + 10 + (index % 2) * 7, 11, 12);
+        });
+        ctx.fillStyle = "#6f4775";
+        ctx.beginPath();
+        ctx.arc(x + 101, y + 78, 20, Math.PI, Math.PI * 2);
+        ctx.fill();
+        ctx.save();
+        ctx.translate(x + 101, y + 66);
+        ctx.rotate(Math.abs(Math.sin(phase * 0.45)) * 0.35);
+        roundedRect(-20, 0, 40, 12, 2, "#7d5136");
+        ctx.strokeStyle = "#5e3d2b";
+        ctx.lineWidth = 2;
+        [-12, 0, 12].forEach((plank) => {
+          ctx.beginPath();
+          ctx.moveTo(plank, 1);
+          ctx.lineTo(plank, 11);
+          ctx.stroke();
+        });
+        ctx.restore();
+        ctx.strokeStyle = "#7d5136";
+        ctx.lineWidth = 3;
+        [x + 26, x + 175].forEach((flagX, index) => {
+          ctx.beginPath();
+          ctx.moveTo(flagX, y + 12);
+          ctx.lineTo(flagX, y - 7);
+          ctx.stroke();
+          ctx.fillStyle = index ? "#d5a856" : "#d66c57";
+          ctx.beginPath();
+          ctx.moveTo(flagX, y - 7);
+          ctx.quadraticCurveTo(flagX + 14, y - 12 + Math.sin(phase) * 3, flagX + 24, y - 4);
+          ctx.lineTo(flagX, y + 2);
+          ctx.closePath();
+          ctx.fill();
+        });
+        return done();
+      }
+      case "whale-aquarium": {
+        roundedRect(x, y + 13, 189, 61, 10, "rgba(126,190,201,.48)");
+        ctx.strokeStyle = "#315f68";
+        ctx.lineWidth = 5;
+        ctx.strokeRect(x, y + 13, 189, 61);
+        ctx.fillStyle = "#547c96";
+        ctx.beginPath();
+        ctx.ellipse(x + 91, y + 48 + Math.sin(phase * 0.5) * 3, 52, 20, -0.08, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x + 42, y + 48);
+        ctx.lineTo(x + 18, y + 31);
+        ctx.lineTo(x + 22, y + 61);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#f5ead8";
+        ctx.beginPath();
+        ctx.arc(x + 121, y + 43, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#8fc9d2";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x + 119, y + 28);
+        ctx.quadraticCurveTo(x + 125, y + 4 - Math.abs(Math.sin(phase)) * 8, x + 132, y + 17);
+        ctx.moveTo(x + 125, y + 19);
+        ctx.quadraticCurveTo(x + 138, y + 1, x + 145, y + 15);
+        ctx.stroke();
+        wheel(x + 35, y + 78, 7);
+        wheel(x + 155, y + 78, 7);
+        return done();
+      }
+      case "cruise-ship": {
+        ctx.fillStyle = "#315f91";
+        ctx.beginPath();
+        ctx.moveTo(x - 4, y + 55);
+        ctx.lineTo(x + 208, y + 55);
+        ctx.lineTo(x + 184, y + 78);
+        ctx.lineTo(x + 32, y + 78);
+        ctx.closePath();
+        ctx.fill();
+        roundedRect(x + 34, y + 20, 142, 38, 5, "#f0f2f2");
+        roundedRect(x + 65, y + 4, 83, 23, 5, "#f5ead8");
+        [50, 74, 98, 122, 146].forEach((px) => windowPane(x + px, y + 30, 12, 10));
+        ctx.fillStyle = "#d66c57";
+        ctx.fillRect(x + 83, y - 6, 17, 16);
+        ctx.fillRect(x + 119, y - 6, 17, 16);
+        ctx.strokeStyle = "rgba(143,201,210,.7)";
+        ctx.lineWidth = 3;
+        for (let wave = 0; wave < 4; wave++) {
+          ctx.beginPath();
+          ctx.arc(x + 30 + wave * 50 + Math.sin(phase) * 5, y + 80, 15, Math.PI, 0);
+          ctx.stroke();
+        }
+        return done();
+      }
+      case "dinosaur-skeleton": {
+        ctx.strokeStyle = "#e7dcc5";
+        ctx.lineCap = "round";
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(x + 24, y + 39);
+        ctx.quadraticCurveTo(x + 99, y + 19, x + 171, y + 39);
+        ctx.lineTo(x + 199, y + 29);
+        ctx.moveTo(x + 88, y + 33);
+        ctx.lineTo(x + 72, y + 77);
+        ctx.moveTo(x + 119, y + 33);
+        ctx.lineTo(x + 137, y + 77);
+        ctx.stroke();
+        ctx.lineWidth = 3;
+        for (let rib = 0; rib < 6; rib++) {
+          const rx = x + 68 + rib * 16;
+          ctx.beginPath();
+          ctx.arc(rx, y + 41, 12 + (rib % 2) * 3, 0, Math.PI);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "#e7dcc5";
+        ctx.beginPath();
+        ctx.ellipse(x + 187, y + 27, 24, 13, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = colors.dark;
+        ctx.beginPath();
+        ctx.arc(x + 196, y + 23, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#7d5136";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x + 18, y + 78);
+        ctx.lineTo(x + 205, y + 78);
+        ctx.stroke();
+        return done();
+      }
+      case "volcano-dolly": {
+        ctx.fillStyle = "#6d5a4b";
+        ctx.beginPath();
+        ctx.moveTo(x + 24, y + 68);
+        ctx.lineTo(x + 70, y + 4);
+        ctx.lineTo(x + 119, y + 68);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#d66c57";
+        ctx.beginPath();
+        ctx.moveTo(x + 57, y + 20);
+        ctx.lineTo(x + 70, y + 5);
+        ctx.lineTo(x + 83, y + 20);
+        ctx.lineTo(x + 75, y + 44);
+        ctx.lineTo(x + 65, y + 30);
+        ctx.lineTo(x + 55, y + 51);
+        ctx.closePath();
+        ctx.fill();
+        roundedRect(x + 7, y + 69, 132, 8, 3, "#7d5136");
+        wheel(x + 29, y + 78, 7);
+        wheel(x + 117, y + 78, 7);
+        [0, 1, 2].forEach((puff) => {
+          const rise = (phase * 2 + puff * 12) % 31;
+          ctx.globalAlpha = 0.5 - rise / 85;
+          ctx.fillStyle = "#8b8780";
+          ctx.beginPath();
+          ctx.arc(x + 69 + Math.sin(phase + puff) * 7, y + 1 - rise, 7 + rise * 0.13, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        return done();
+      }
+      case "tornado-jar": {
+        ctx.fillStyle = "rgba(191,226,230,.28)";
+        roundedRect(x + 11, y + 1, 112, 76, 14, "rgba(191,226,230,.28)");
+        ctx.strokeStyle = "#7b8f93";
+        ctx.lineWidth = 5;
+        ctx.strokeRect(x + 11, y + 1, 112, 76);
+        ctx.fillStyle = "#315f68";
+        ctx.fillRect(x + 5, y - 3, 124, 8);
+        ctx.strokeStyle = "#a9b8bb";
+        ctx.lineWidth = 5;
+        for (let swirl = 0; swirl < 5; swirl++) {
+          const sy = y + 13 + swirl * 12;
+          const width = 46 - swirl * 6;
+          ctx.beginPath();
+          ctx.ellipse(x + 67 + Math.sin(phase * 0.8 + swirl) * 7, sy, width, 7, 0, 0, Math.PI * 1.7);
+          ctx.stroke();
+        }
+        ctx.save();
+        ctx.translate(x + 67 + Math.cos(phase) * 25, y + 39 + Math.sin(phase) * 19);
+        ctx.rotate(phase);
+        roundedRect(-8, -5, 16, 10, 2, "#8e6f91");
+        ctx.restore();
+        wheel(x + 31, y + 79, 6);
+        wheel(x + 105, y + 79, 6);
+        return done();
+      }
+      case "thundercloud": {
+        ctx.fillStyle = "#68777d";
+        [[31, 38, 27], [61, 27, 33], [95, 37, 29], [122, 42, 23], [65, 49, 39]].forEach(([cx, cy, r]) => {
+          ctx.beginPath();
+          ctx.arc(x + cx, y + cy, r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        const flash = Math.sin(phase * 1.7) > 0.62;
+        ctx.globalAlpha = flash ? 1 : 0.35;
+        ctx.fillStyle = "#f1c15b";
+        ctx.beginPath();
+        ctx.moveTo(x + 65, y + 50);
+        ctx.lineTo(x + 49, y + 70);
+        ctx.lineTo(x + 63, y + 69);
+        ctx.lineTo(x + 53, y + 84);
+        ctx.lineTo(x + 83, y + 61);
+        ctx.lineTo(x + 69, y + 62);
+        ctx.closePath();
+        ctx.fill();
+        [27, 103, 128].forEach((drop, index) => {
+          ctx.globalAlpha = 0.45;
+          ctx.strokeStyle = "#8fc9d2";
+          ctx.lineWidth = 3;
+          const drift = (phase * 5 + index * 13) % 22;
+          ctx.beginPath();
+          ctx.moveTo(x + drop, y + 55 + drift);
+          ctx.lineTo(x + drop - 4, y + 63 + drift);
+          ctx.stroke();
+        });
+        return done();
+      }
+      case "time-machine": {
+        roundedRect(x + 19, y + 3, 119, 73, 11, "#6f4775");
+        roundedRect(x + 29, y + 12, 99, 55, 7, "#d9dddd");
+        ctx.fillStyle = "#bfe2e6";
+        ctx.beginPath();
+        ctx.arc(x + 78, y + 38, 25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = colors.dark;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x + 78, y + 38, 19, 0, Math.PI * 2);
+        ctx.moveTo(x + 78, y + 38);
+        ctx.lineTo(x + 78 + Math.cos(-phase) * 15, y + 38 + Math.sin(-phase) * 15);
+        ctx.moveTo(x + 78, y + 38);
+        ctx.lineTo(x + 78 + Math.cos(-phase * 0.22) * 11, y + 38 + Math.sin(-phase * 0.22) * 11);
+        ctx.stroke();
+        [37, 119].forEach((px, index) => {
+          ctx.fillStyle = index ? "#85e0a3" : "#d66c57";
+          ctx.globalAlpha = 0.4 + (Math.sin(phase + index * Math.PI) + 1) * 0.3;
+          ctx.beginPath();
+          ctx.arc(x + px, y + 61, 5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        wheel(x + 40, y + 78, 7);
+        wheel(x + 119, y + 78, 7);
+        return done();
+      }
+      case "portal": {
+        ctx.save();
+        ctx.translate(x + 75, y + 39);
+        ctx.rotate(Math.sin(phase * 0.4) * 0.08);
+        for (let ring = 5; ring > 0; ring--) {
+          ctx.strokeStyle = ["#6f4775", "#8fc9d2", "#85e0a3"][ring % 3];
+          ctx.globalAlpha = 0.38 + ring * 0.1;
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 12 + ring * 9 + Math.sin(phase + ring) * 2, 8 + ring * 6, phase * 0.08 + ring, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "rgba(36,24,54,.72)";
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 31, 23, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(245,234,216,.46)";
+        if (Math.floor(phase / 6) % 2) {
+          roundedRect(-12, -1, 24, 16, 5, "rgba(245,234,216,.46)");
+          roundedRect(-8, -15, 17, 18, 5, "rgba(245,234,216,.46)");
+        } else {
+          ctx.fillRect(-2, -13, 4, 27);
+          ctx.beginPath();
+          ctx.moveTo(-13, -11);
+          ctx.lineTo(13, -11);
+          ctx.lineTo(8, -24);
+          ctx.lineTo(-8, -24);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+        return done();
+      }
+      case "mini-sun": {
+        ctx.save();
+        ctx.translate(x + 68, y + 39);
+        ctx.rotate(phase * 0.16);
+        ctx.strokeStyle = "rgba(241,193,91,.72)";
+        ctx.lineWidth = 6;
+        for (let ray = 0; ray < 12; ray++) {
+          ctx.rotate(Math.PI / 6);
+          const reach = 43 + Math.sin(phase + ray) * 7;
+          ctx.beginPath();
+          ctx.moveTo(32, 0);
+          ctx.lineTo(reach, 0);
+          ctx.stroke();
+        }
+        ctx.restore();
+        const gradient = ctx.createRadialGradient(x + 68, y + 39, 4, x + 68, y + 39, 35);
+        gradient.addColorStop(0, "#fff5bd");
+        gradient.addColorStop(0.45, "#f1c15b");
+        gradient.addColorStop(1, "#df8f43");
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x + 68, y + 39, 33 + Math.sin(phase * 0.7) * 2, 0, Math.PI * 2);
+        ctx.fill();
+        return done();
+      }
+      case "saturn": {
+        ctx.save();
+        ctx.translate(x + 88, y + 39);
+        ctx.rotate(-0.22);
+        ctx.strokeStyle = "#d5a856";
+        ctx.lineWidth = 11;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 77, 22, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#d7a687";
+        ctx.beginPath();
+        ctx.arc(0, 0, 34, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(138,76,54,.38)";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(0, 0, 24, -1, 1.7);
+        ctx.stroke();
+        orbitDot(0, 0, 87, phase * 0.35, 6, "#bfe2e6");
+        ctx.restore();
+        return done();
+      }
+      case "black-hole-cart": {
+        ctx.save();
+        ctx.translate(x + 84, y + 35);
+        for (let ring = 4; ring > 0; ring--) {
+          ctx.strokeStyle = ["#6f4775", "#315f91", "#d66c57", "#d5a856"][ring - 1];
+          ctx.lineWidth = 6;
+          ctx.globalAlpha = 0.45 + ring * 0.1;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, ring * 15 + 9, ring * 7 + 5, phase * 0.11 + ring * 0.45, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "#17131f";
+        ctx.beginPath();
+        ctx.arc(0, 0, 21, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.strokeStyle = "#7b8f93";
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(x + 19, y + 61);
+        ctx.lineTo(x + 140, y + 61);
+        ctx.lineTo(x + 129, y + 76);
+        ctx.lineTo(x + 45, y + 76);
+        ctx.stroke();
+        wheel(x + 48, y + 79, 7);
+        wheel(x + 126, y + 79, 7);
+        return done();
+      }
+      case "friendly-kaiju": {
+        ctx.fillStyle = "#527861";
+        ctx.beginPath();
+        ctx.moveTo(x + 29, y + 70);
+        ctx.quadraticCurveTo(x + 12, y + 34, x + 61, y + 19);
+        ctx.quadraticCurveTo(x + 106, y + 4, x + 120, y + 51);
+        ctx.lineTo(x + 151, y + 69);
+        ctx.lineTo(x + 98, y + 63);
+        ctx.lineTo(x + 89, y + 79);
+        ctx.lineTo(x + 58, y + 79);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#85a079";
+        for (let spike = 0; spike < 5; spike++) {
+          ctx.beginPath();
+          ctx.moveTo(x + 42 + spike * 14, y + 25 - Math.sin(spike) * 8);
+          ctx.lineTo(x + 48 + spike * 14, y + 6 - Math.sin(spike) * 8);
+          ctx.lineTo(x + 56 + spike * 14, y + 25 - Math.sin(spike) * 8);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.fillStyle = "#fffdf6";
+        ctx.beginPath();
+        ctx.arc(x + 94, y + 25, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = colors.dark;
+        ctx.beginPath();
+        ctx.arc(x + 96 + Math.sin(phase) * 1.5, y + 25, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#d66c57";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x + 107, y + 37, 10, 0.1, 1.1);
+        ctx.stroke();
+        return done();
+      }
+      case "solar-system-mobile": {
+        ctx.strokeStyle = "#7b8f93";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(x + 102, y - 3);
+        ctx.lineTo(x + 102, y + 77);
+        ctx.moveTo(x + 11, y + 14);
+        ctx.lineTo(x + 194, y + 14);
+        ctx.stroke();
+        const planets = [
+          [24, 10, 6, "#8fc9d2", 0.8], [55, 25, 9, "#d66c57", 1.2],
+          [91, 37, 12, "#315f91", 0.65], [129, 21, 8, "#df8f43", 1.5],
+          [169, 34, 15, "#d7a687", 0.5], [194, 47, 7, "#6f4775", 1.1],
+        ];
+        planets.forEach(([px, drop, radius, fill, sway], index) => {
+          const planetX = x + px + Math.sin(phase * sway + index) * 6;
+          ctx.strokeStyle = "#7b8f93";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x + px, y + 15);
+          ctx.lineTo(planetX, y + drop + 18);
+          ctx.stroke();
+          ctx.fillStyle = fill;
+          ctx.beginPath();
+          ctx.arc(planetX, y + drop + 18, radius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        roundedRect(x + 79, y + 75, 48, 6, 3, "#7d5136");
+        return done();
+      }
+      default:
+        ctx.restore();
+        return false;
+    }
+  }
+
   function drawSandyEffectUnderlay(item, x, y) {
     ctx.save();
     if (hoveringSandyProps.has(item.prop)) {
@@ -1428,6 +2089,88 @@
       ctx.arc(x + 131, y + 24, 5, 0, Math.PI * 2);
       ctx.fill();
     }
+    if (item.prop === "fire-truck") {
+      const spray = 18 + (Math.sin(item.phase * 0.8) + 1) * 13;
+      ctx.strokeStyle = "rgba(143,201,210,.8)";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(x + 17, y + 39);
+      ctx.quadraticCurveTo(x - 20, y + 4 - spray, x - 45, y + 47);
+      ctx.stroke();
+      for (let drop = 0; drop < 4; drop++) {
+        ctx.globalAlpha = 0.35 + drop * 0.12;
+        ctx.fillStyle = "#8fc9d2";
+        ctx.beginPath();
+        ctx.arc(x - 43 + drop * 7, y + 44 + Math.sin(item.phase + drop) * 9, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (item.prop === "cruise-ship") {
+      [0, 1].forEach((stack) => {
+        const rise = (item.phase * 1.7 + stack * 14) % 28;
+        ctx.globalAlpha = 0.48 - rise / 80;
+        ctx.fillStyle = "#a9b8bb";
+        ctx.beginPath();
+        ctx.arc(x + 92 + stack * 36 + Math.sin(item.phase + stack) * 4, y - 8 - rise, 5 + rise * 0.16, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+    if (item.prop === "time-machine") {
+      [-22, 22].forEach((offset, index) => {
+        ctx.globalAlpha = 0.12 + (Math.sin(item.phase + index * Math.PI) + 1) * 0.07;
+        ctx.strokeStyle = "#8fc9d2";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(x + 19 + offset, y + 5, 119, 70);
+        const ghostX = x - 30 + offset * 1.35;
+        ctx.fillStyle = "#8fc9d2";
+        ctx.beginPath();
+        ctx.arc(ghostX, y + 15, 13, 0, Math.PI * 2);
+        ctx.fill();
+        roundedRect(ghostX - 14, y + 29, 28, 34, 7, "#8fc9d2");
+      });
+    }
+    if (item.prop === "volcano-dolly") {
+      for (let ember = 0; ember < 3; ember++) {
+        const arc = (item.phase * 0.6 + ember * 1.8) % 5.4;
+        ctx.globalAlpha = 0.45 + ember * 0.16;
+        ctx.fillStyle = ember % 2 ? "#f1c15b" : "#d66c57";
+        ctx.beginPath();
+        ctx.arc(x + 70 + Math.cos(arc) * (14 + ember * 8), y + 3 - Math.abs(Math.sin(arc)) * (23 + ember * 7), 3 + ember, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (item.prop === "black-hole-cart") {
+      for (let tag = 0; tag < 3; tag++) {
+        const angle = -item.phase * 0.34 + tag * Math.PI * 2 / 3;
+        const radius = 51 - tag * 8;
+        ctx.save();
+        ctx.translate(x + 84 + Math.cos(angle) * radius, y + 35 + Math.sin(angle) * radius * 0.4);
+        ctx.rotate(angle);
+        ctx.globalAlpha = 0.65;
+        roundedRect(-5, -7, 10, 14, 2, "#fffdf6");
+        ctx.fillStyle = colors.clay;
+        ctx.font = "700 7px Poppins";
+        ctx.textAlign = "center";
+        ctx.fillText("$", 0, 3);
+        ctx.restore();
+      }
+    }
+    if (item.prop === "friendly-kaiju") {
+      ctx.strokeStyle = "rgba(138,76,54,.55)";
+      ctx.lineWidth = 3;
+      [11, 20, 29].forEach((radius, index) => {
+        ctx.globalAlpha = 0.7 - index * 0.16;
+        ctx.beginPath();
+        ctx.arc(x + 113, y + 42, radius, -0.55, 0.55);
+        ctx.stroke();
+      });
+      ctx.strokeStyle = "#d66c57";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x + 17, y + 39);
+      ctx.quadraticCurveTo(x + 36, y + 20, x + 66, y + 34);
+      ctx.stroke();
+    }
     if (illuminatedSandyProps.has(item.prop)) {
       const lightCount = Math.max(3, Math.min(7, Math.round((item.w - 60) / 25)));
       const usableWidth = Math.max(50, item.w - 78);
@@ -1476,6 +2219,7 @@
     let propY = y;
     if (hoveringSandyProps.has(item.prop)) propY += Math.sin(item.phase * 0.62) * 4 - 5;
     if (item.prop === "monster-truck") propY -= Math.abs(Math.sin(item.phase)) * 4;
+    if (item.prop === "dinosaur-skeleton") propY += Math.sin(item.phase * 0.55) * 2;
     if (item.prop === "art") {
       ctx.strokeStyle = "#8a6449";
       ctx.lineWidth = 6;
@@ -1922,6 +2666,13 @@
       });
     } else if (drawSandySpectacle(item.prop, propX, propY)) {
       // Higher tiers are drawn by the escalating spectacle renderer.
+    } else if (absurdSandyProps.has(item.prop)) {
+      const propScale = sandyItemScale(item.tier, item.prop);
+      ctx.save();
+      ctx.translate(propX, propY + 78);
+      ctx.scale(propScale, propScale);
+      drawSandyAbsurdity(item.prop, 0, -78, item.phase);
+      ctx.restore();
     } else {
       roundedRect(propX + 3, y + 36, 38, 31, 8, "#77958d");
       roundedRect(propX + 9, y + 17, 29, 30, 8, "#91aaa4");
@@ -2097,9 +2848,21 @@
         let propY = item.y + Math.sin(item.phase) * 2;
         if (hoveringSandyProps.has(item.prop)) propY += Math.sin(item.phase * 0.62) * 4 - 5;
         if (item.prop === "monster-truck") propY -= Math.abs(Math.sin(item.phase)) * 4;
+        if (item.prop === "dinosaur-skeleton") propY += Math.sin(item.phase * 0.55) * 2;
+        const propScale = sandyItemScale(item.tier, item.prop);
+        ctx.save();
+        ctx.translate(propX, propY + 78);
+        ctx.scale(propScale, propScale);
+        ctx.translate(-propX, -(propY + 78));
         drawSandyEffectUnderlay(item, propX, propY);
+        ctx.restore();
         drawSandy(item);
+        ctx.save();
+        ctx.translate(propX, propY + 78);
+        ctx.scale(propScale, propScale);
+        ctx.translate(-propX, -(propY + 78));
         drawSandyEffectOverlay(item, propX, propY);
+        ctx.restore();
       } else {
         drawSandy(item);
       }
@@ -2139,7 +2902,11 @@
   function draw() {
     const locomotive = obstacles.find((item) => item.prop === "steam-locomotive" && item.x < W && item.x + item.w > 0);
     const tRex = obstacles.find((item) => item.prop === "t-rex" && item.x < W && item.x + item.w > 0);
-    const rumble = locomotive ? 2.6 : (tRex && Math.sin(tRex.phase) > 0.65 ? 1.2 : 0);
+    const thundercloud = obstacles.find((item) => item.prop === "thundercloud" && item.x < W && item.x + item.w > 0);
+    const kaiju = obstacles.find((item) => item.prop === "friendly-kaiju" && item.x < W && item.x + item.w > 0);
+    const thunderFlash = thundercloud && Math.sin(thundercloud.phase * 1.7) > 0.62;
+    const kaijuStomp = kaiju && Math.sin(kaiju.phase) > 0.72;
+    const rumble = thunderFlash ? 3.2 : locomotive ? 2.6 : kaijuStomp ? 1.8 : (tRex && Math.sin(tRex.phase) > 0.65 ? 1.2 : 0);
     ctx.save();
     if (rumble) ctx.translate(Math.sin(elapsed * 73) * rumble, Math.cos(elapsed * 91) * rumble * 0.55);
     drawShowroom();
