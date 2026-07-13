@@ -143,6 +143,7 @@
   let distance = 0;
   let tagCount = 0;
   let tagPoints = 0;
+  let clearancePoints = 0;
   let sandyEncounters = 0;
   let selectedSandyTestTier = null;
   let lastSandyProp = null;
@@ -151,8 +152,10 @@
   let tagIn = 2.2;
   let helperIn = 4.5;
   let brendaIn = 10;
+  let kamdenIn = 16;
   let brenda = null;
   let brendaBoost = 0;
+  let kamden = null;
   let obstacles = [];
   let collectibles = [];
   let dust = [];
@@ -416,6 +419,12 @@
       tone(960, 1180, 0.13, "sine", 0.025, 0.07);
     } else if (kind === "brenda") {
       [0, 0.1, 0.2].forEach((delay, index) => tone(440 + index * 180, 520 + index * 210, 0.16, "triangle", 0.032, delay));
+    } else if (kind === "kamden") {
+      tone(392, 523, 0.13, "triangle", 0.022);
+      tone(523, 784, 0.16, "sine", 0.019, 0.09);
+    } else if (kind === "clearance") {
+      tone(659, 988, 0.13, "sine", 0.027);
+      tone(784, 1175, 0.15, "triangle", 0.02, 0.07);
     } else if (kind === "crash") {
       tone(145, 48, 0.38, "sawtooth", 0.052);
       tone(88, 42, 0.3, "square", 0.025, 0.05);
@@ -474,6 +483,7 @@
     distance = 0;
     tagCount = 0;
     tagPoints = 0;
+    clearancePoints = 0;
     sandyEncounters = selectedSandyTestTier === null ? 0 : selectedSandyTestTier;
     lastSandyProp = null;
     speed = 270;
@@ -481,8 +491,10 @@
     tagIn = 2;
     helperIn = 3.5 + Math.random() * 4;
     brendaIn = 9 + Math.random() * 4;
+    kamdenIn = 15 + Math.random() * 5;
     brenda = null;
     brendaBoost = 0;
+    kamden = null;
     boostStatusNode.textContent = "";
     obstacles = [];
     collectibles = [];
@@ -547,7 +559,7 @@
   function gameOver() {
     state = "over";
     playSound("crash");
-    const score = Math.floor(distance) + tagPoints;
+    const score = Math.floor(distance) + tagPoints + clearancePoints;
     if (score > best) {
       best = score;
       localStorage.setItem("couchDashBest", String(best));
@@ -556,7 +568,8 @@
     } else {
       messageTitle.textContent = "Couch traffic jam!";
     }
-    messageCopy.textContent = `Score ${score}: ${Math.floor(distance)} feet + ${tagPoints} tag bonus. You saved ${tagCount} price tag${tagCount === 1 ? "" : "s"}.`;
+    const clearanceSummary = clearancePoints ? ` + ${clearancePoints} Kamden clearance bonus` : "";
+    messageCopy.textContent = `Score ${score}: ${Math.floor(distance)} feet + ${tagPoints} tag bonus${clearanceSummary}. You saved ${tagCount} price tag${tagCount === 1 ? "" : "s"}.`;
     startButton.textContent = "Try again";
     message.hidden = false;
   }
@@ -656,8 +669,9 @@
     tagIn -= dt;
     helperIn -= dt;
     brendaIn -= dt;
+    kamdenIn -= dt;
     brendaBoost = Math.max(0, brendaBoost - dt);
-    if (brendaBoost === 0 && boostStatusNode.textContent) boostStatusNode.textContent = "";
+    if (brendaBoost === 0 && !kamden && boostStatusNode.textContent) boostStatusNode.textContent = "";
 
     if (spawnIn <= 0) {
       spawnObstacle();
@@ -682,12 +696,30 @@
       });
       helperIn = 6 + Math.random() * 8;
     }
-    if (brendaIn <= 0 && !brenda) {
+    if (kamdenIn <= 0 && !kamden && !brenda) {
+      const target = obstacles
+        .filter((item) => !item.clearance && item.x > player.x + player.w + 150)
+        .sort((a, b) => a.x - b.x)[0];
+      if (target) {
+        target.clearance = true;
+        kamden = { life: 5.5, total: 5.5, phase: 0, target };
+        playSound("kamden");
+        wallHelpers = [];
+        helperIn = Math.max(helperIn, 7);
+        brendaIn = Math.max(brendaIn, 7);
+        kamdenIn = 23 + Math.random() * 8;
+        boostStatusNode.textContent = "Kamden Clearance Run active. The marked obstacle has a smaller collision area.";
+      } else {
+        kamdenIn = 0.5;
+      }
+    }
+    if (brendaIn <= 0 && !brenda && !kamden) {
       brenda = { life: 6, total: 6, phase: 0 };
       playSound("brenda");
       brendaBoost = 6;
       wallHelpers = [];
       helperIn = Math.max(helperIn, 7);
+      kamdenIn = Math.max(kamdenIn, 7);
       boostStatusNode.textContent = "Brenda Boost active. Price tags are worth double and jumps are stronger.";
       tagIn = Math.min(tagIn, 0.55);
       brendaIn = 20 + Math.random() * 8;
@@ -701,7 +733,7 @@
       player.grounded = true;
     }
 
-    obstacles.forEach((item) => { item.x -= speed * dt; item.phase += dt * 8; });
+    obstacles.forEach((item) => { item.x -= speed * (item.clearance ? 0.88 : 1) * dt; item.phase += dt * 8; });
     collectibles.forEach((item) => { item.x -= speed * dt; item.phase += dt * 5; });
     dust.forEach((p) => { p.x += p.vx * dt; p.life -= dt; });
     wallHelpers.forEach((helper) => { helper.x -= speed * 0.32 * dt; helper.phase += dt * 4; });
@@ -710,6 +742,20 @@
       brenda.phase += dt * 8;
       if (brenda.life <= 0) brenda = null;
     }
+    if (kamden) {
+      kamden.life -= dt;
+      kamden.phase += dt * 7;
+      if (kamden.life <= 0) kamden = null;
+    }
+    obstacles.forEach((item) => {
+      if (item.clearance && !item.clearanceAwarded && item.x + item.w < player.x + 36) {
+        item.clearanceAwarded = true;
+        item.clearance = false;
+        clearancePoints += 75;
+        playSound("clearance");
+        if (kamden?.target === item) kamden.target = null;
+      }
+    });
     obstacles = obstacles.filter((item) => item.x + item.w > -20);
     collectibles = collectibles.filter((item) => {
       if (intersects(player, item, 18)) {
@@ -727,12 +773,18 @@
     // Keep collisions centered on the couch instead of its decorative edges and
     // movers. This gives the long sprite a fair, readable clearance window.
     const hitbox = { x: player.x + 36, y: player.y + 14, w: player.w - 72, h: 56 };
-    if (obstacles.some((item) => intersects(hitbox, item, 10))) gameOver();
+    if (obstacles.some((item) => {
+      if (!item.clearance) return intersects(hitbox, item, 10);
+      const shrinkX = item.w * 0.1;
+      const shrinkY = item.h * 0.1;
+      const clearanceHitbox = { x: item.x + shrinkX, y: item.y + shrinkY, w: item.w - shrinkX * 2, h: item.h - shrinkY * 2 };
+      return intersects(hitbox, clearanceHitbox, 10);
+    })) gameOver();
     updateScore();
   }
 
   function updateScore() {
-    scoreNode.textContent = String(Math.floor(distance) + tagPoints).padStart(5, "0");
+    scoreNode.textContent = String(Math.floor(distance) + tagPoints + clearancePoints).padStart(5, "0");
     tagsNode.textContent = brendaBoost > 0 ? `${tagCount} ×2` : String(tagCount);
   }
 
@@ -1085,6 +1137,127 @@
     roundedRect(x - 16 + wave * 0.2, base - 5, 12, 6, 2, "#e8c6a6");
     roundedRect(x + 6 - wave * 0.2, base - 5, 12, 6, 2, "#e8c6a6");
     ctx.restore();
+    ctx.restore();
+  }
+
+  function drawKamden() {
+    if (!kamden) return;
+    const enter = Math.min(1, (kamden.total - kamden.life) / 0.45);
+    const exit = kamden.life < 0.55 ? 1 - kamden.life / 0.55 : 0;
+    const eased = 1 - Math.pow(1 - enter, 3);
+    const x = W - 82 + (1 - eased) * 125 + exit * 130;
+    const base = ground;
+    const bob = Math.sin(kamden.phase) * 1.5;
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, enter * 1.5, kamden.life * 2);
+
+    drawSpeechBubble(x - 264, 130, 242, 66, x - 9, base - 83);
+    ctx.fillStyle = colors.clay;
+    ctx.font = "800 15px Poppins, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("I'LL MAKE SOME ROOM!", x - 143, 158);
+    ctx.fillStyle = colors.dark;
+    ctx.font = "700 11px Poppins, sans-serif";
+    ctx.fillText("KAMDEN CLEARANCE · +75", x - 143, 180);
+
+    // Long dark hair and a black shirt echo Kamden's portrait while the bright
+    // green pricing gun gives her an unmistakable gameplay silhouette.
+    ctx.fillStyle = "#181719";
+    ctx.beginPath();
+    ctx.arc(x, base - 71 + bob, 18, Math.PI, Math.PI * 2);
+    ctx.fill();
+    roundedRect(x - 18, base - 73 + bob, 8, 42, 4, "#181719");
+    roundedRect(x + 10, base - 73 + bob, 8, 42, 4, "#181719");
+
+    ctx.fillStyle = "#efc5a6";
+    ctx.beginPath();
+    ctx.arc(x, base - 67 + bob, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#332b28";
+    ctx.beginPath();
+    ctx.arc(x - 5, base - 69 + bob, 1.4, 0, Math.PI * 2);
+    ctx.arc(x + 5, base - 69 + bob, 1.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#8a4c36";
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(x, base - 63 + bob, 5, 0.15, Math.PI - 0.15);
+    ctx.stroke();
+
+    roundedRect(x - 17, base - 52 + bob, 34, 35, 8, "#202124");
+    ctx.strokeStyle = "#315f91";
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x - 7, base - 18);
+    ctx.lineTo(x - 10, base - 2);
+    ctx.moveTo(x + 7, base - 18);
+    ctx.lineTo(x + 11, base - 2);
+    ctx.stroke();
+
+    // Kamden aims the pricing gun toward the marked obstacle.
+    ctx.strokeStyle = "#efc5a6";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(x - 13, base - 44 + bob);
+    ctx.lineTo(x - 34, base - 50 + bob);
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(x - 43, base - 52 + bob);
+    ctx.rotate(-0.08);
+    roundedRect(-14, -8, 27, 16, 4, "#3f8a5b");
+    ctx.fillStyle = "#2e6f48";
+    ctx.fillRect(-20, -4, 8, 8);
+    ctx.beginPath();
+    ctx.moveTo(1, 7);
+    ctx.lineTo(10, 7);
+    ctx.lineTo(6, 19);
+    ctx.lineTo(-2, 19);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#d9f0df";
+    ctx.fillRect(-7, -3, 12, 6);
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function drawKamdenClearanceGuide() {
+    const target = obstacles.find((item) => item.clearance);
+    if (!target) return;
+    const guideX = player.x + player.w + 92;
+    const pulse = 0.55 + (Math.sin(elapsed * 7) + 1) * 0.18;
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.strokeStyle = "#3f8a5b";
+    ctx.fillStyle = "#3f8a5b";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath();
+    ctx.moveTo(guideX, ground - 66);
+    ctx.lineTo(guideX, ground);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    roundedRect(guideX - 31, ground - 20, 62, 17, 8, "rgba(63,138,91,.2)");
+    ctx.globalAlpha = 0.92;
+    ctx.font = "800 10px Poppins, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("JUMP", guideX, ground - 8);
+    ctx.restore();
+  }
+
+  function drawKamdenClearanceSticker(item) {
+    if (!item.clearance) return;
+    const stickerX = item.x + item.w * 0.58;
+    const stickerY = Math.max(45, item.y + 13);
+    ctx.save();
+    ctx.translate(stickerX, stickerY);
+    ctx.rotate(-0.1 + Math.sin(item.phase * 0.25) * 0.035);
+    roundedRect(-31, -11, 62, 22, 5, "#3f8a5b");
+    ctx.fillStyle = "#fffdf6";
+    ctx.font = "800 8px Poppins, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("CLEARANCE", 0, 3);
     ctx.restore();
   }
 
@@ -3537,8 +3710,11 @@
     ctx.save();
     if (rumble) ctx.translate(Math.sin(elapsed * 73) * rumble, Math.cos(elapsed * 91) * rumble * 0.55);
     drawShowroom();
+    drawKamdenClearanceGuide();
     collectibles.forEach(drawTag);
     obstacles.forEach(drawObstacle);
+    obstacles.forEach(drawKamdenClearanceSticker);
+    drawKamden();
     drawBrenda();
     dust.forEach((p) => {
       ctx.globalAlpha = Math.max(0, p.life * 1.8);
