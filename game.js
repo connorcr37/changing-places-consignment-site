@@ -5,6 +5,9 @@
   const jumpButton = document.getElementById("jump-button");
   const fullscreenButton = document.getElementById("fullscreen-button");
   const soundButton = document.getElementById("sound-button");
+  const crewOpenButton = document.getElementById("crew-open");
+  const crewModal = document.getElementById("crew-modal");
+  const crewCloseButton = document.getElementById("crew-close");
   const gameCard = document.querySelector(".game-card");
   const message = document.getElementById("game-message");
   const messageTitle = document.getElementById("message-title");
@@ -16,6 +19,7 @@
   const testPanel = document.getElementById("test-panel");
   const tierTestButtons = document.getElementById("tier-test-buttons");
   const testStatus = document.getElementById("test-status");
+  const characterTestStatus = document.getElementById("character-test-status");
   const radioTestStatus = document.getElementById("radio-test-status");
   const testMode = new URLSearchParams(location.search).has("test");
 
@@ -387,6 +391,12 @@
     });
   }
 
+  function updateCharacterTestControls(activeCharacter = null) {
+    testPanel.querySelectorAll("[data-test-character]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.testCharacter === activeCharacter));
+    });
+  }
+
   function updateSandyTestControls() {
     testPanel.querySelectorAll("[data-test-tier]").forEach((button) => {
       button.setAttribute("aria-pressed", String(Number(button.dataset.testTier) - 1 === selectedSandyTestTier));
@@ -655,6 +665,53 @@
     collectibles.push({ x: W + 40, y: ground - 135 - Math.random() * 80, w: 30, h: 42, phase: Math.random() * 6 });
   }
 
+  function activateKamden(forceTarget = false) {
+    if (kamden || brenda) return false;
+    let target = obstacles
+      .filter((item) => !item.clearance && item.x > player.x + player.w + 150)
+      .sort((a, b) => a.x - b.x)[0];
+    if (!target && forceTarget) {
+      target = {
+        type: "chair", variant: "armchair", color: "#62806f",
+        x: Math.min(W * 0.68, W - 220), y: ground - 60, w: 72, h: 60, phase: 0,
+      };
+      obstacles.push(target);
+    }
+    if (!target) return false;
+    target.clearance = true;
+    kamden = { life: 5.5, total: 5.5, phase: 0, target };
+    playSound("kamden");
+    wallHelpers = [];
+    helperIn = Math.max(helperIn, 7);
+    brendaIn = Math.max(brendaIn, 7);
+    kamdenIn = 23 + Math.random() * 8;
+    boostStatusNode.textContent = "Kamden Clearance Run active. The marked obstacle has a smaller collision area.";
+    return true;
+  }
+
+  function activateBrenda() {
+    if (brenda || kamden) return false;
+    brenda = { life: 6, total: 6, phase: 0 };
+    playSound("brenda");
+    brendaBoost = 6;
+    wallHelpers = [];
+    helperIn = Math.max(helperIn, 7);
+    kamdenIn = Math.max(kamdenIn, 7);
+    boostStatusNode.textContent = "Brenda Boost active. Price tags are worth double and jumps are stronger.";
+    tagIn = Math.min(tagIn, 0.55);
+    brendaIn = 20 + Math.random() * 8;
+    return true;
+  }
+
+  function clearCharacterMoments() {
+    brenda = null;
+    brendaBoost = 0;
+    kamden = null;
+    obstacles.forEach((item) => { item.clearance = false; });
+    boostStatusNode.textContent = "";
+    updateScore();
+  }
+
   function intersects(a, b, inset = 0) {
     return a.x + inset < b.x + b.w && a.x + a.w - inset > b.x && a.y + inset < b.y + b.h && a.y + a.h - inset > b.y;
   }
@@ -697,32 +754,10 @@
       helperIn = 6 + Math.random() * 8;
     }
     if (kamdenIn <= 0 && !kamden && !brenda) {
-      const target = obstacles
-        .filter((item) => !item.clearance && item.x > player.x + player.w + 150)
-        .sort((a, b) => a.x - b.x)[0];
-      if (target) {
-        target.clearance = true;
-        kamden = { life: 5.5, total: 5.5, phase: 0, target };
-        playSound("kamden");
-        wallHelpers = [];
-        helperIn = Math.max(helperIn, 7);
-        brendaIn = Math.max(brendaIn, 7);
-        kamdenIn = 23 + Math.random() * 8;
-        boostStatusNode.textContent = "Kamden Clearance Run active. The marked obstacle has a smaller collision area.";
-      } else {
-        kamdenIn = 0.5;
-      }
+      if (!activateKamden()) kamdenIn = 0.5;
     }
     if (brendaIn <= 0 && !brenda && !kamden) {
-      brenda = { life: 6, total: 6, phase: 0 };
-      playSound("brenda");
-      brendaBoost = 6;
-      wallHelpers = [];
-      helperIn = Math.max(helperIn, 7);
-      kamdenIn = Math.max(kamdenIn, 7);
-      boostStatusNode.textContent = "Brenda Boost active. Price tags are worth double and jumps are stronger.";
-      tagIn = Math.min(tagIn, 0.55);
-      brendaIn = 20 + Math.random() * 8;
+      activateBrenda();
     }
 
     player.vy += gravity * dt;
@@ -1206,6 +1241,7 @@
     ctx.save();
     ctx.translate(x - 43, base - 52 + bob);
     ctx.rotate(-0.08);
+    ctx.scale(0.8, 0.8);
     roundedRect(-14, -8, 27, 16, 4, "#3f8a5b");
     ctx.fillStyle = "#2e6f48";
     ctx.fillRect(-20, -4, 8, 8);
@@ -1219,30 +1255,6 @@
     ctx.fillStyle = "#d9f0df";
     ctx.fillRect(-7, -3, 12, 6);
     ctx.restore();
-    ctx.restore();
-  }
-
-  function drawKamdenClearanceGuide() {
-    const target = obstacles.find((item) => item.clearance);
-    if (!target) return;
-    const guideX = player.x + player.w + 92;
-    const pulse = 0.55 + (Math.sin(elapsed * 7) + 1) * 0.18;
-    ctx.save();
-    ctx.globalAlpha = pulse;
-    ctx.strokeStyle = "#3f8a5b";
-    ctx.fillStyle = "#3f8a5b";
-    ctx.lineWidth = 3;
-    ctx.setLineDash([6, 5]);
-    ctx.beginPath();
-    ctx.moveTo(guideX, ground - 66);
-    ctx.lineTo(guideX, ground);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    roundedRect(guideX - 31, ground - 20, 62, 17, 8, "rgba(63,138,91,.2)");
-    ctx.globalAlpha = 0.92;
-    ctx.font = "800 10px Poppins, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("JUMP", guideX, ground - 8);
     ctx.restore();
   }
 
@@ -3710,7 +3722,6 @@
     ctx.save();
     if (rumble) ctx.translate(Math.sin(elapsed * 73) * rumble, Math.cos(elapsed * 91) * rumble * 0.55);
     drawShowroom();
-    drawKamdenClearanceGuide();
     collectibles.forEach(drawTag);
     obstacles.forEach(drawObstacle);
     obstacles.forEach(drawKamdenClearanceSticker);
@@ -3780,6 +3791,33 @@
 
   soundButton.addEventListener("click", toggleSound);
 
+  function openCrewModal() {
+    pause();
+    crewModal.hidden = false;
+    crewCloseButton.focus();
+  }
+
+  function closeCrewModal() {
+    if (crewModal.hidden) return;
+    crewModal.hidden = true;
+    crewOpenButton.focus();
+  }
+
+  crewOpenButton.addEventListener("click", openCrewModal);
+  crewCloseButton.addEventListener("click", closeCrewModal);
+  crewModal.addEventListener("click", (event) => {
+    if (event.target === crewModal) closeCrewModal();
+  });
+  crewModal.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeCrewModal();
+    } else if (event.key === "Tab") {
+      event.preventDefault();
+      crewCloseButton.focus();
+    }
+  });
+
   console.info("Couch Dash tester: append '?test' to the URL to open the tier and shop radio controls.");
 
   if (testMode) {
@@ -3794,8 +3832,26 @@
       tierTestButtons.append(button);
     });
     updateSandyTestControls();
+    updateCharacterTestControls();
     updateRadioTestControls();
     testPanel.addEventListener("click", (event) => {
+      const characterButton = event.target.closest("[data-test-character]");
+      if (characterButton) {
+        if (state !== "running") start();
+        clearCharacterMoments();
+        obstacles = [];
+        collectibles = [];
+        spawnIn = 2.2;
+        if (characterButton.dataset.testCharacter === "brenda") {
+          activateBrenda();
+          characterTestStatus.textContent = "Her energy powers higher jumps and doubles every tag's value.";
+        } else {
+          activateKamden(true);
+          characterTestStatus.textContent = "Her green pricing gun reduces an obstacle's speed and hitbox, with a +75 bonus.";
+        }
+        updateCharacterTestControls(characterButton.dataset.testCharacter);
+        return;
+      }
       const radioButton = event.target.closest("[data-test-radio]");
       if (radioButton) {
         selectShopRadio(radioButton.dataset.testRadio);
