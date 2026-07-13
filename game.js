@@ -178,15 +178,22 @@
   let wallHelpers = [];
   let best = Number(localStorage.getItem("couchDashBest") || 0);
   const player = { x: 112, y: ground - 88, w: 190, h: 88, vy: 0, grounded: true };
+  const playerCollisionBox = { x: 0, y: 0, w: 0, h: 0 };
+  const clearanceCollisionBox = { x: 0, y: 0, w: 0, h: 0 };
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  const musicSilence = 0.00001;
   let soundEnabled = localStorage.getItem("couchDashSound") !== "off";
   let audioContext = null;
   let audioMasterGain = null;
   let audioLimiter = null;
   let noiseBuffer = null;
+  let musicEngine = null;
   let musicTimer = null;
+  let musicSessionStarted = false;
   let musicStep = 0;
   let nextMusicTime = 0;
+  let displayedScore = -1;
+  let displayedTags = "";
   const shopRadios = {
     boardwalk: {
       name: "Boardwalk Beat",
@@ -272,6 +279,7 @@
     audioMasterGain = null;
     audioLimiter = null;
     noiseBuffer = null;
+    musicEngine = null;
     if (!closingMaster) {
       closingAudio.close().catch(() => {});
       return;
@@ -294,6 +302,10 @@
     gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
     oscillator.connect(gain);
     gain.connect(audioOutput(audio));
+    oscillator.addEventListener("ended", () => {
+      oscillator.disconnect();
+      gain.disconnect();
+    }, { once: true });
     oscillator.start(startAt);
     oscillator.stop(startAt + duration + 0.02);
   }
@@ -308,33 +320,98 @@
     return 440 * Math.pow(2, (note - 69) / 12);
   }
 
-  function scheduleNoiseAt(audio, startAt, duration, volume, highpass) {
-    if (!noiseBuffer) return;
-    const source = audio.createBufferSource();
+  function createMusicVoice(audio, type) {
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(440, audio.currentTime);
+    gain.gain.setValueAtTime(musicSilence, audio.currentTime);
+    oscillator.connect(gain);
+    gain.connect(audioOutput(audio));
+    oscillator.start();
+    return { oscillator, gain };
+  }
+
+  function createMusicNoiseChannel(audio, source, highpass) {
+    const gain = audio.createGain();
     const highpassFilter = audio.createBiquadFilter();
     const lowpassFilter = audio.createBiquadFilter();
-    const gain = audio.createGain();
-    source.buffer = noiseBuffer;
+    gain.gain.setValueAtTime(0, audio.currentTime);
     highpassFilter.type = "highpass";
-    highpassFilter.frequency.setValueAtTime(highpass, startAt);
-    highpassFilter.Q.setValueAtTime(0.7, startAt);
+    highpassFilter.frequency.setValueAtTime(highpass, audio.currentTime);
+    highpassFilter.Q.setValueAtTime(0.7, audio.currentTime);
     lowpassFilter.type = "lowpass";
-    lowpassFilter.frequency.setValueAtTime(6500, startAt);
-    lowpassFilter.Q.setValueAtTime(0.55, startAt);
-    const attack = Math.min(0.012, duration * 0.3);
-    gain.gain.setValueAtTime(0, startAt);
-    gain.gain.linearRampToValueAtTime(volume, startAt + attack);
-    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
-    gain.gain.linearRampToValueAtTime(0, startAt + duration + 0.008);
-    source.connect(highpassFilter);
+    lowpassFilter.frequency.setValueAtTime(6500, audio.currentTime);
+    lowpassFilter.Q.setValueAtTime(0.55, audio.currentTime);
+    source.connect(gain);
+    gain.connect(highpassFilter);
     highpassFilter.connect(lowpassFilter);
-    lowpassFilter.connect(gain);
-    gain.connect(audioOutput(audio));
-    source.start(startAt, Math.random() * 0.7);
-    source.stop(startAt + duration + 0.012);
+    lowpassFilter.connect(audioOutput(audio));
+    return { gain };
+  }
+
+  function ensureMusicEngine(audio) {
+    if (musicEngine?.audio === audio) return musicEngine;
+    if (!noiseBuffer) return null;
+    const station = shopRadios[activeRadio];
+    const noiseSource = audio.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+    noiseSource.loop = true;
+    musicEngine = {
+      audio,
+      bass: createMusicVoice(audio, station.bassType),
+      chords: [
+        createMusicVoice(audio, station.chordType),
+        createMusicVoice(audio, station.chordType),
+        createMusicVoice(audio, station.chordType),
+      ],
+      melody: createMusicVoice(audio, station.melodyType),
+      kick: createMusicVoice(audio, "sine"),
+      noiseSource,
+      hat: null,
+      snare: null,
+    };
+    musicEngine.hat = createMusicNoiseChannel(audio, noiseSource, 3200);
+    musicEngine.snare = createMusicNoiseChannel(audio, noiseSource, 1200);
+    noiseSource.start(audio.currentTime, Math.random() * 0.7);
+    return musicEngine;
+  }
+
+  function scheduleMusicToneAt(voice, startAt, frequency, endFrequency, duration, volume) {
+    voice.oscillator.frequency.setValueAtTime(frequency, startAt);
+    voice.oscillator.frequency.exponentialRampToValueAtTime(Math.max(24, endFrequency), startAt + duration);
+    voice.gain.gain.setValueAtTime(musicSilence, startAt);
+    voice.gain.gain.exponentialRampToValueAtTime(volume, startAt + Math.min(0.015, duration * 0.2));
+    voice.gain.gain.exponentialRampToValueAtTime(musicSilence, startAt + duration);
+  }
+
+  function scheduleMusicNoiseAt(channel, startAt, duration, volume) {
+    const attack = Math.min(0.012, duration * 0.3);
+    channel.gain.gain.setValueAtTime(0, startAt);
+    channel.gain.gain.linearRampToValueAtTime(volume, startAt + attack);
+    channel.gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    channel.gain.gain.linearRampToValueAtTime(0, startAt + duration + 0.008);
+  }
+
+  function silenceMusicEngine() {
+    if (!musicEngine) return;
+    const now = musicEngine.audio.currentTime;
+    const voices = [musicEngine.bass, ...musicEngine.chords, musicEngine.melody, musicEngine.kick];
+    for (let index = 0; index < voices.length; index++) {
+      const voice = voices[index];
+      voice.oscillator.frequency.cancelScheduledValues(now);
+      voice.gain.gain.cancelScheduledValues(now);
+      voice.gain.gain.setTargetAtTime(musicSilence, now, 0.006);
+    }
+    [musicEngine.hat, musicEngine.snare].forEach((channel) => {
+      channel.gain.gain.cancelScheduledValues(now);
+      channel.gain.gain.setTargetAtTime(0, now, 0.006);
+    });
   }
 
   function scheduleMusicStep(audio, step, startAt) {
+    const engine = ensureMusicEngine(audio);
+    if (!engine) return;
     const station = shopRadios[activeRadio];
     const bar = Math.floor(step / 8);
     const beat = step % 8;
@@ -342,23 +419,23 @@
     if (beat % 2 === 0) {
       const bassNote = station.bass[bar] + (beat === 4 ? 7 : 0);
       const bassFrequency = noteFrequency(bassNote);
-      scheduleToneAt(audio, startAt, bassFrequency, bassFrequency * 0.985, 0.3, station.bassType, station.bassVolume);
+      scheduleMusicToneAt(engine.bass, startAt, bassFrequency, bassFrequency * 0.985, 0.3, station.bassVolume);
     }
     if (station.plucks.includes(beat)) {
-      chord.slice(0, 3).forEach((note, index) => {
-        const frequency = noteFrequency(note + 12);
-        scheduleToneAt(audio, startAt + index * 0.012, frequency, frequency * 0.995, 0.18, station.chordType, station.chordVolume);
-      });
+      for (let index = 0; index < 3; index++) {
+        const frequency = noteFrequency(chord[index] + 12);
+        scheduleMusicToneAt(engine.chords[index], startAt + index * 0.012, frequency, frequency * 0.995, 0.18, station.chordVolume);
+      }
     }
     if (beat % 2 === 1) {
-      scheduleNoiseAt(audio, startAt, 0.055, 0.00075, 3200);
+      scheduleMusicNoiseAt(engine.hat, startAt, 0.055, 0.00075);
     }
-    if (station.kick.includes(beat)) scheduleToneAt(audio, startAt, 82, 44, 0.12, "sine", 0.013);
-    if (station.snare.includes(beat)) scheduleNoiseAt(audio, startAt, 0.11, 0.0038, 1200);
+    if (station.kick.includes(beat)) scheduleMusicToneAt(engine.kick, startAt, 82, 44, 0.12, 0.013);
+    if (station.snare.includes(beat)) scheduleMusicNoiseAt(engine.snare, startAt, 0.11, 0.0038);
     const melodyNote = station.melody[step];
     if (melodyNote) {
       const melodyFrequency = noteFrequency(melodyNote);
-      scheduleToneAt(audio, startAt, melodyFrequency, melodyFrequency * 1.006, 0.19, station.melodyType, station.melodyVolume);
+      scheduleMusicToneAt(engine.melody, startAt, melodyFrequency, melodyFrequency * 1.006, 0.19, station.melodyVolume);
     }
   }
 
@@ -383,7 +460,15 @@
 
   function startMusic() {
     const audio = ensureAudio();
-    if (!audio || musicTimer) return;
+    if (!audio) return;
+    musicSessionStarted = true;
+    if (musicTimer || document.hidden) return;
+    if (audio.state !== "running") {
+      audio.resume().then(() => {
+        if (audio === audioContext && soundEnabled && !document.hidden && !musicTimer) startMusic();
+      }).catch(() => {});
+      return;
+    }
     musicStep = 0;
     nextMusicTime = audio.currentTime + 0.06;
     pumpMusic();
@@ -391,9 +476,11 @@
   }
 
   function stopMusic() {
-    if (!musicTimer) return;
-    clearInterval(musicTimer);
-    musicTimer = null;
+    if (musicTimer) {
+      clearInterval(musicTimer);
+      musicTimer = null;
+    }
+    silenceMusicEngine();
   }
 
   function updateRadioTestControls() {
@@ -796,10 +883,54 @@
       player.grounded = true;
     }
 
-    obstacles.forEach((item) => { item.x -= speed * (item.clearance ? 0.88 : 1) * dt; item.phase += dt * 8; });
-    collectibles.forEach((item) => { item.x -= speed * dt; item.phase += dt * 5; });
-    dust.forEach((p) => { p.x += p.vx * dt; p.life -= dt; });
-    wallHelpers.forEach((helper) => { helper.x -= speed * 0.32 * dt; helper.phase += dt * 4; });
+    let writeIndex = 0;
+    for (let index = 0; index < obstacles.length; index++) {
+      const item = obstacles[index];
+      item.x -= speed * (item.clearance ? 0.88 : 1) * dt;
+      item.phase += dt * 8;
+      if (item.clearance && !item.clearanceAwarded && item.x + item.w < player.x + 36) {
+        item.clearanceAwarded = true;
+        item.clearance = false;
+        clearancePoints += 75;
+        playSound("clearance");
+        if (kamden?.target === item) kamden.target = null;
+      }
+      if (item.x + item.w > -20) obstacles[writeIndex++] = item;
+    }
+    obstacles.length = writeIndex;
+
+    writeIndex = 0;
+    for (let index = 0; index < collectibles.length; index++) {
+      const item = collectibles[index];
+      item.x -= speed * dt;
+      item.phase += dt * 5;
+      if (intersects(player, item, 18)) {
+        tagCount++;
+        tagPoints += brendaBoost > 0 ? 100 : 50;
+        playSound("tag");
+      } else if (item.x + item.w > -20) {
+        collectibles[writeIndex++] = item;
+      }
+    }
+    collectibles.length = writeIndex;
+
+    writeIndex = 0;
+    for (let index = 0; index < dust.length; index++) {
+      const particle = dust[index];
+      particle.x += particle.vx * dt;
+      particle.life -= dt;
+      if (particle.life > 0) dust[writeIndex++] = particle;
+    }
+    dust.length = writeIndex;
+
+    writeIndex = 0;
+    for (let index = 0; index < wallHelpers.length; index++) {
+      const helper = wallHelpers[index];
+      helper.x -= speed * 0.32 * dt;
+      helper.phase += dt * 4;
+      if (helper.x > -100) wallHelpers[writeIndex++] = helper;
+    }
+    wallHelpers.length = writeIndex;
     if (brenda) {
       brenda.life -= dt;
       brenda.phase += dt * 8;
@@ -810,45 +941,45 @@
       kamden.phase += dt * 7;
       if (kamden.life <= 0) kamden = null;
     }
-    obstacles.forEach((item) => {
-      if (item.clearance && !item.clearanceAwarded && item.x + item.w < player.x + 36) {
-        item.clearanceAwarded = true;
-        item.clearance = false;
-        clearancePoints += 75;
-        playSound("clearance");
-        if (kamden?.target === item) kamden.target = null;
-      }
-    });
-    obstacles = obstacles.filter((item) => item.x + item.w > -20);
-    collectibles = collectibles.filter((item) => {
-      if (intersects(player, item, 18)) {
-        tagCount++;
-        tagPoints += brendaBoost > 0 ? 100 : 50;
-        playSound("tag");
-        updateScore();
-        return false;
-      }
-      return item.x + item.w > -20;
-    });
-    dust = dust.filter((p) => p.life > 0);
-    wallHelpers = wallHelpers.filter((helper) => helper.x > -100);
-
     // Keep collisions centered on the couch instead of its decorative edges and
     // movers. This gives the long sprite a fair, readable clearance window.
-    const hitbox = { x: player.x + 36, y: player.y + 14, w: player.w - 72, h: 56 };
-    if (obstacles.some((item) => {
-      if (!item.clearance) return intersects(hitbox, item, 10);
-      const shrinkX = item.w * 0.1;
-      const shrinkY = item.h * 0.1;
-      const clearanceHitbox = { x: item.x + shrinkX, y: item.y + shrinkY, w: item.w - shrinkX * 2, h: item.h - shrinkY * 2 };
-      return intersects(hitbox, clearanceHitbox, 10);
-    })) gameOver();
+    playerCollisionBox.x = player.x + 36;
+    playerCollisionBox.y = player.y + 14;
+    playerCollisionBox.w = player.w - 72;
+    playerCollisionBox.h = 56;
+    for (let index = 0; index < obstacles.length; index++) {
+      const item = obstacles[index];
+      let collided;
+      if (!item.clearance) {
+        collided = intersects(playerCollisionBox, item, 10);
+      } else {
+        const shrinkX = item.w * 0.1;
+        const shrinkY = item.h * 0.1;
+        clearanceCollisionBox.x = item.x + shrinkX;
+        clearanceCollisionBox.y = item.y + shrinkY;
+        clearanceCollisionBox.w = item.w - shrinkX * 2;
+        clearanceCollisionBox.h = item.h - shrinkY * 2;
+        collided = intersects(playerCollisionBox, clearanceCollisionBox, 10);
+      }
+      if (collided) {
+        gameOver();
+        break;
+      }
+    }
     updateScore();
   }
 
   function updateScore() {
-    scoreNode.textContent = String(Math.floor(distance) + tagPoints + clearancePoints).padStart(5, "0");
-    tagsNode.textContent = brendaBoost > 0 ? `${tagCount} ×2` : String(tagCount);
+    const score = Math.floor(distance) + tagPoints + clearancePoints;
+    const tags = brendaBoost > 0 ? `${tagCount} ×2` : String(tagCount);
+    if (score !== displayedScore) {
+      displayedScore = score;
+      scoreNode.textContent = String(score).padStart(5, "0");
+    }
+    if (tags !== displayedTags) {
+      displayedTags = tags;
+      tagsNode.textContent = tags;
+    }
   }
 
   function roundedRect(x, y, w, h, r, fill) {
@@ -3907,12 +4038,22 @@
   }
 
   function draw() {
-    const locomotive = obstacles.find((item) => item.prop === "steam-locomotive" && item.x < W && item.x + item.w > 0);
-    const tRex = obstacles.find((item) => item.prop === "t-rex" && item.x < W && item.x + item.w > 0);
-    const thundercloud = obstacles.find((item) => item.prop === "thundercloud" && item.x < W && item.x + item.w > 0);
-    const kaiju = obstacles.find((item) => item.prop === "friendly-kaiju" && item.x < W && item.x + item.w > 0);
-    const rollerCoaster = obstacles.find((item) => item.prop === "roller-coaster" && item.x < W && item.x + item.w > 0);
-    const dragon = obstacles.find((item) => item.prop === "fire-breathing-dragon" && item.x < W && item.x + item.w > 0);
+    let locomotive = null;
+    let tRex = null;
+    let thundercloud = null;
+    let kaiju = null;
+    let rollerCoaster = null;
+    let dragon = null;
+    for (let index = 0; index < obstacles.length; index++) {
+      const item = obstacles[index];
+      if (item.x >= W || item.x + item.w <= 0) continue;
+      if (item.prop === "steam-locomotive") locomotive = item;
+      else if (item.prop === "t-rex") tRex = item;
+      else if (item.prop === "thundercloud") thundercloud = item;
+      else if (item.prop === "friendly-kaiju") kaiju = item;
+      else if (item.prop === "roller-coaster") rollerCoaster = item;
+      else if (item.prop === "fire-breathing-dragon") dragon = item;
+    }
     const thunderFlash = thundercloud && Math.sin(thundercloud.phase * 1.7) > 0.62;
     const kaijuStomp = kaiju && Math.sin(kaiju.phase) > 0.72;
     const rollerRattle = rollerCoaster && Math.sin(rollerCoaster.phase * 1.2) > 0.25;
@@ -3921,19 +4062,25 @@
     ctx.save();
     if (rumble) ctx.translate(Math.sin(elapsed * 73) * rumble, Math.cos(elapsed * 91) * rumble * 0.55);
     drawShowroom();
-    collectibles.forEach(drawTag);
-    obstacles.forEach(drawObstacle);
-    obstacles.forEach(drawKamdenClearanceSticker);
+    for (let index = 0; index < collectibles.length; index++) drawTag(collectibles[index]);
+    let clearanceItem = null;
+    for (let index = 0; index < obstacles.length; index++) {
+      const item = obstacles[index];
+      drawObstacle(item);
+      if (item.clearance) clearanceItem = item;
+    }
+    if (clearanceItem) drawKamdenClearanceSticker(clearanceItem);
     drawKamden();
     drawBrenda();
-    dust.forEach((p) => {
-      ctx.globalAlpha = Math.max(0, p.life * 1.8);
+    for (let index = 0; index < dust.length; index++) {
+      const particle = dust[index];
+      ctx.globalAlpha = Math.max(0, particle.life * 1.8);
       ctx.fillStyle = "#b9a795";
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+      ctx.arc(particle.x, particle.y, 5, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
-    });
+    }
     drawPlayer();
     ctx.restore();
   }
@@ -4101,7 +4248,7 @@
       pause();
       stopMusic();
       if (audioContext?.state === "running") audioContext.suspend().catch(() => {});
-    } else if (soundEnabled) {
+    } else if (soundEnabled && musicSessionStarted) {
       ensureAudio();
       startMusic();
     }
