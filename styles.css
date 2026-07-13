@@ -584,6 +584,31 @@ nav a.active {
   text-decoration: underline;
 }
 
+.community-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  width: fit-content;
+  margin: 1.75rem auto 0;
+  color: var(--color-muted);
+}
+
+.community-badge img {
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.community-badge p {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .contact-icon {
   flex: 0 0 auto;
   width: 1.75rem;
