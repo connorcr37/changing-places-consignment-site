@@ -28,6 +28,18 @@
   const ground = 330;
   const jumpVelocity = -820;
   const gravity = 1550;
+  const clearanceItemTypes = new Set(["chair", "lamp", "showroom"]);
+  const showroomItemVariants = [
+    { variant: "bar-stool", w: 46, h: 74, minElapsed: 0 },
+    { variant: "end-table", w: 60, h: 55, minElapsed: 0 },
+    { variant: "floor-mirror", w: 58, h: 92, minElapsed: 8 },
+    { variant: "plant-stand", w: 54, h: 82, minElapsed: 0 },
+    { variant: "bookcase", w: 78, h: 88, minElapsed: 10 },
+    { variant: "entryway-bench", w: 100, h: 48, minElapsed: 6 },
+    { variant: "folding-screen", w: 105, h: 92, minElapsed: 20 },
+    { variant: "coat-rack", w: 54, h: 94, minElapsed: 10 },
+    { variant: "rolled-rug", w: 92, h: 28, minElapsed: 4 },
+  ];
   const colors = {
     forest: "#2e5c50",
     dark: "#244b42",
@@ -636,28 +648,44 @@
       });
     } else if (roll < 0.7 && !obstacles.some((item) => item.type === "sandy")) {
       spawnSandy();
-    } else if (roll < 0.84) {
-      const lampKinds = ["floor", "table", "arc", "tripod"];
-      const variant = lampKinds[Math.floor(Math.random() * lampKinds.length)];
-      const lampSizes = {
-        floor: [46, 86],
-        table: [48, 50],
-        arc: [70, 90],
-        tripod: [52, 82],
-      };
-      const [w, h] = lampSizes[variant];
-      obstacles.push({ type: "lamp", variant, color: ["#d5a856", "#d77a61", "#77958d", "#8e6f91"][Math.floor(Math.random() * 4)], x: W + 40, y: ground - h, w, h, phase: 0 });
     } else {
-      const chairKinds = ["office", "dining", "armchair", "rocker"];
-      const variant = chairKinds[Math.floor(Math.random() * chairKinds.length)];
-      const chairSizes = {
-        office: [60, 64],
-        dining: [48, 68],
-        armchair: [72, 60],
-        rocker: [72, 64],
-      };
-      const [w, h] = chairSizes[variant];
-      obstacles.push({ type: "chair", variant, color: ["#668aa0", "#b56f58", "#62806f", "#8e6f91", "#d5a856"][Math.floor(Math.random() * 5)], x: W + 40, y: ground - h, w, h, phase: 0 });
+      const itemRoll = Math.random();
+      if (itemRoll < 0.28) {
+        const lampKinds = ["floor", "table", "arc", "tripod"];
+        const variant = lampKinds[Math.floor(Math.random() * lampKinds.length)];
+        const lampSizes = {
+          floor: [46, 86],
+          table: [48, 50],
+          arc: [70, 90],
+          tripod: [52, 82],
+        };
+        const [w, h] = lampSizes[variant];
+        obstacles.push({ type: "lamp", variant, color: ["#d5a856", "#d77a61", "#77958d", "#8e6f91"][Math.floor(Math.random() * 4)], x: W + 40, y: ground - h, w, h, phase: 0 });
+      } else if (itemRoll < 0.56) {
+        const chairKinds = ["office", "dining", "armchair", "rocker"];
+        const variant = chairKinds[Math.floor(Math.random() * chairKinds.length)];
+        const chairSizes = {
+          office: [60, 64],
+          dining: [48, 68],
+          armchair: [72, 60],
+          rocker: [72, 64],
+        };
+        const [w, h] = chairSizes[variant];
+        obstacles.push({ type: "chair", variant, color: ["#668aa0", "#b56f58", "#62806f", "#8e6f91", "#d5a856"][Math.floor(Math.random() * 5)], x: W + 40, y: ground - h, w, h, phase: 0 });
+      } else {
+        const availableItems = showroomItemVariants.filter((item) => elapsed >= item.minElapsed);
+        const selected = availableItems[Math.floor(Math.random() * availableItems.length)];
+        obstacles.push({
+          type: "showroom",
+          variant: selected.variant,
+          color: ["#668aa0", "#b56f58", "#62806f", "#8e6f91", "#d5a856"][Math.floor(Math.random() * 5)],
+          x: W + 40,
+          y: ground - selected.h,
+          w: selected.w,
+          h: selected.h,
+          phase: Math.random() * 6,
+        });
+      }
     }
   }
 
@@ -668,7 +696,7 @@
   function activateKamden(forceTarget = false) {
     if (kamden || brenda) return false;
     let target = obstacles
-      .filter((item) => !item.clearance && item.x > player.x + player.w + 150)
+      .filter((item) => clearanceItemTypes.has(item.type) && !item.clearance && item.x > player.x + player.w + 150)
       .sort((a, b) => a.x - b.x)[0];
     if (!target && forceTarget) {
       target = {
@@ -685,7 +713,7 @@
     helperIn = Math.max(helperIn, 7);
     brendaIn = Math.max(brendaIn, 7);
     kamdenIn = 23 + Math.random() * 8;
-    boostStatusNode.textContent = "Kamden Clearance Run active. The marked obstacle has a smaller collision area.";
+    boostStatusNode.textContent = "Kamden Clearance Run active. The marked item has a smaller collision area.";
     return true;
   }
 
@@ -3645,6 +3673,175 @@
     }
   }
 
+  function drawShowroomObstacle(item) {
+    const x = item.x;
+    const y = item.y;
+    const bottom = y + item.h;
+    const wood = item.color;
+    const accent = "#f0d3bd";
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    if (item.variant === "bar-stool") {
+      roundedRect(x + 4, y + 3, item.w - 8, 12, 6, wood);
+      ctx.strokeStyle = colors.dark;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(x + 12, y + 14);
+      ctx.lineTo(x + 6, bottom);
+      ctx.moveTo(x + item.w - 12, y + 14);
+      ctx.lineTo(x + item.w - 6, bottom);
+      ctx.stroke();
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x + 9, bottom - 20);
+      ctx.lineTo(x + item.w - 9, bottom - 20);
+      ctx.stroke();
+    } else if (item.variant === "end-table") {
+      roundedRect(x + 1, y + 2, item.w - 2, 9, 3, colors.dark);
+      roundedRect(x + 6, y + 10, item.w - 12, 27, 4, wood);
+      ctx.strokeStyle = "rgba(36,75,66,.48)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + 7, y + 23);
+      ctx.lineTo(x + item.w - 7, y + 23);
+      ctx.stroke();
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.arc(x + item.w / 2, y + 17, 2.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = colors.dark;
+      ctx.fillRect(x + 9, y + 36, 6, bottom - y - 36);
+      ctx.fillRect(x + item.w - 15, y + 36, 6, bottom - y - 36);
+    } else if (item.variant === "floor-mirror") {
+      roundedRect(x + 2, y, item.w - 4, item.h - 3, 13, wood);
+      roundedRect(x + 8, y + 7, item.w - 16, item.h - 18, 9, "#c7d8d5");
+      ctx.save();
+      ctx.globalAlpha = 0.3 + (Math.sin(item.phase * 0.35) + 1) * 0.1;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(x + 14, y + 59);
+      ctx.lineTo(x + item.w - 13, y + 27);
+      ctx.stroke();
+      ctx.restore();
+      roundedRect(x + 7, bottom - 6, item.w - 14, 6, 3, colors.dark);
+    } else if (item.variant === "plant-stand") {
+      ctx.fillStyle = "#567c57";
+      [[27, 12, -0.65], [18, 20, -1.2], [35, 21, 1.1], [25, 27, 0.2], [38, 12, 0.65]].forEach(([leafX, leafY, angle]) => {
+        ctx.save();
+        ctx.translate(x + leafX, y + leafY);
+        ctx.rotate(angle + Math.sin(item.phase * 0.2) * 0.04);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 11, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+      ctx.fillStyle = "#b56f58";
+      ctx.beginPath();
+      ctx.moveTo(x + 12, y + 30);
+      ctx.lineTo(x + 42, y + 30);
+      ctx.lineTo(x + 37, y + 49);
+      ctx.lineTo(x + 17, y + 49);
+      ctx.closePath();
+      ctx.fill();
+      roundedRect(x + 8, y + 48, 38, 7, 3, wood);
+      ctx.strokeStyle = colors.dark;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(x + 15, y + 54);
+      ctx.lineTo(x + 10, bottom);
+      ctx.moveTo(x + 39, y + 54);
+      ctx.lineTo(x + 44, bottom);
+      ctx.stroke();
+    } else if (item.variant === "bookcase") {
+      roundedRect(x + 1, y, item.w - 2, item.h, 5, wood);
+      roundedRect(x + 8, y + 7, item.w - 16, item.h - 15, 2, "#f6eadf");
+      [y + 30, y + 57].forEach((shelfY) => roundedRect(x + 6, shelfY, item.w - 12, 5, 2, colors.dark));
+      const bookColors = ["#8a4c36", "#315f91", "#d5a856", "#62806f", "#8e6f91"];
+      [[11, 10, 10, 18], [23, 13, 8, 15], [33, 8, 12, 20], [49, 12, 8, 16], [13, 38, 9, 16], [24, 35, 12, 19], [39, 40, 8, 14], [50, 36, 12, 18], [12, 65, 13, 15], [28, 63, 8, 17], [39, 67, 12, 13]].forEach(([bx, by, bw, bh], index) => {
+        roundedRect(x + bx, y + by, bw, bh, 1, bookColors[index % bookColors.length]);
+      });
+    } else if (item.variant === "entryway-bench") {
+      roundedRect(x + 3, y + 2, item.w - 6, 17, 7, wood);
+      roundedRect(x + 7, y + 19, item.w - 14, 7, 3, colors.dark);
+      ctx.fillStyle = colors.dark;
+      ctx.fillRect(x + 12, y + 25, 7, bottom - y - 25);
+      ctx.fillRect(x + item.w - 19, y + 25, 7, bottom - y - 25);
+      ctx.strokeStyle = "rgba(36,75,66,.45)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + item.w / 2, y + 4);
+      ctx.lineTo(x + item.w / 2, y + 17);
+      ctx.stroke();
+    } else if (item.variant === "folding-screen") {
+      const panelW = 33;
+      [0, 1, 2].forEach((panel) => {
+        const panelX = x + panel * 35;
+        roundedRect(panelX, y + (panel === 1 ? 2 : 0), panelW, item.h - (panel === 1 ? 2 : 0), 7, panel === 1 ? "#d9b69e" : wood);
+        roundedRect(panelX + 5, y + 10, panelW - 10, item.h - 25, 4, panel === 1 ? "#f5e4d7" : "#dce8e4");
+        ctx.strokeStyle = "rgba(138,76,54,.45)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(panelX + 6, y + 37);
+        ctx.lineTo(panelX + panelW - 6, y + 37);
+        ctx.stroke();
+      });
+      ctx.fillStyle = colors.dark;
+      [34, 69].forEach((hingeX) => {
+        ctx.beginPath();
+        ctx.arc(x + hingeX, y + 24, 2.3, 0, Math.PI * 2);
+        ctx.arc(x + hingeX, y + 66, 2.3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    } else if (item.variant === "coat-rack") {
+      ctx.strokeStyle = colors.dark;
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(x + 27, y + 8);
+      ctx.lineTo(x + 27, bottom - 8);
+      ctx.moveTo(x + 27, y + 19);
+      ctx.lineTo(x + 9, y + 9);
+      ctx.moveTo(x + 27, y + 19);
+      ctx.lineTo(x + 45, y + 9);
+      ctx.moveTo(x + 27, y + 30);
+      ctx.lineTo(x + 13, y + 24);
+      ctx.moveTo(x + 27, y + 30);
+      ctx.lineTo(x + 41, y + 24);
+      ctx.moveTo(x + 27, bottom - 8);
+      ctx.lineTo(x + 7, bottom);
+      ctx.moveTo(x + 27, bottom - 8);
+      ctx.lineTo(x + 47, bottom);
+      ctx.stroke();
+      ctx.fillStyle = wood;
+      ctx.beginPath();
+      ctx.ellipse(x + 10, y + 10, 12, 6, -0.22, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (item.variant === "rolled-rug") {
+      roundedRect(x + 10, y + 3, item.w - 11, item.h - 6, 10, wood);
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.ellipse(x + 11, y + item.h / 2, 11, item.h / 2 - 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = colors.clay;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(x + 11, y + item.h / 2, 6, 0.15, Math.PI * 2.15);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,.5)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x + 34, y + 5);
+      ctx.lineTo(x + 34, bottom - 5);
+      ctx.moveTo(x + 62, y + 5);
+      ctx.lineTo(x + 62, bottom - 5);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
   function drawObstacle(item) {
     if (item.type === "shopper") {
       drawCustomer(item);
@@ -3678,6 +3875,8 @@
       drawLampObstacle(item);
     } else if (item.type === "chair") {
       drawChairObstacle(item);
+    } else if (item.type === "showroom") {
+      drawShowroomObstacle(item);
     }
   }
 
@@ -3847,7 +4046,7 @@
           characterTestStatus.textContent = "Her energy powers higher jumps and doubles every tag's value.";
         } else {
           activateKamden(true);
-          characterTestStatus.textContent = "Her green pricing gun reduces an obstacle's speed and hitbox, with a +75 bonus.";
+          characterTestStatus.textContent = "Her green pricing gun reduces an item's speed and hitbox, with a +75 bonus.";
         }
         updateCharacterTestControls(characterButton.dataset.testCharacter);
         return;
