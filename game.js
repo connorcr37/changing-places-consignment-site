@@ -22,10 +22,23 @@
   const characterTestStatus = document.getElementById("character-test-status");
   const radioTestStatus = document.getElementById("radio-test-status");
   const testMode = new URLSearchParams(location.search).has("test");
+  const laserHeroImage = new Image();
+  laserHeroImage.src = "images/laser-hero.png";
+  const vortexHeroImage = new Image();
+  vortexHeroImage.src = "images/vortex-hero.png";
+  const willFinaleImage = new Image();
+  willFinaleImage.src = "images/will-finale.png";
 
   const W = canvas.width;
   const H = canvas.height;
   const ground = 330;
+  const laserHeroW = 335;
+  const laserHeroH = 223;
+  const vortexHeroW = 270;
+  const vortexHeroH = 180;
+  const superKidsRestingX = 28;
+  const superKidsRestingY = 44;
+  const superKidsFrontX = superKidsRestingX + 455;
   const jumpVelocity = -820;
   const gravity = 1550;
   const clearanceItemTypes = new Set(["chair", "lamp", "showroom"]);
@@ -160,7 +173,18 @@
   let tagCount = 0;
   let tagPoints = 0;
   let clearancePoints = 0;
+  let heroPoints = 0;
   let sandyEncounters = 0;
+  let superKidsTriggered = false;
+  let superKidsTwoTriggered = false;
+  let superKidsPending = 0;
+  let superKidsPendingVariant = 1;
+  let laserLeagueAppearances = 0;
+  let firstLaserLeagueEndElapsed = 0;
+  let laserLeagueFinale = null;
+  let laserAftermathFlash = 0;
+  let laserAftermathGrace = 0;
+  let showroomDamaged = false;
   let selectedSandyTestTier = null;
   let lastSandyProp = null;
   let speed = 270;
@@ -172,6 +196,7 @@
   let brenda = null;
   let brendaBoost = 0;
   let kamden = null;
+  let superKids = null;
   let obstacles = [];
   let collectibles = [];
   let dust = [];
@@ -534,6 +559,27 @@
     } else if (kind === "clearance") {
       tone(659, 988, 0.13, "sine", 0.027);
       tone(784, 1175, 0.15, "triangle", 0.02, 0.07);
+    } else if (kind === "super-kids") {
+      [392, 523, 659, 784].forEach((frequency, index) => tone(frequency, frequency * 1.5, 0.2, "sine", 0.022, index * 0.065));
+    } else if (kind === "laser") {
+      tone(1180, 420, 0.11, "sawtooth", 0.014);
+      tone(840, 1260, 0.09, "sine", 0.012, 0.035);
+    } else if (kind === "will-power") {
+      [392, 587, 784, 1047].forEach((frequency, index) => {
+        tone(frequency, frequency * 1.42, 0.19, index < 2 ? "triangle" : "sine", 0.018, index * 0.055);
+      });
+    } else if (kind === "will-finale") {
+      tone(72, 196, 1.3, "sawtooth", 0.03);
+      [196, 294, 440, 659].forEach((frequency, index) => tone(frequency, frequency * 1.8, 0.7, "sine", 0.018, index * 0.16));
+    } else if (kind === "will-mega-blast") {
+      tone(1400, 52, 1.05, "sawtooth", 0.055);
+      tone(880, 74, 1.2, "square", 0.03, 0.04);
+      tone(68, 34, 1.4, "sine", 0.045, 0.08);
+    } else if (kind === "hero-combo") {
+      tone(130, 58, 0.72, "sawtooth", 0.035);
+      [262, 392, 523, 659, 880].forEach((frequency, index) => {
+        tone(frequency, frequency * 1.55, 0.34, index % 2 ? "triangle" : "sine", 0.025, index * 0.085);
+      });
     } else if (kind === "crash") {
       tone(145, 48, 0.38, "sawtooth", 0.052);
       tone(88, 42, 0.3, "square", 0.025, 0.05);
@@ -593,7 +639,18 @@
     tagCount = 0;
     tagPoints = 0;
     clearancePoints = 0;
+    heroPoints = 0;
     sandyEncounters = selectedSandyTestTier === null ? 0 : selectedSandyTestTier;
+    superKidsTriggered = false;
+    superKidsTwoTriggered = false;
+    superKidsPending = 0;
+    superKidsPendingVariant = 1;
+    laserLeagueAppearances = 0;
+    firstLaserLeagueEndElapsed = 0;
+    laserLeagueFinale = null;
+    laserAftermathFlash = 0;
+    laserAftermathGrace = 0;
+    showroomDamaged = false;
     lastSandyProp = null;
     speed = 270;
     spawnIn = 1.65;
@@ -604,6 +661,8 @@
     brenda = null;
     brendaBoost = 0;
     kamden = null;
+    superKids = null;
+    gameCard.classList.remove("laser-league-active");
     boostStatusNode.textContent = "";
     obstacles = [];
     collectibles = [];
@@ -668,7 +727,7 @@
   function gameOver() {
     state = "over";
     playSound("crash");
-    const score = Math.floor(distance) + tagPoints + clearancePoints;
+    const score = Math.floor(distance) + tagPoints + clearancePoints + heroPoints;
     if (score > best) {
       best = score;
       localStorage.setItem("couchDashBest", String(best));
@@ -678,7 +737,8 @@
       messageTitle.textContent = "Couch traffic jam!";
     }
     const clearanceSummary = clearancePoints ? ` + ${clearancePoints} Kamden clearance bonus` : "";
-    messageCopy.textContent = `Score ${score}: ${Math.floor(distance)} feet + ${tagPoints} tag bonus${clearanceSummary}. You saved ${tagCount} price tag${tagCount === 1 ? "" : "s"}.`;
+    const heroSummary = heroPoints ? ` + ${heroPoints} Laser League bonus` : "";
+    messageCopy.textContent = `Score ${score}: ${Math.floor(distance)} feet + ${tagPoints} tag bonus${clearanceSummary}${heroSummary}. You saved ${tagCount} price tag${tagCount === 1 ? "" : "s"}.`;
     startButton.textContent = "Try again";
     message.hidden = false;
   }
@@ -781,7 +841,7 @@
   }
 
   function activateKamden(forceTarget = false) {
-    if (kamden || brenda) return false;
+    if (kamden || brenda || superKids) return false;
     let target = obstacles
       .filter((item) => clearanceItemTypes.has(item.type) && !item.clearance && item.x > player.x + player.w + 150)
       .sort((a, b) => a.x - b.x)[0];
@@ -805,7 +865,7 @@
   }
 
   function activateBrenda() {
-    if (brenda || kamden) return false;
+    if (brenda || kamden || superKids) return false;
     brenda = { life: 6, total: 6, phase: 0 };
     playSound("brenda");
     brendaBoost = 6;
@@ -818,10 +878,78 @@
     return true;
   }
 
+  function spawnLaserLeagueWave() {
+    const wave = [
+      { type: "showroom", variant: "folding-screen", color: "#5b5f98", x: W + 110, y: ground - 92, w: 105, h: 92 },
+      { type: "chair", variant: "armchair", color: "#744f8f", x: W + 310, y: ground - 60, w: 72, h: 60 },
+      { type: "lamp", variant: "arc", color: "#5578a8", x: W + 500, y: ground - 90, w: 70, h: 90 },
+      { type: "shopper", variant: "young-man", palette: 3, x: W + 690, y: ground - 78, w: 48, h: 78 },
+      { type: "showroom", variant: "bookcase", color: "#684f88", x: W + 860, y: ground - 88, w: 78, h: 88 },
+      {
+        type: "sandy",
+        prop: "fire-breathing-dragon",
+        tier: sandyPropTiers.length - 1,
+        x: W + 1080,
+        y: ground - 84,
+        w: Math.round((sandyPropWidths["fire-breathing-dragon"] || 112) * sandyItemScale(sandyPropTiers.length - 1, "fire-breathing-dragon")),
+        h: 84,
+      },
+    ];
+    wave.forEach((item, index) => obstacles.push({ ...item, phase: index * 0.9, heroWave: true }));
+  }
+
+  function activateSuperKids(variant = 1) {
+    if (superKids || laserLeagueFinale) return false;
+    brenda = null;
+    brendaBoost = 0;
+    kamden = null;
+    superKids = {
+      variant,
+      life: 16,
+      total: 16,
+      phase: 0,
+      laserCooldown: 0.12,
+      laserLife: 0,
+      laserTarget: null,
+      comboTriggered: false,
+      comboLife: 0,
+      comboTotal: 2.2,
+      overdrive: 0,
+      powerStage: 1,
+      stageDwell: 0,
+      stageFlashLife: 1.35,
+      captures: 0,
+      waveLabelLife: 2.6,
+    };
+    if (variant === 1) superKidsTriggered = true;
+    else superKidsTwoTriggered = true;
+    superKidsPending = 0;
+    superKidsPendingVariant = 1;
+    wallHelpers = [];
+    helperIn = Math.max(helperIn, 9);
+    brendaIn = Math.max(brendaIn, 19);
+    kamdenIn = Math.max(kamdenIn, 19);
+    tagIn = Math.min(tagIn, 0.3);
+    spawnLaserLeagueWave();
+    gameCard.classList.add("laser-league-active");
+    boostStatusNode.textContent = variant === 2
+      ? "Laser League 2: Cosmic Overdrive! Will is pushing WILLPOWER beyond the showroom."
+      : "Will enters with power hands. Every blast and vortex catch charges WILLPOWER.";
+    playSound("super-kids");
+    return true;
+  }
+
   function clearCharacterMoments() {
     brenda = null;
     brendaBoost = 0;
     kamden = null;
+    superKids = null;
+    superKidsPending = 0;
+    superKidsPendingVariant = 1;
+    laserLeagueFinale = null;
+    laserAftermathFlash = 0;
+    laserAftermathGrace = 0;
+    gameCard.classList.remove("laser-league-active");
     obstacles.forEach((item) => { item.clearance = false; });
     boostStatusNode.textContent = "";
     updateScore();
@@ -829,6 +957,49 @@
 
   function intersects(a, b, inset = 0) {
     return a.x + inset < b.x + b.w && a.x + a.w - inset > b.x && a.y + inset < b.y + b.h && a.y + a.h - inset > b.y;
+  }
+
+  function visibleToLaserLeague(item) {
+    const requiredVisibleWidth = item.w * 0.8;
+    return item.x <= W - requiredVisibleWidth && item.x + item.w > 0;
+  }
+
+  function willPowerStage(value) {
+    if (value >= 100) return 4;
+    if (value >= 75) return 3;
+    if (value >= 50) return 2;
+    if (value > 0) return 1;
+    return 0;
+  }
+
+  function chargeWillPower(amount) {
+    if (!superKids) return;
+    superKids.overdrive = Math.min(100, superKids.overdrive + amount);
+  }
+
+  function superKidsAnchors() {
+    const pose = superKidsPose();
+    const laserX = pose.x + 128;
+    const laserY = pose.y + 6 + Math.sin(superKids.phase * 0.92) * 7;
+    const vortexSpriteX = pose.x + 4;
+    const vortexSpriteY = pose.y + 126 + Math.cos(superKids.phase * 0.68) * 5;
+    return {
+      ...pose,
+      laserX,
+      laserY,
+      vortexSpriteX,
+      vortexSpriteY,
+      eyeX: laserX + laserHeroW * 0.615,
+      eyeY: laserY + laserHeroH * 0.29,
+      handX: laserX + laserHeroW * 0.865,
+      handY: laserY + laserHeroH * 0.4,
+      handTwoX: laserX + laserHeroW * 0.36,
+      handTwoY: laserY + laserHeroH * 0.36,
+      vortexX: vortexSpriteX + vortexHeroW * 0.79,
+      vortexY: vortexSpriteY + vortexHeroH * 0.19,
+      gravityBallX: vortexSpriteX + vortexHeroW * 0.19,
+      gravityBallY: vortexSpriteY + vortexHeroH * 0.36,
+    };
   }
 
   function update(dt) {
@@ -842,8 +1013,40 @@
     helperIn -= dt;
     brendaIn -= dt;
     kamdenIn -= dt;
+    if (superKidsPending > 0) {
+      superKidsPending -= dt;
+      if (superKidsPending <= 0) activateSuperKids(superKidsPendingVariant);
+    }
+    laserAftermathFlash = Math.max(0, laserAftermathFlash - dt);
+    laserAftermathGrace = Math.max(0, laserAftermathGrace - dt);
+    if (laserLeagueFinale) {
+      laserLeagueFinale.life -= dt;
+      laserLeagueFinale.phase += dt * 5;
+      const finaleProgress = 1 - laserLeagueFinale.life / laserLeagueFinale.total;
+      if (!laserLeagueFinale.blastPlayed && finaleProgress >= 0.62) {
+        laserLeagueFinale.blastPlayed = true;
+        playSound("will-mega-blast");
+      }
+      if (laserLeagueFinale.life <= 0) {
+        laserLeagueFinale = null;
+        laserAftermathFlash = 1.35;
+        laserAftermathGrace = 4;
+        showroomDamaged = true;
+        for (let index = 0; index < obstacles.length; index++) {
+          heroPoints += obstacles[index].type === "sandy" ? 250 : 100;
+        }
+        obstacles = [];
+        wallHelpers = [];
+        spawnIn = Math.max(spawnIn, 2.2);
+        helperIn = Math.max(helperIn, 8);
+        brendaIn = Math.max(brendaIn, 8);
+        kamdenIn = Math.max(kamdenIn, 8);
+        gameCard.classList.remove("laser-league-active");
+        boostStatusNode.textContent = "Laser League 2 complete. The showroom survived… technically.";
+      }
+    }
     brendaBoost = Math.max(0, brendaBoost - dt);
-    if (brendaBoost === 0 && !kamden && boostStatusNode.textContent) boostStatusNode.textContent = "";
+    if (brendaBoost === 0 && !kamden && !superKids && !superKidsPending && !laserLeagueFinale && !laserAftermathFlash && !laserAftermathGrace && boostStatusNode.textContent) boostStatusNode.textContent = "";
 
     if (spawnIn <= 0) {
       spawnObstacle();
@@ -854,7 +1057,7 @@
     }
     if (tagIn <= 0) {
       spawnTag();
-      tagIn = brendaBoost > 0 ? 0.85 + Math.random() * 0.65 : 2.1 + Math.random() * 2.1;
+      tagIn = brendaBoost > 0 || superKids ? 0.65 + Math.random() * 0.55 : 2.1 + Math.random() * 2.1;
     }
     if (helperIn <= 0 && wallHelpers.length < 2) {
       const helperProps = ["art", "pillow", "vase", "basket", "plant", "mirror", "table-lamp"];
@@ -868,10 +1071,10 @@
       });
       helperIn = 6 + Math.random() * 8;
     }
-    if (kamdenIn <= 0 && !kamden && !brenda) {
+    if (kamdenIn <= 0 && !kamden && !brenda && !superKids && !superKidsPending && !laserLeagueFinale && !laserAftermathFlash && !laserAftermathGrace) {
       if (!activateKamden()) kamdenIn = 0.5;
     }
-    if (brendaIn <= 0 && !brenda && !kamden) {
+    if (brendaIn <= 0 && !brenda && !kamden && !superKids && !superKidsPending && !laserLeagueFinale && !laserAftermathFlash && !laserAftermathGrace) {
       activateBrenda();
     }
 
@@ -883,10 +1086,96 @@
       player.grounded = true;
     }
 
+    if (superKids) {
+      superKids.life -= dt;
+      superKids.phase += dt * 6;
+      superKids.laserCooldown -= dt;
+      superKids.laserLife = Math.max(0, superKids.laserLife - dt);
+      superKids.waveLabelLife = Math.max(0, superKids.waveLabelLife - dt);
+      superKids.stageFlashLife = Math.max(0, superKids.stageFlashLife - dt);
+      superKids.stageDwell += dt;
+      const desiredPowerStage = Math.max(1, willPowerStage(superKids.overdrive));
+      if (desiredPowerStage > superKids.powerStage && superKids.stageDwell >= 1.15) {
+        superKids.powerStage++;
+        superKids.stageDwell = 0;
+        superKids.stageFlashLife = superKids.powerStage === 4 ? 2 : 1.35;
+        playSound("will-power");
+      }
+      const comboWasActive = superKids.comboLife > 0;
+      superKids.comboLife = Math.max(0, superKids.comboLife - dt);
+      if (comboWasActive && superKids.comboLife === 0) {
+        boostStatusNode.textContent = "WILLPOWER unleashed! Laser League is finishing the showroom siege.";
+      }
+      const heroAge = superKids.total - superKids.life;
+      const overdriveReady = superKids.overdrive >= 100 && heroAge >= 6.2;
+      if (!superKids.comboTriggered && (overdriveReady || heroAge >= 11.4)) {
+        superKids.comboTriggered = true;
+        chargeWillPower(100 - superKids.overdrive);
+        superKids.comboLife = superKids.comboTotal;
+        superKids.laserLife = 0;
+        superKids.laserTarget = null;
+        superKids.laserCooldown = superKids.comboTotal + 0.2;
+        boostStatusNode.textContent = "WILLPOWER: MAX! Will is charging the Gravity Alley-Oop.";
+        for (let index = 0; index < obstacles.length; index++) {
+          const item = obstacles[index];
+          if (item.heroBlast || !visibleToLaserLeague(item)) continue;
+          item.heroBlast = 0.85;
+          item.heroBlastTotal = 0.85;
+          heroPoints += item.type === "sandy" ? 250 : 100;
+        }
+        for (let tag = 0; tag < 4; tag++) {
+          collectibles.push({ x: W + 35 + tag * 68, y: 82 + tag % 2 * 84, w: 30, h: 42, phase: tag * 1.3 });
+        }
+        playSound("hero-combo");
+      }
+      if (superKids.comboLife <= 0 && superKids.laserCooldown <= 0) {
+        const target = obstacles
+          .filter((item) => {
+            const centerX = item.x + item.w / 2;
+            return !item.heroBlast && centerX > superKidsFrontX && visibleToLaserLeague(item);
+          })
+          .sort((a, b) => a.x - b.x)[0];
+        if (target) {
+          target.heroBlast = 0.28;
+          target.heroBlastTotal = 0.28;
+          superKids.laserTarget = target;
+          superKids.laserLife = 0.22;
+          superKids.laserCooldown = 0.42;
+          chargeWillPower(target.heroWave ? 14 : 10);
+          heroPoints += target.type === "sandy" ? 250 : 100;
+          playSound("laser");
+        } else {
+          superKids.laserCooldown = 0.08;
+        }
+      }
+      if (superKids.life <= 0) {
+        const completedVariant = superKids.variant;
+        superKids = null;
+        laserLeagueAppearances = Math.max(laserLeagueAppearances, completedVariant);
+        if (completedVariant === 2) {
+          laserLeagueFinale = { life: 3.8, total: 3.8, phase: 0, blastPlayed: false };
+          boostStatusNode.textContent = "Will is going beyond maximum. Brace for one final blast!";
+          playSound("will-finale");
+        } else {
+          firstLaserLeagueEndElapsed = elapsed;
+          gameCard.classList.remove("laser-league-active");
+          boostStatusNode.textContent = "Laser League complete. Cosmic Overdrive may return later…";
+        }
+      }
+    }
+
+    const heroWorldScale = laserLeagueFinale ? 0 : superKids?.comboLife > 0 ? 0.32 : 1;
     let writeIndex = 0;
     for (let index = 0; index < obstacles.length; index++) {
       const item = obstacles[index];
-      item.x -= speed * (item.clearance ? 0.88 : 1) * dt;
+      if (item.heroBlast) {
+        item.heroBlast -= dt;
+        item.phase += dt * 15;
+        item.x -= speed * 0.12 * heroWorldScale * dt;
+        if (item.heroBlast > 0) obstacles[writeIndex++] = item;
+        continue;
+      }
+      item.x -= speed * (item.clearance ? 0.88 : 1) * heroWorldScale * dt;
       item.phase += dt * 8;
       if (item.clearance && !item.clearanceAwarded && item.x + item.w < player.x + 36) {
         item.clearanceAwarded = true;
@@ -895,18 +1184,54 @@
         playSound("clearance");
         if (kamden?.target === item) kamden.target = null;
       }
-      if (item.x + item.w > -20) obstacles[writeIndex++] = item;
+      if (item.x + item.w > -20) {
+        obstacles[writeIndex++] = item;
+      } else if (item.type === "sandy" && item.tier === sandyPropTiers.length - 1) {
+        if (!superKidsTriggered) {
+          superKidsTriggered = true;
+          superKidsPendingVariant = 1;
+          superKidsPending = 0.65;
+          boostStatusNode.textContent = "Level 50 cleared. Something super is approaching…";
+        } else if (
+          laserLeagueAppearances >= 1
+          && !superKidsTwoTriggered
+          && !superKids
+          && !laserLeagueFinale
+          && elapsed >= firstLaserLeagueEndElapsed + 28
+        ) {
+          superKidsTwoTriggered = true;
+          superKidsPendingVariant = 2;
+          superKidsPending = 0.8;
+          boostStatusNode.textContent = "The portal is reopening. Cosmic Overdrive is inbound!";
+        }
+      }
     }
     obstacles.length = writeIndex;
 
     writeIndex = 0;
     for (let index = 0; index < collectibles.length; index++) {
       const item = collectibles[index];
-      item.x -= speed * dt;
+      item.x -= speed * heroWorldScale * dt;
       item.phase += dt * 5;
-      if (intersects(player, item, 18)) {
+      let vortexCaught = false;
+      if (superKids && item.x + item.w / 2 > player.x + player.w) {
+        const { vortexX, vortexY } = superKidsAnchors();
+        const distanceToVortex = Math.hypot(item.x + item.w / 2 - vortexX, item.y + item.h / 2 - vortexY);
+        const orbitRadius = Math.min(30, distanceToVortex * 0.12);
+        const orbitX = vortexX + Math.cos(item.phase * 0.72) * orbitRadius;
+        const orbitY = vortexY + Math.sin(item.phase * 0.72) * orbitRadius * 0.7;
+        const magnetStrength = Math.min(1, dt * 3.6);
+        item.x += (orbitX - item.w / 2 - item.x) * magnetStrength;
+        item.y += (orbitY - item.h / 2 - item.y) * magnetStrength;
+        vortexCaught = distanceToVortex < 38;
+      }
+      if (intersects(player, item, 18) || vortexCaught) {
         tagCount++;
-        tagPoints += brendaBoost > 0 ? 100 : 50;
+        tagPoints += brendaBoost > 0 || superKids ? 100 : 50;
+        if (superKids && vortexCaught) {
+          superKids.captures++;
+          chargeWillPower(6);
+        }
         playSound("tag");
       } else if (item.x + item.w > -20) {
         collectibles[writeIndex++] = item;
@@ -961,7 +1286,7 @@
         clearanceCollisionBox.h = item.h - shrinkY * 2;
         collided = intersects(playerCollisionBox, clearanceCollisionBox, 10);
       }
-      if (collided) {
+      if (collided && !superKids && !laserLeagueFinale && laserAftermathFlash <= 0 && laserAftermathGrace <= 0) {
         gameOver();
         break;
       }
@@ -970,8 +1295,8 @@
   }
 
   function updateScore() {
-    const score = Math.floor(distance) + tagPoints + clearancePoints;
-    const tags = brendaBoost > 0 ? `${tagCount} ×2` : String(tagCount);
+    const score = Math.floor(distance) + tagPoints + clearancePoints + heroPoints;
+    const tags = brendaBoost > 0 || superKids ? `${tagCount} ×2` : String(tagCount);
     if (score !== displayedScore) {
       displayedScore = score;
       scoreNode.textContent = String(score).padStart(5, "0");
@@ -1183,15 +1508,31 @@
 
     const scroll = (distance * 6) % 240;
     for (let x = -scroll; x < W + 240; x += 240) {
+      const frameIndex = Math.floor((x + scroll) / 240);
+      const crookedAngle = showroomDamaged ? Math.sin(frameIndex * 2.3 + 0.7) * 0.11 : 0;
+      ctx.save();
+      ctx.translate(x + 120, 96);
+      ctx.rotate(crookedAngle);
       ctx.strokeStyle = "#d8cec2";
       ctx.lineWidth = 8;
-      ctx.strokeRect(x + 45, 42, 150, 108);
-      ctx.fillStyle = (Math.floor((x + scroll) / 240) % 2) ? "#d9b69e" : "#97b1aa";
-      ctx.fillRect(x + 57, 54, 126, 84);
+      ctx.strokeRect(-75, -54, 150, 108);
+      ctx.fillStyle = frameIndex % 2 ? "#d9b69e" : "#97b1aa";
+      ctx.fillRect(-63, -42, 126, 84);
       ctx.fillStyle = "rgba(255,255,255,.36)";
       ctx.beginPath();
-      ctx.arc(x + 120, 93, 26, 0, Math.PI * 2);
+      ctx.arc(0, -3, 26, 0, Math.PI * 2);
       ctx.fill();
+      if (showroomDamaged && frameIndex % 3 === 0) {
+        ctx.strokeStyle = "rgba(38,31,29,.62)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-56, -35);
+        ctx.lineTo(42, 32);
+        ctx.moveTo(12, -38);
+        ctx.lineTo(-32, 36);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
     if (!brenda) wallHelpers.forEach(drawWallHelper);
@@ -1230,6 +1571,61 @@
       ctx.moveTo(x, ground + 7);
       ctx.lineTo(x - 25, H);
       ctx.stroke();
+    }
+
+    if (showroomDamaged) {
+      ctx.save();
+      const wallDamageScroll = (distance * 6) % 960;
+      for (let damagePanel = -wallDamageScroll; damagePanel < W + 960; damagePanel += 960) {
+        for (let scorch = 0; scorch < 5; scorch++) {
+          const x = damagePanel + 82 + scorch * 202 + Math.sin(scorch * 4.2) * 29;
+          const y = 72 + (scorch % 2) * 94;
+          const soot = ctx.createRadialGradient(x, y, 3, x, y, 58 + scorch % 3 * 13);
+          soot.addColorStop(0, "rgba(29,27,31,.48)");
+          soot.addColorStop(0.48, "rgba(61,52,53,.22)");
+          soot.addColorStop(1, "rgba(42,37,42,0)");
+          ctx.fillStyle = soot;
+          ctx.fillRect(x - 85, y - 85, 170, 170);
+        }
+
+        ctx.strokeStyle = "rgba(74,57,53,.72)";
+        ctx.lineWidth = 2.2;
+        for (let crack = 0; crack < 8; crack++) {
+          const rootX = damagePanel + 54 + crack * 124;
+          const rootY = 31 + crack % 3 * 61;
+          for (let branch = 0; branch < 4; branch++) {
+            const angle = branch * 1.45 + crack * 0.7;
+            ctx.beginPath();
+            ctx.moveTo(rootX, rootY);
+            ctx.lineTo(rootX + Math.cos(angle) * 19, rootY + Math.sin(angle) * 18);
+            ctx.lineTo(rootX + Math.cos(angle + 0.24) * 37, rootY + Math.sin(angle + 0.24) * 34);
+            ctx.stroke();
+          }
+        }
+      }
+
+      const floorDamageScroll = (distance * 10) % 960;
+      for (let floorPanel = -floorDamageScroll; floorPanel < W + 960; floorPanel += 960) {
+        for (let debris = 0; debris < 13; debris++) {
+          const x = floorPanel + 35 + debris * 76 + Math.sin(debris * 2.7) * 14;
+          const y = ground + 12 + (debris * 31 % 68);
+          ctx.fillStyle = debris % 3 === 0 ? "#6a5e5b" : debris % 2 ? "#9b765f" : "#4f5965";
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(debris * 0.83);
+          ctx.fillRect(-5 - debris % 4, -2, 10 + debris % 8, 4 + debris % 5);
+          ctx.restore();
+        }
+
+        ctx.strokeStyle = "rgba(60,51,49,.8)";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(floorPanel + 20, ground + 5);
+        ctx.quadraticCurveTo(floorPanel + 230, ground - 18, floorPanel + 420, ground + 7);
+        ctx.quadraticCurveTo(floorPanel + 650, ground + 26, floorPanel + 940, ground - 2);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
   }
@@ -4011,6 +4407,665 @@
     }
   }
 
+  function drawLaserLeagueWaveMark(item) {
+    if (!superKids || !item.heroWave || item.heroBlast || !visibleToLaserLeague(item)) return;
+    const x = item.x + item.w / 2;
+    const y = item.y + item.h / 2;
+    const radius = Math.max(item.w, item.h) * 0.62 + 8;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (let ring = 0; ring < 2; ring++) {
+      ctx.globalAlpha = 0.32 - ring * 0.1;
+      ctx.strokeStyle = ring ? "#70eaff" : "#8d68ff";
+      ctx.lineWidth = 4 - ring;
+      ctx.setLineDash([8 + ring * 4, 7]);
+      ctx.lineDashOffset = -superKids.phase * (2 + ring);
+      ctx.beginPath();
+      ctx.arc(x, y, radius + ring * 9, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 0.72;
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 9px Poppins, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("SIEGE", x, y - radius - 8);
+    ctx.restore();
+  }
+
+  function drawHeroBlast(item) {
+    if (!item.heroBlast) return;
+    const progress = 1 - item.heroBlast / (item.heroBlastTotal || 0.2);
+    const x = item.x + item.w / 2;
+    const y = item.y + item.h / 2;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (let ring = 0; ring < 3; ring++) {
+      ctx.globalAlpha = Math.max(0, 0.86 - progress * 0.7 - ring * 0.16);
+      ctx.strokeStyle = ring === 1 ? "#ffffff" : "#50d8ff";
+      ctx.lineWidth = 5 - ring;
+      ctx.beginPath();
+      ctx.arc(x, y, 10 + progress * 42 + ring * 9, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    for (let spark = 0; spark < 8; spark++) {
+      const angle = spark * Math.PI / 4 + item.phase * 0.08;
+      const inner = 12 + progress * 24;
+      const outer = inner + 12 + progress * 20;
+      ctx.globalAlpha = Math.max(0, 0.9 - progress * 0.7);
+      ctx.strokeStyle = spark % 2 ? "#ffffff" : "#65e8ff";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(angle) * inner, y + Math.sin(angle) * inner);
+      ctx.lineTo(x + Math.cos(angle) * outer, y + Math.sin(angle) * outer);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawOrbitFurnitureSilhouette(kind, x, y, scale, rotation, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = "rgba(3,5,24,.84)";
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    if (kind === 0) {
+      ctx.roundRect(-38, -8, 76, 28, 8);
+      ctx.rect(-34, -26, 68, 22);
+      ctx.rect(-31, 20, 7, 16);
+      ctx.rect(24, 20, 7, 16);
+    } else if (kind === 1) {
+      ctx.moveTo(-22, -18);
+      ctx.lineTo(22, -18);
+      ctx.lineTo(12, 2);
+      ctx.lineTo(-12, 2);
+      ctx.closePath();
+      ctx.rect(-3, 2, 6, 31);
+      ctx.rect(-17, 33, 34, 5);
+    } else if (kind === 2) {
+      ctx.rect(-27, -32, 54, 64);
+      ctx.rect(-20, -24, 40, 48);
+    } else if (kind === 3) {
+      ctx.rect(-25, -8, 50, 18);
+      ctx.rect(-22, -34, 9, 26);
+      ctx.rect(-22, 10, 7, 28);
+      ctx.rect(15, 10, 7, 28);
+    } else {
+      ctx.ellipse(0, 17, 18, 22, 0, 0, Math.PI * 2);
+      ctx.moveTo(0, -5);
+      ctx.lineTo(0, -27);
+      ctx.moveTo(0, -18);
+      ctx.lineTo(-17, -32);
+      ctx.moveTo(0, -16);
+      ctx.lineTo(17, -30);
+    }
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawCosmicShowroomArena(opacity, blend) {
+    ctx.save();
+    const arenaAlpha = opacity * blend;
+    const starBlend = Math.max(0, Math.min(1, (blend - 0.12) / 0.88));
+    const orbitBlend = Math.max(0, Math.min(1, (blend - 0.28) / 0.72));
+    const gridBlend = Math.max(0, Math.min(1, (blend - 0.42) / 0.58));
+    ctx.globalAlpha = arenaAlpha;
+    const arenaGradient = ctx.createLinearGradient(0, 0, 0, H);
+    arenaGradient.addColorStop(0, "#05041d");
+    arenaGradient.addColorStop(0.55, "#15105a");
+    arenaGradient.addColorStop(1, "#030615");
+    ctx.fillStyle = arenaGradient;
+    ctx.fillRect(0, 0, W, H);
+
+    const nebula = ctx.createRadialGradient(480, 150, 20, 480, 150, 390);
+    nebula.addColorStop(0, "rgba(57,230,255,.34)");
+    nebula.addColorStop(0.45, "rgba(111,45,255,.24)");
+    nebula.addColorStop(1, "rgba(4,2,24,0)");
+    ctx.fillStyle = nebula;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.globalCompositeOperation = "lighter";
+    for (let star = 0; star < 56; star++) {
+      const x = (star * 157 + 43) % W;
+      const y = (star * 83 + 29) % 252;
+      const twinkle = 0.35 + Math.sin(superKids.phase * 0.22 + star) * 0.25;
+      ctx.globalAlpha = opacity * starBlend * Math.max(0.12, twinkle);
+      ctx.fillStyle = star % 5 ? "#9fefff" : "#ffffff";
+      ctx.beginPath();
+      ctx.arc(x, y, 1 + star % 3 * 0.65, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = opacity * orbitBlend * 0.55;
+    ctx.strokeStyle = "#8b6dff";
+    ctx.lineWidth = 2.5;
+    for (let ring = 0; ring < 4; ring++) {
+      ctx.beginPath();
+      ctx.ellipse(480, 150, 210 + ring * 76, 56 + ring * 25, -0.08 + ring * 0.035, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    for (let item = 0; item < 12; item++) {
+      const orbit = item % 4;
+      const angle = superKids.phase * (0.035 + orbit * 0.008) + item * Math.PI / 6;
+      const radiusX = 220 + orbit * 72;
+      const radiusY = 62 + orbit * 23;
+      const x = 480 + Math.cos(angle) * radiusX;
+      const y = 150 + Math.sin(angle) * radiusY;
+      const depth = 0.58 + (Math.sin(angle) + 1) * 0.18;
+      drawOrbitFurnitureSilhouette(item % 5, x, y, depth, angle * 0.38, item % 2 ? "#55eeff" : "#a56dff");
+    }
+
+    const horizon = 262;
+    ctx.globalAlpha = opacity * gridBlend * 0.52;
+    ctx.strokeStyle = "#36dfff";
+    ctx.lineWidth = 2;
+    for (let line = 0; line < 9; line++) {
+      const y = horizon + Math.pow(line / 8, 1.55) * (H - horizon);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+    for (let line = -8; line <= 8; line++) {
+      ctx.beginPath();
+      ctx.moveTo(480, horizon);
+      ctx.lineTo(480 + line * 105, H);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawSuperKidsAtmosphere() {
+    if (!superKids) return;
+    const { age, x, y, opacity } = superKidsPose();
+    ctx.save();
+    if (superKids.variant === 2 && superKids.powerStage >= 4) {
+      const transition = Math.max(0, Math.min(1, superKids.stageDwell / 1.6));
+      const cosmicBlend = transition * transition * (3 - 2 * transition);
+      drawCosmicShowroomArena(opacity, cosmicBlend);
+    }
+    ctx.globalAlpha = opacity * 0.2;
+    ctx.fillStyle = "#061936";
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.globalCompositeOperation = "lighter";
+    for (let streak = 0; streak < 9; streak++) {
+      const streakY = 38 + streak * 34 + Math.sin(superKids.phase * 0.25 + streak) * 11;
+      const streakX = W - ((superKids.phase * 34 + streak * 117) % (W + 260));
+      ctx.globalAlpha = opacity * (0.08 + (streak % 3) * 0.035);
+      ctx.strokeStyle = streak % 2 ? "#9af3ff" : "#5d86ff";
+      ctx.lineWidth = 2 + streak % 3;
+      ctx.beginPath();
+      ctx.moveTo(streakX, streakY);
+      ctx.lineTo(streakX + 92 + streak % 3 * 36, streakY);
+      ctx.stroke();
+    }
+
+    if (age < 1.65) {
+      const portalAlpha = Math.min(1, age * 3.5, (1.65 - age) * 1.6);
+      const portalX = 48;
+      const portalY = 178;
+      for (let ring = 0; ring < 5; ring++) {
+        ctx.globalAlpha = opacity * portalAlpha * (0.76 - ring * 0.11);
+        ctx.strokeStyle = ring % 2 ? "#ffffff" : "#58ddff";
+        ctx.lineWidth = 8 - ring;
+        ctx.beginPath();
+        ctx.ellipse(portalX, portalY, 30 + ring * 13, 112 + ring * 9, 0, -1.32 + ring * 0.08, 1.32 - ring * 0.08);
+        ctx.stroke();
+      }
+    }
+
+    if (superKids.comboLife > 0) {
+      const comboProgress = 1 - superKids.comboLife / superKids.comboTotal;
+      ctx.globalAlpha = Math.sin(comboProgress * Math.PI) * 0.22;
+      ctx.fillStyle = "#bff8ff";
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    if (superKids.variant === 1 && superKids.life < 0.9) {
+      const exitProgress = 1 - superKids.life / 0.9;
+      const boomX = x + 330;
+      const boomY = y + 135;
+      for (let ring = 0; ring < 4; ring++) {
+        ctx.globalAlpha = opacity * (0.72 - ring * 0.13);
+        ctx.strokeStyle = ring % 2 ? "#ffffff" : "#70e7ff";
+        ctx.lineWidth = 7 - ring;
+        ctx.beginPath();
+        ctx.arc(boomX, boomY, 35 + exitProgress * 150 + ring * 17, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function superKidsPose() {
+    const age = superKids.total - superKids.life;
+    const enter = Math.min(1, age / 0.55);
+    const exit = superKids.variant === 1 && superKids.life < 0.65 ? 1 - superKids.life / 0.65 : 0;
+    const eased = 1 - Math.pow(1 - enter, 3);
+    return {
+      age,
+      x: superKidsRestingX - (1 - eased) * 470 + exit * 480,
+      y: superKidsRestingY + Math.sin(superKids.phase * 0.6) * 7,
+      opacity: superKids.variant === 2 ? Math.min(1, enter * 1.8) : Math.min(1, enter * 1.8, superKids.life * 1.8),
+    };
+  }
+
+  function drawLaserHeroSprite(x, y, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    if (superKids?.powerStage >= 4) {
+      ctx.shadowColor = "#c8fbff";
+      ctx.shadowBlur = 28 + Math.sin(superKids.phase * 1.3) * 8;
+    }
+    ctx.drawImage(laserHeroImage, x, y, laserHeroW, laserHeroH);
+    ctx.restore();
+  }
+
+  function drawVortexHeroSprite(x, y, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.drawImage(vortexHeroImage, x, y, vortexHeroW, vortexHeroH);
+    ctx.restore();
+  }
+
+  function drawSuperKids() {
+    if (!superKids) return;
+    const anchors = superKidsAnchors();
+    const {
+      age, opacity, laserX, laserY, vortexSpriteX, vortexSpriteY,
+      eyeX, eyeY, handX, handY, handTwoX, handTwoY,
+      vortexX, vortexY, gravityBallX, gravityBallY,
+    } = anchors;
+
+    ctx.save();
+    ctx.globalAlpha = opacity;
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.strokeStyle = "rgba(126,105,255,.62)";
+    ctx.lineWidth = 3;
+    for (let index = 0; index < collectibles.length; index++) {
+      const tag = collectibles[index];
+      const tagX = tag.x + tag.w / 2;
+      const tagY = tag.y + tag.h / 2;
+      if (tagX < vortexX || tagX - vortexX > 360) continue;
+      ctx.beginPath();
+      ctx.moveTo(vortexX, vortexY);
+      ctx.quadraticCurveTo(vortexX + (tagX - vortexX) * 0.48, tagY - 42, tagX, tagY);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    if (superKids.waveLabelLife > 0) {
+      const waveAge = 2.6 - superKids.waveLabelLife;
+      const bannerAlpha = Math.min(1, waveAge * 3.4, superKids.waveLabelLife * 1.7);
+      ctx.globalAlpha = opacity * bannerAlpha;
+      roundedRect(274, 16, 412, 56, 18, "rgba(35,22,82,.94)");
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 21px Poppins, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(superKids.variant === 2 ? "LASER LEAGUE 2!" : "SHOWROOM SIEGE!", 480, 42);
+      ctx.fillStyle = "#8ff3ff";
+      ctx.font = "800 10px Poppins, sans-serif";
+      ctx.fillText(superKids.variant === 2 ? "COSMIC OVERDRIVE · WILLPOWER BEYOND MAX" : "CHARGE WILLPOWER · CLEAR THE SPECIAL WAVE", 480, 59);
+      ctx.globalAlpha = opacity;
+    }
+
+    if (superKids.comboLife <= 0) {
+      const meterX = 338;
+      const meterY = 78;
+      const meterW = 284;
+      const meterFill = (meterW - 8) * superKids.overdrive / 100;
+      roundedRect(meterX, meterY, meterW, 27, 14, "rgba(8,25,58,.9)");
+      if (meterFill > 0) {
+        const meterGradient = ctx.createLinearGradient(meterX, 0, meterX + meterW, 0);
+        meterGradient.addColorStop(0, "#5d70ff");
+        meterGradient.addColorStop(0.58, "#36dfff");
+        meterGradient.addColorStop(1, "#ffffff");
+        roundedRect(meterX + 4, meterY + 4, meterFill, 19, 10, meterGradient);
+      }
+      ctx.strokeStyle = superKids.overdrive >= 100 ? "#ffffff" : "rgba(157,244,255,.65)";
+      ctx.lineWidth = superKids.overdrive >= 100 ? 3 + Math.sin(superKids.phase) : 1.5;
+      ctx.strokeRect(meterX + 1, meterY + 1, meterW - 2, 25);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 11px Poppins, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`WILLPOWER ${Math.round(superKids.overdrive)}%`, 480, 96);
+    }
+
+    if (superKids.stageFlashLife > 0 && superKids.comboLife <= 0) {
+      const stageLife = superKids.powerStage === 4 ? 2 : 1.35;
+      const stageProgress = 1 - superKids.stageFlashLife / stageLife;
+      const stageAlpha = Math.min(1, stageProgress * 6, superKids.stageFlashLife * 2.4);
+      const stageTitles = ["", "POWER HANDS ONLINE", "PHOTON VISION ONLINE", "QUAD LASER UNLEASHED", "WILLPOWER: MAX"];
+      const stageColors = ["", "#82efff", "#48d6ff", "#ffffff", "#fff8c9"];
+      ctx.save();
+      ctx.globalAlpha = opacity * stageAlpha;
+      ctx.translate(754, 132);
+      ctx.rotate(-0.035);
+      roundedRect(-154, -23, 308, 46, 12, "rgba(8,31,70,.92)");
+      ctx.strokeStyle = stageColors[superKids.powerStage];
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(-148, -17, 296, 34);
+      ctx.fillStyle = stageColors[superKids.powerStage];
+      ctx.font = "900 15px Poppins, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(stageTitles[superKids.powerStage], 0, 6);
+      ctx.restore();
+    }
+
+    if (superKids.powerStage >= 4) {
+      const maxPulse = 0.72 + Math.sin(superKids.phase * 1.5) * 0.2;
+      const glowX = laserX + laserHeroW * 0.57;
+      const glowY = laserY + laserHeroH * 0.5;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const willGlow = ctx.createRadialGradient(glowX, glowY, 12, glowX, glowY, 172);
+      willGlow.addColorStop(0, `rgba(255,255,255,${0.34 * maxPulse})`);
+      willGlow.addColorStop(0.35, `rgba(79,224,255,${0.24 * maxPulse})`);
+      willGlow.addColorStop(1, "rgba(52,99,255,0)");
+      ctx.fillStyle = willGlow;
+      ctx.fillRect(glowX - 180, glowY - 135, 360, 270);
+      for (let ray = 0; ray < 12; ray++) {
+        const angle = ray * Math.PI / 6 + superKids.phase * 0.035;
+        ctx.globalAlpha = opacity * (0.16 + ray % 3 * 0.04) * maxPulse;
+        ctx.strokeStyle = ray % 2 ? "#ffffff" : "#5ce9ff";
+        ctx.lineWidth = 2 + ray % 3;
+        ctx.beginPath();
+        ctx.moveTo(glowX + Math.cos(angle) * 82, glowY + Math.sin(angle) * 58);
+        ctx.lineTo(glowX + Math.cos(angle) * 178, glowY + Math.sin(angle) * 126);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    if (superKids.powerStage >= 4 && superKids.comboLife <= 0) {
+      const chargePulse = 0.5 + Math.sin(superKids.phase * 1.7) * 0.24;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      [[eyeX, eyeY], [handX, handY], [handTwoX, handTwoY]].forEach(([sourceX, sourceY], index) => {
+        ctx.globalAlpha = opacity * chargePulse * 0.45;
+        ctx.strokeStyle = index ? "#76edff" : "#ffffff";
+        ctx.lineWidth = index ? 4 : 3;
+        ctx.beginPath();
+        ctx.moveTo(sourceX, sourceY);
+        ctx.quadraticCurveTo((sourceX + gravityBallX) / 2, gravityBallY - 48, gravityBallX, gravityBallY);
+        ctx.stroke();
+      });
+      for (let ring = 0; ring < 3; ring++) {
+        ctx.globalAlpha = opacity * (0.62 - ring * 0.14);
+        ctx.strokeStyle = ring % 2 ? "#ffffff" : "#8377ff";
+        ctx.lineWidth = 5 - ring;
+        ctx.beginPath();
+        ctx.arc(gravityBallX, gravityBallY, 30 + ring * 11 + chargePulse * 9, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    if (superKids.laserLife > 0 && superKids.laserTarget) {
+      const target = superKids.laserTarget;
+      const targetX = target.x + target.w * 0.48;
+      const targetY = target.y + target.h * 0.45;
+      const pulse = superKids.laserLife / 0.22;
+      let laserSources;
+      if (superKids.powerStage < 2) {
+        laserSources = [
+          { x: handX, y: handY, kind: "hand" },
+          { x: handTwoX, y: handTwoY, kind: "hand" },
+        ];
+      } else if (superKids.powerStage < 3) {
+        laserSources = [
+          { x: eyeX - 3, y: eyeY, kind: "eye" },
+          { x: eyeX + 5, y: eyeY + 1, kind: "eye" },
+        ];
+      } else {
+        laserSources = [
+          { x: eyeX - 3, y: eyeY, kind: "eye" },
+          { x: eyeX + 5, y: eyeY + 1, kind: "eye" },
+          { x: handX, y: handY, kind: "hand" },
+          { x: handTwoX, y: handTwoY, kind: "hand" },
+        ];
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      laserSources.forEach(({ x: sourceX, y: sourceY, kind }, index) => {
+        ctx.globalAlpha = opacity * (0.55 + pulse * 0.45);
+        ctx.strokeStyle = kind === "hand" ? "#8ff5ff" : "#36c8ff";
+        ctx.lineWidth = kind === "hand" ? 10 : 6.5;
+        ctx.beginPath();
+        ctx.moveTo(sourceX, sourceY);
+        ctx.lineTo(targetX, targetY + (index - (laserSources.length - 1) / 2) * 5);
+        ctx.stroke();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = kind === "hand" ? 3 : 2.1;
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+
+    if (superKids.comboLife > 0) {
+      const comboProgress = 1 - superKids.comboLife / superKids.comboTotal;
+      const launched = Math.min(1, Math.max(0, (comboProgress - 0.18) * 1.42));
+      const chargePulse = Math.min(1, comboProgress / 0.2);
+      const ballX = gravityBallX + Math.pow(launched, 0.72) * (W - gravityBallX + 90);
+      const ballY = gravityBallY - Math.sin(launched * Math.PI) * 96;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      if (launched > 0) {
+        ctx.globalAlpha = opacity * 0.7;
+        ctx.strokeStyle = "#806dff";
+        ctx.lineWidth = 38 * (1 - launched * 0.55);
+        ctx.beginPath();
+        ctx.moveTo(gravityBallX, gravityBallY);
+        ctx.quadraticCurveTo((gravityBallX + ballX) / 2, ballY - 78, ballX, ballY);
+        ctx.stroke();
+      }
+      [[eyeX, eyeY], [handX, handY], [handTwoX, handTwoY], [vortexX, vortexY]].forEach(([sourceX, sourceY], index) => {
+        ctx.globalAlpha = opacity * chargePulse * (1 - launched * 0.65);
+        ctx.strokeStyle = index === 3 ? "#9f83ff" : "#ffffff";
+        ctx.lineWidth = index === 3 ? 11 : 5;
+        ctx.beginPath();
+        ctx.moveTo(sourceX, sourceY);
+        ctx.lineTo(ballX, ballY);
+        ctx.stroke();
+      });
+      for (let ring = 4; ring >= 0; ring--) {
+        ctx.globalAlpha = opacity * (0.94 - ring * 0.12);
+        ctx.fillStyle = ring % 2 ? "#5f6fff" : "#e7fdff";
+        ctx.beginPath();
+        ctx.arc(ballX, ballY, 19 + ring * 8 + Math.sin(comboProgress * Math.PI) * 18, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (launched > 0.72) {
+        for (let ring = 0; ring < 4; ring++) {
+          ctx.globalAlpha = opacity * (launched - 0.72) * (2.6 - ring * 0.42);
+          ctx.strokeStyle = ring % 2 ? "#ffffff" : "#6ff2ff";
+          ctx.lineWidth = 8 - ring;
+          ctx.beginPath();
+          ctx.arc(ballX, ballY, 44 + ring * 24 + (launched - 0.72) * 150, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+
+      const titleAlpha = Math.sin(Math.min(1, comboProgress * 1.18) * Math.PI);
+      ctx.save();
+      ctx.globalAlpha = opacity * titleAlpha;
+      ctx.translate(480, 50);
+      ctx.rotate(-0.022);
+      roundedRect(-204, -34, 408, 68, 15, "rgba(22,12,72,.96)");
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-197, -27, 394, 54);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 23px Poppins, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("WILLPOWER: MAX!", 0, -2);
+      ctx.fillStyle = "#89f5ff";
+      ctx.font = "900 11px Poppins, sans-serif";
+      ctx.fillText("GRAVITY ALLEY-OOP", 0, 18);
+      ctx.restore();
+      ctx.globalAlpha = opacity;
+    }
+
+    const spritesReady = laserHeroImage.complete && laserHeroImage.naturalWidth && vortexHeroImage.complete && vortexHeroImage.naturalWidth;
+    if (spritesReady) {
+      const trailStrength = age < 1.2 || superKids.comboLife > 0 || superKids.life < 1 ? 1 : 0.35;
+      for (let trail = 3; trail >= 1; trail--) {
+        drawVortexHeroSprite(vortexSpriteX - trail * 8, vortexSpriteY + trail * 2, trailStrength * (0.025 + trail * 0.02));
+        drawLaserHeroSprite(laserX - trail * 15, laserY + trail * 2, trailStrength * (0.035 + trail * 0.025));
+      }
+      drawVortexHeroSprite(vortexSpriteX, vortexSpriteY);
+      drawLaserHeroSprite(laserX, laserY);
+    } else {
+      ctx.strokeStyle = "#62ddff";
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.arc(260, 190, 105, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "#173b5c";
+      ctx.font = "900 22px Poppins, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("LASER LEAGUE", 260, 198);
+    }
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const energyAnchors = [[eyeX, eyeY], [handX, handY], [handTwoX, handTwoY], [vortexX, vortexY], [gravityBallX, gravityBallY]];
+    for (let spark = 0; spark < 26; spark++) {
+      const anchor = energyAnchors[spark % energyAnchors.length];
+      const angle = superKids.phase * (0.12 + spark % 4 * 0.025) + spark * 2.1;
+      const radius = 8 + spark % 7 * 4;
+      ctx.globalAlpha = opacity * (0.3 + spark % 3 * 0.16);
+      ctx.fillStyle = spark % 5 === 0 ? "#ffffff" : spark % 2 ? "#73eaff" : "#937cff";
+      ctx.beginPath();
+      ctx.arc(anchor[0] + Math.cos(angle) * radius, anchor[1] + Math.sin(angle) * radius, 1.5 + spark % 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function drawLaserLeagueFinale() {
+    if (!laserLeagueFinale) return;
+    const progress = Math.max(0, Math.min(1, 1 - laserLeagueFinale.life / laserLeagueFinale.total));
+    const chargeProgress = Math.min(1, progress / 0.62);
+    const blastProgress = Math.max(0, Math.min(1, (progress - 0.62) / 0.38));
+    ctx.save();
+
+    const backdrop = ctx.createLinearGradient(0, 0, W, H);
+    backdrop.addColorStop(0, "#06031d");
+    backdrop.addColorStop(0.55, "#15126a");
+    backdrop.addColorStop(1, "#03020d");
+    ctx.fillStyle = backdrop;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.globalCompositeOperation = "lighter";
+    for (let ray = 0; ray < 24; ray++) {
+      const angle = ray * Math.PI / 12 + laserLeagueFinale.phase * 0.015;
+      const inner = 55 + chargeProgress * 22;
+      const outer = 620 + ray % 4 * 80;
+      ctx.globalAlpha = 0.12 + ray % 3 * 0.035;
+      ctx.strokeStyle = ray % 2 ? "#71efff" : "#9a72ff";
+      ctx.lineWidth = 3 + ray % 4;
+      ctx.beginPath();
+      ctx.moveTo(290 + Math.cos(angle) * inner, 220 + Math.sin(angle) * inner);
+      ctx.lineTo(290 + Math.cos(angle) * outer, 220 + Math.sin(angle) * outer);
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = "source-over";
+
+    if (willFinaleImage.complete && willFinaleImage.naturalWidth) {
+      const zoom = 1 + Math.sin(Math.min(1, chargeProgress) * Math.PI * 0.5) * 0.075;
+      const drawW = 760 * zoom;
+      const drawH = 507 * zoom;
+      ctx.save();
+      ctx.shadowColor = "#4deaff";
+      ctx.shadowBlur = 32 + chargeProgress * 28;
+      ctx.drawImage(willFinaleImage, -14 - (drawW - 760) * 0.36, -28 - (drawH - 507) * 0.34, drawW, drawH);
+      ctx.restore();
+    }
+
+    const orbX = 174;
+    const orbY = 304;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (let ring = 4; ring >= 0; ring--) {
+      ctx.globalAlpha = 0.9 - ring * 0.13;
+      ctx.fillStyle = ring % 2 ? "#57eaff" : "#ffffff";
+      ctx.beginPath();
+      ctx.arc(orbX, orbY, 12 + ring * 10 + chargeProgress * 18 + Math.sin(laserLeagueFinale.phase) * 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    const titleAlpha = Math.min(1, progress * 7) * (1 - blastProgress * 0.75);
+    ctx.globalAlpha = titleAlpha;
+    ctx.save();
+    ctx.translate(708, 72);
+    ctx.rotate(-0.025);
+    roundedRect(-216, -43, 432, 86, 16, "rgba(8,18,58,.94)");
+    ctx.strokeStyle = "#8cf6ff";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(-208, -35, 416, 70);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 24px Poppins, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("POWER LEVEL: BEYOND MAX", 0, -5);
+    ctx.fillStyle = "#86efff";
+    ctx.font = "900 12px Poppins, sans-serif";
+    ctx.fillText("WILL. POWER. UNLEASHED.", 0, 19);
+    ctx.restore();
+
+    if (blastProgress > 0) {
+      const sourceX = 350;
+      const sourceY = 146;
+      const beamHalf = 18 + blastProgress * 195;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = Math.min(1, blastProgress * 2.4);
+      ctx.fillStyle = "rgba(61,222,255,.86)";
+      ctx.beginPath();
+      ctx.moveTo(sourceX, sourceY - 8 - blastProgress * 10);
+      ctx.lineTo(W + 80, sourceY - beamHalf);
+      ctx.lineTo(W + 80, sourceY + beamHalf);
+      ctx.lineTo(sourceX, sourceY + 8 + blastProgress * 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,.96)";
+      ctx.beginPath();
+      ctx.moveTo(sourceX, sourceY - 4);
+      ctx.lineTo(W + 80, sourceY - beamHalf * 0.42);
+      ctx.lineTo(W + 80, sourceY + beamHalf * 0.42);
+      ctx.lineTo(sourceX, sourceY + 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    if (blastProgress > 0.48) {
+      const whiteout = Math.pow((blastProgress - 0.48) / 0.52, 1.35);
+      ctx.globalAlpha = whiteout;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.globalAlpha = Math.max(0, 1 - blastProgress * 1.3);
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 9;
+    ctx.strokeRect(7, 7, W - 14, H - 14);
+    ctx.restore();
+  }
+
   function drawTag(item) {
     ctx.save();
     ctx.translate(item.x + item.w / 2, item.y + item.h / 2);
@@ -4059,14 +5114,22 @@
     const rollerRattle = rollerCoaster && Math.sin(rollerCoaster.phase * 1.2) > 0.25;
     const dragonRoar = dragon && Math.sin(dragon.phase * 1.4) > 0.82;
     const rumble = thunderFlash ? 3.2 : locomotive ? 2.6 : kaijuStomp ? 1.8 : rollerRattle ? 1.35 : dragonRoar ? 1.1 : (tRex && Math.sin(tRex.phase) > 0.65 ? 1.2 : 0);
+    const heroAge = superKids ? superKids.total - superKids.life : 0;
+    const heroRumble = laserLeagueFinale
+      ? (laserLeagueFinale.blastPlayed ? 8.5 : 3.6)
+      : !superKids ? 0 : superKids.comboLife > 0 ? 4.8 : heroAge < 0.65 ? (0.65 - heroAge) * 7 : superKids.life < 0.8 ? 2.8 : 0;
+    const totalRumble = Math.max(rumble, heroRumble);
     ctx.save();
-    if (rumble) ctx.translate(Math.sin(elapsed * 73) * rumble, Math.cos(elapsed * 91) * rumble * 0.55);
+    if (totalRumble) ctx.translate(Math.sin(elapsed * 73) * totalRumble, Math.cos(elapsed * 91) * totalRumble * 0.55);
     drawShowroom();
+    drawSuperKidsAtmosphere();
     for (let index = 0; index < collectibles.length; index++) drawTag(collectibles[index]);
     let clearanceItem = null;
     for (let index = 0; index < obstacles.length; index++) {
       const item = obstacles[index];
       drawObstacle(item);
+      drawLaserLeagueWaveMark(item);
+      drawHeroBlast(item);
       if (item.clearance) clearanceItem = item;
     }
     if (clearanceItem) drawKamdenClearanceSticker(clearanceItem);
@@ -4082,7 +5145,16 @@
       ctx.globalAlpha = 1;
     }
     drawPlayer();
+    drawSuperKids();
+    drawLaserLeagueFinale();
     ctx.restore();
+    if (laserAftermathFlash > 0) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, laserAftermathFlash / 1.12);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
   }
 
   function loop(now) {
@@ -4191,9 +5263,18 @@
         if (characterButton.dataset.testCharacter === "brenda") {
           activateBrenda();
           characterTestStatus.textContent = "Her energy powers higher jumps and doubles every tag's value.";
-        } else {
+        } else if (characterButton.dataset.testCharacter === "kamden") {
           activateKamden(true);
           characterTestStatus.textContent = "Her green pricing gun reduces an item's speed and hitbox, with a +75 bonus.";
+        } else {
+          const leagueVariant = characterButton.dataset.testCharacter === "super-kids-2" ? 2 : 1;
+          activateSuperKids(leagueVariant);
+          for (let tag = 0; tag < 5; tag++) {
+            collectibles.push({ x: 800 + tag * 86, y: 92 + (tag % 2) * 74, w: 30, h: 42, phase: tag });
+          }
+          characterTestStatus.textContent = leagueVariant === 2
+            ? "Cosmic Overdrive transforms the showroom, ends with Will's mega-blast, and leaves permanent damage."
+            : "Will escalates from power hands to photon vision and quad lasers while the team charges WILLPOWER.";
         }
         updateCharacterTestControls(characterButton.dataset.testCharacter);
         return;
