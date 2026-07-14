@@ -5027,8 +5027,8 @@
     ctx.restore();
 
     if (blastProgress > 0) {
-      const sourceX = 350;
-      const sourceY = 146;
+      const sourceX = orbX;
+      const sourceY = orbY;
       const beamHalf = 18 + blastProgress * 195;
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
