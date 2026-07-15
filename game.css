@@ -135,7 +135,54 @@ h1 {
   letter-spacing: 0.08em;
 }
 
+#couch-condition { color: #b9f0d8; }
+#couch-condition[data-condition="scuffed"] { color: #ffd08a; }
+#couch-condition[data-condition="critical"] { color: #ff9c78; text-shadow: 0 0 0.5rem rgba(255, 92, 65, 0.55); }
+#couch-condition[data-condition="destroyed"] { color: #ff746e; }
+
+#couch-condition.condition-hit {
+  display: inline-block;
+  animation: couch-condition-hit 0.7s ease-out;
+}
+
+@keyframes couch-condition-hit {
+  0%, 100% { transform: scale(1); }
+  24% { transform: scale(1.34) rotate(-3deg); filter: brightness(1.45); }
+  52% { transform: scale(1.12) rotate(2deg); }
+}
+
 .canvas-wrap { position: relative; }
+
+.game-toast {
+  position: absolute;
+  z-index: 3;
+  top: 1rem;
+  left: 50%;
+  display: grid;
+  min-width: min(20rem, calc(100% - 2rem));
+  padding: 0.68rem 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.76);
+  border-radius: 1rem;
+  color: #fff;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, -0.65rem) scale(0.96);
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms;
+  box-shadow: 0 0.8rem 2rem rgba(27, 42, 37, 0.28);
+}
+
+.game-toast.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.game-toast[data-kind="tutorial"] { background: rgba(36, 75, 66, 0.94); }
+.game-toast[data-kind="damage"] { background: rgba(138, 76, 54, 0.96); }
+.game-toast strong { font-size: 1.05rem; line-height: 1.1; }
+.game-toast span { margin-top: 0.15rem; font-size: 0.82rem; font-weight: 700; }
 
 canvas {
   display: block;
@@ -362,11 +409,7 @@ canvas {
 .crew-badge-brenda { color: var(--forest-dark); background: #e4b846; }
 .crew-badge-kamden { background: #3f8a5b; }
 .crew-badge-sandy { background: var(--forest); }
-.crew-badge-laser {
-  color: #143a5c;
-  background: linear-gradient(135deg, #75e7ff, #b8f5ff 48%, #6a8cff);
-  box-shadow: 0 0 0.8rem rgba(58, 191, 255, 0.45);
-}
+.crew-badge-mystery { background: #66729a; }
 
 .game-card:fullscreen,
 .game-card:-webkit-full-screen {
@@ -557,7 +600,7 @@ kbd {
   .game-card { border-radius: 1rem; }
   .scoreboard {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.35rem;
     padding: 0.65rem 0.4rem;
     font-size: clamp(0.62rem, 2.8vw, 0.78rem);

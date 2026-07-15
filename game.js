@@ -10,12 +10,17 @@
   const crewCloseButton = document.getElementById("crew-close");
   const gameCard = document.querySelector(".game-card");
   const message = document.getElementById("game-message");
+  const messageKicker = document.getElementById("message-kicker");
   const messageTitle = document.getElementById("message-title");
   const messageCopy = document.getElementById("message-copy");
   const scoreNode = document.getElementById("score");
   const tagsNode = document.getElementById("tags");
+  const couchConditionNode = document.getElementById("couch-condition");
   const bestNode = document.getElementById("best");
   const boostStatusNode = document.getElementById("boost-status");
+  const gameToast = document.getElementById("game-toast");
+  const gameToastTitle = document.getElementById("game-toast-title");
+  const gameToastCopy = document.getElementById("game-toast-copy");
   const testPanel = document.getElementById("test-panel");
   const tierTestButtons = document.getElementById("tier-test-buttons");
   const testStatus = document.getElementById("test-status");
@@ -23,11 +28,8 @@
   const radioTestStatus = document.getElementById("radio-test-status");
   const testMode = new URLSearchParams(location.search).has("test");
   const laserHeroImage = new Image();
-  laserHeroImage.src = "images/laser-hero.png";
   const vortexHeroImage = new Image();
-  vortexHeroImage.src = "images/vortex-hero.png";
   const willFinaleImage = new Image();
-  willFinaleImage.src = "images/will-finale.png";
 
   const W = canvas.width;
   const H = canvas.height;
@@ -36,9 +38,84 @@
   const laserHeroH = 223;
   const vortexHeroW = 270;
   const vortexHeroH = 180;
+  let laserHeroSprite = null;
+  let vortexHeroSprite = null;
+  let willFinaleSprite = null;
+  let laserLeagueAssetsPromise = null;
+  let laserLeagueAssetsReady = false;
+  let cosmicOverdrivePromise = null;
+  let cosmicOverdriveReady = false;
+
+  function prepareSprite(image, source, width, height) {
+    image.decoding = "async";
+    image.fetchPriority = "low";
+    image.src = source;
+    const decoded = image.complete && image.naturalWidth
+      ? Promise.resolve()
+      : typeof image.decode === "function"
+        ? image.decode()
+        : new Promise((resolve, reject) => {
+          image.addEventListener("load", resolve, { once: true });
+          image.addEventListener("error", reject, { once: true });
+        });
+    return decoded.then(() => runIdlePreparation(() => {
+      if (!image.naturalWidth) return null;
+      const sprite = document.createElement("canvas");
+      sprite.width = width;
+      sprite.height = height;
+      const spriteContext = sprite.getContext("2d");
+      spriteContext.drawImage(image, 0, 0, width, height);
+      return sprite;
+    })).catch(() => null).finally(() => {
+      image.removeAttribute("src");
+    });
+  }
+
+  function prepareLaserLeagueAssets() {
+    if (laserLeagueAssetsPromise) return laserLeagueAssetsPromise;
+    laserLeagueAssetsPromise = Promise.all([
+      prepareSprite(laserHeroImage, "images/laser-hero.png", laserHeroW, laserHeroH),
+      prepareSprite(vortexHeroImage, "images/vortex-hero.png", vortexHeroW, vortexHeroH),
+    ]).then(([laserSprite, vortexSprite]) => {
+      laserHeroSprite = laserSprite;
+      vortexHeroSprite = vortexSprite;
+      laserLeagueAssetsReady = true;
+    });
+    return laserLeagueAssetsPromise;
+  }
+
+  function runIdlePreparation(task) {
+    return new Promise((resolve, reject) => {
+      const run = () => {
+        try {
+          resolve(task());
+        } catch (error) {
+          reject(error);
+        }
+      };
+      if ("requestIdleCallback" in window) window.requestIdleCallback(run, { timeout: 1200 });
+      else window.setTimeout(run, 0);
+    });
+  }
+
+  function prepareCosmicOverdrive() {
+    if (cosmicOverdrivePromise) return cosmicOverdrivePromise;
+    const finaleSpritePromise = prepareSprite(willFinaleImage, "images/will-finale.png", 760, 507)
+      .then((sprite) => { willFinaleSprite = sprite; });
+    const cachePromise = runIdlePreparation(buildShowroomWallDamageTile)
+      .then(() => runIdlePreparation(buildShowroomFloorDamageTile))
+      .then(() => runIdlePreparation(buildCosmicBackdropLayers))
+      .then(() => runIdlePreparation(buildCosmicOrbitLayer))
+      .then(() => runIdlePreparation(buildCosmicGridLayer));
+    cosmicOverdrivePromise = Promise.all([prepareLaserLeagueAssets(), finaleSpritePromise, cachePromise])
+      .then(() => { cosmicOverdriveReady = true; });
+    return cosmicOverdrivePromise;
+  }
   const superKidsRestingX = 28;
   const superKidsRestingY = 44;
   const superKidsFrontX = superKidsRestingX + 455;
+  const maxCouchCondition = 3;
+  const recoveryDuration = 1.8;
   const jumpVelocity = -820;
   const gravity = 1550;
   const clearanceItemTypes = new Set(["chair", "lamp", "showroom"]);
@@ -174,6 +251,9 @@
   let tagPoints = 0;
   let clearancePoints = 0;
   let heroPoints = 0;
+  let couchCondition = maxCouchCondition;
+  let recoveryGrace = 0;
+  let conditionStatusTime = 0;
   let sandyEncounters = 0;
   let superKidsTriggered = false;
   let superKidsTwoTriggered = false;
@@ -219,6 +299,14 @@
   let nextMusicTime = 0;
   let displayedScore = -1;
   let displayedTags = "";
+  let displayedCouchCondition = -1;
+  const tutorialStorageKey = "couchDashTutorialComplete";
+  let tutorialComplete = testMode || localStorage.getItem(tutorialStorageKey) === "yes";
+  let tutorialJumpDone = tutorialComplete;
+  let tutorialTagDone = tutorialComplete;
+  let activeToastKey = "";
+  let activeToastKind = "";
+  let toastTime = 0;
   const shopRadios = {
     boardwalk: {
       name: "Boardwalk Beat",
@@ -583,6 +671,9 @@
     } else if (kind === "crash") {
       tone(145, 48, 0.38, "sawtooth", 0.052);
       tone(88, 42, 0.3, "square", 0.025, 0.05);
+    } else if (kind === "couch-damage") {
+      tone(330, 125, 0.24, "triangle", 0.035);
+      tone(220, 165, 0.18, "square", 0.018, 0.08);
     } else if (kind === "sandy" && item) {
       if (item.prop === "parade-float") {
         [0, 0.08, 0.16].forEach((delay, index) => tone(523 + index * 136, 590 + index * 146, 0.13, "triangle", 0.018, delay));
@@ -633,6 +724,52 @@
   if (!AudioContextClass) soundButton.hidden = true;
   updateSoundButton();
 
+  function showGameToast(key, title, copy, kind = "tutorial", duration = 0) {
+    if (activeToastKey === key && gameToast.classList.contains("is-visible")) return;
+    activeToastKey = key;
+    activeToastKind = kind;
+    toastTime = duration;
+    gameToastTitle.textContent = title;
+    gameToastCopy.textContent = copy;
+    gameToast.dataset.kind = kind;
+    gameToast.classList.add("is-visible");
+  }
+
+  function hideGameToast(key = "") {
+    if (key && activeToastKey !== key) return;
+    gameToast.classList.remove("is-visible");
+    activeToastKey = "";
+    activeToastKind = "";
+    toastTime = 0;
+  }
+
+  function finishTutorialIfReady() {
+    if (tutorialComplete || !tutorialJumpDone || !tutorialTagDone) return;
+    tutorialComplete = true;
+    localStorage.setItem(tutorialStorageKey, "yes");
+  }
+
+  function updateTutorialPrompt() {
+    if (tutorialComplete || state !== "running" || activeToastKind === "damage") return;
+    if (!tutorialJumpDone) {
+      const obstacleApproaching = obstacles.some((item) => item.x < W - 30 && item.x > player.x + player.w + 70);
+      if (obstacleApproaching) showGameToast("jump", "Jump!", "Press Space, ↑, or tap the game.");
+      else hideGameToast("jump");
+      return;
+    }
+    if (!tutorialTagDone) {
+      const tagApproaching = collectibles.some((item) => item.x < W - 30 && item.x > player.x + player.w + 30);
+      if (tagApproaching) showGameToast("tag", "Grab the price tag!", "Tags add bonus points to your score.");
+      else hideGameToast("tag");
+    }
+  }
+
+  function pulseCouchCondition() {
+    couchConditionNode.classList.remove("condition-hit");
+    void couchConditionNode.offsetWidth;
+    couchConditionNode.classList.add("condition-hit");
+  }
+
   function reset() {
     elapsed = selectedSandyTestTier === null ? 0 : selectedSandyTestTier * 4;
     distance = 0;
@@ -640,6 +777,9 @@
     tagPoints = 0;
     clearancePoints = 0;
     heroPoints = 0;
+    couchCondition = maxCouchCondition;
+    recoveryGrace = 0;
+    conditionStatusTime = 0;
     sandyEncounters = selectedSandyTestTier === null ? 0 : selectedSandyTestTier;
     superKidsTriggered = false;
     superKidsTwoTriggered = false;
@@ -664,6 +804,7 @@
     superKids = null;
     gameCard.classList.remove("laser-league-active");
     boostStatusNode.textContent = "";
+    hideGameToast();
     obstacles = [];
     collectibles = [];
     dust = [];
@@ -671,6 +812,8 @@
     player.y = ground - player.h;
     player.vy = 0;
     player.grounded = true;
+    couchConditionNode.classList.remove("condition-hit");
+    updateCouchCondition();
     updateScore();
   }
 
@@ -702,6 +845,11 @@
     if (state === "running" && player.grounded) {
       player.vy = brendaBoost > 0 ? jumpVelocity * 1.12 : jumpVelocity;
       player.grounded = false;
+      if (!tutorialComplete && !tutorialJumpDone) {
+        tutorialJumpDone = true;
+        hideGameToast("jump");
+        finishTutorialIfReady();
+      }
       playSound("jump");
       for (let i = 0; i < 5; i++) dust.push({ x: player.x + 35, y: ground - 4, life: 0.45, vx: -45 - Math.random() * 75 });
     }
@@ -710,6 +858,8 @@
   function pause() {
     if (state !== "running") return;
     state = "paused";
+    hideGameToast();
+    messageKicker.textContent = "Hold that couch!";
     messageTitle.textContent = "Quick breather";
     messageCopy.textContent = "Press P, Space, or tap continue when you’re ready.";
     startButton.textContent = "Keep moving";
@@ -724,17 +874,77 @@
     requestAnimationFrame(loop);
   }
 
+  function couchConditionLabel(value = couchCondition) {
+    if (value >= 3) return "sturdy";
+    if (value === 2) return "scuffed";
+    if (value === 1) return "critical";
+    return "destroyed";
+  }
+
+  function updateCouchCondition() {
+    if (couchCondition === displayedCouchCondition) return;
+    displayedCouchCondition = couchCondition;
+    const conditionLabel = couchConditionLabel();
+    couchConditionNode.textContent = "▰".repeat(couchCondition) + "▱".repeat(maxCouchCondition - couchCondition);
+    couchConditionNode.dataset.condition = conditionLabel;
+    couchConditionNode.setAttribute("aria-label", `Couch condition: ${conditionLabel}, ${couchCondition} of ${maxCouchCondition}`);
+  }
+
+  function damageCouch(collidedItem) {
+    couchCondition = Math.max(0, couchCondition - 1);
+    updateCouchCondition();
+    pulseCouchCondition();
+    if (couchCondition === 0) {
+      gameOver();
+      return;
+    }
+
+    recoveryGrace = recoveryDuration;
+    conditionStatusTime = recoveryDuration;
+    player.y = ground - player.h;
+    player.vy = 0;
+    player.grounded = true;
+    const recoveryLeft = player.x - 90;
+    const recoveryRight = player.x + player.w + 240;
+    for (let index = 0; index < obstacles.length; index++) {
+      const item = obstacles[index];
+      const nearPlayer = item === collidedItem || (item.x < recoveryRight && item.x + item.w > recoveryLeft);
+      if (!nearPlayer) continue;
+      if (item.clearance) {
+        item.clearance = false;
+        item.clearanceAwarded = true;
+        if (kamden?.target === item) kamden.target = null;
+      }
+      item.x = -item.w - 40;
+    }
+    spawnIn = Math.max(spawnIn, 1.35);
+    boostStatusNode.textContent = couchCondition === 1
+      ? "Couch frame critical! One hit left."
+      : "The couch is scuffed, but still moving.";
+    showGameToast(
+      `damage-${couchCondition}`,
+      couchCondition === 1 ? "Couch critical!" : "Couch scuffed!",
+      couchCondition === 1 ? "One hit left." : "Two hits left.",
+      "damage",
+      2.2,
+    );
+    playSound("couch-damage");
+  }
+
   function gameOver() {
     state = "over";
+    hideGameToast();
     playSound("crash");
     const score = Math.floor(distance) + tagPoints + clearancePoints + heroPoints;
     if (score > best) {
       best = score;
       localStorage.setItem("couchDashBest", String(best));
       bestNode.textContent = String(best).padStart(5, "0");
-      messageTitle.textContent = "New showroom record!";
+      messageKicker.textContent = "New showroom record!";
+      messageTitle.textContent = "What a run!";
     } else {
-      messageTitle.textContent = "Couch traffic jam!";
+      messageKicker.textContent = "Delivery delayed!";
+      messageTitle.textContent = "Couch down!";
     }
     const clearanceSummary = clearancePoints ? ` + ${clearancePoints} Kamden clearance bonus` : "";
     const heroSummary = heroPoints ? ` + ${heroPoints} Laser League bonus` : "";
@@ -745,6 +955,7 @@
 
   function spawnSandy(tierIndex = Math.min(sandyEncounters, sandyPropTiers.length - 1), x = W + 40) {
     const safeTierIndex = Math.max(0, Math.min(tierIndex, sandyPropTiers.length - 1));
+    if (safeTierIndex >= 39) prepareLaserLeagueAssets();
     const isFirstFinaleEncounter = safeTierIndex === sandyPropTiers.length - 1 && sandyEncounters === sandyPropTiers.length - 1;
     const tier = isFirstFinaleEncounter ? [sandyPropTiers[safeTierIndex][0]] : sandyPropTiers[safeTierIndex];
     const nonRepeatingChoices = tier.filter((candidate) => candidate !== lastSandyProp);
@@ -900,6 +1111,17 @@
 
   function activateSuperKids(variant = 1) {
     if (superKids || laserLeagueFinale) return false;
+    const assetsReady = laserLeagueAssetsReady && (variant !== 2 || cosmicOverdriveReady);
+    if (!assetsReady) {
+      prepareLaserLeagueAssets();
+      if (variant === 2) prepareCosmicOverdrive();
+      superKidsPendingVariant = variant;
+      superKidsPending = 0.12;
+      boostStatusNode.textContent = variant === 2
+        ? "Cosmic Overdrive is chargingâ€¦"
+        : "Laser League is approachingâ€¦";
+      return false;
+    }
     brenda = null;
     brendaBoost = 0;
     kamden = null;
@@ -1019,6 +1241,12 @@
     }
     laserAftermathFlash = Math.max(0, laserAftermathFlash - dt);
     laserAftermathGrace = Math.max(0, laserAftermathGrace - dt);
+    recoveryGrace = Math.max(0, recoveryGrace - dt);
+    conditionStatusTime = Math.max(0, conditionStatusTime - dt);
+    if (toastTime > 0) {
+      toastTime = Math.max(0, toastTime - dt);
+      if (toastTime === 0) hideGameToast();
+    }
     if (laserLeagueFinale) {
       laserLeagueFinale.life -= dt;
       laserLeagueFinale.phase += dt * 5;
@@ -1046,7 +1274,7 @@
       }
     }
     brendaBoost = Math.max(0, brendaBoost - dt);
-    if (brendaBoost === 0 && !kamden && !superKids && !superKidsPending && !laserLeagueFinale && !laserAftermathFlash && !laserAftermathGrace && boostStatusNode.textContent) boostStatusNode.textContent = "";
+    if (brendaBoost === 0 && !kamden && !superKids && !superKidsPending && !laserLeagueFinale && !laserAftermathFlash && !laserAftermathGrace && !conditionStatusTime && boostStatusNode.textContent) boostStatusNode.textContent = "";
 
     if (spawnIn <= 0) {
       spawnObstacle();
@@ -1158,6 +1386,7 @@
           playSound("will-finale");
         } else {
           firstLaserLeagueEndElapsed = elapsed;
+          prepareCosmicOverdrive();
           gameCard.classList.remove("laser-league-active");
           boostStatusNode.textContent = "Laser League complete. Cosmic Overdrive may return later…";
         }
@@ -1228,6 +1457,11 @@
       if (intersects(player, item, 18) || vortexCaught) {
         tagCount++;
         tagPoints += brendaBoost > 0 || superKids ? 100 : 50;
+        if (!tutorialComplete && !tutorialTagDone) {
+          tutorialTagDone = true;
+          hideGameToast("tag");
+          finishTutorialIfReady();
+        }
         if (superKids && vortexCaught) {
           superKids.captures++;
           chargeWillPower(6);
@@ -1238,6 +1472,7 @@
       }
     }
     collectibles.length = writeIndex;
+    updateTutorialPrompt();
 
     writeIndex = 0;
     for (let index = 0; index < dust.length; index++) {
@@ -1286,8 +1521,8 @@
         clearanceCollisionBox.h = item.h - shrinkY * 2;
         collided = intersects(playerCollisionBox, clearanceCollisionBox, 10);
       }
-      if (collided && !superKids && !laserLeagueFinale && laserAftermathFlash <= 0 && laserAftermathGrace <= 0) {
-        gameOver();
+      if (collided && recoveryGrace <= 0 && !superKids && !laserLeagueFinale && laserAftermathFlash <= 0 && laserAftermathGrace <= 0) {
+        damageCouch(item);
         break;
       }
     }
@@ -1500,6 +1735,132 @@
     ctx.restore();
   }
 
+  let showroomWallDamageTile = null;
+  let showroomFloorDamageTile = null;
+  let cosmicBackdropLayer = null;
+  let cosmicNebulaLayer = null;
+  let cosmicOrbitLayer = null;
+  let cosmicGridLayer = null;
+
+  function createCanvasLayer(width, height) {
+    const layer = document.createElement("canvas");
+    layer.width = width;
+    layer.height = height;
+    return layer;
+  }
+
+  function buildShowroomWallDamageTile() {
+    if (showroomWallDamageTile) return;
+    showroomWallDamageTile = createCanvasLayer(960, ground);
+    const wallContext = showroomWallDamageTile.getContext("2d");
+    for (let scorch = 0; scorch < 5; scorch++) {
+      const x = 82 + scorch * 202 + Math.sin(scorch * 4.2) * 29;
+      const y = 72 + (scorch % 2) * 94;
+      const soot = wallContext.createRadialGradient(x, y, 3, x, y, 58 + scorch % 3 * 13);
+      soot.addColorStop(0, "rgba(29,27,31,.48)");
+      soot.addColorStop(0.48, "rgba(61,52,53,.22)");
+      soot.addColorStop(1, "rgba(42,37,42,0)");
+      wallContext.fillStyle = soot;
+      wallContext.fillRect(x - 85, y - 85, 170, 170);
+    }
+    wallContext.strokeStyle = "rgba(74,57,53,.72)";
+    wallContext.lineWidth = 2.2;
+    for (let crack = 0; crack < 8; crack++) {
+      const rootX = 54 + crack * 124;
+      const rootY = 31 + crack % 3 * 61;
+      for (let branch = 0; branch < 4; branch++) {
+        const angle = branch * 1.45 + crack * 0.7;
+        wallContext.beginPath();
+        wallContext.moveTo(rootX, rootY);
+        wallContext.lineTo(rootX + Math.cos(angle) * 19, rootY + Math.sin(angle) * 18);
+        wallContext.lineTo(rootX + Math.cos(angle + 0.24) * 37, rootY + Math.sin(angle + 0.24) * 34);
+        wallContext.stroke();
+      }
+    }
+  }
+
+  function buildShowroomFloorDamageTile() {
+    if (showroomFloorDamageTile) return;
+    showroomFloorDamageTile = createCanvasLayer(960, H);
+    const floorContext = showroomFloorDamageTile.getContext("2d");
+    for (let debris = 0; debris < 13; debris++) {
+      const x = 35 + debris * 76 + Math.sin(debris * 2.7) * 14;
+      const y = ground + 12 + (debris * 31 % 68);
+      floorContext.fillStyle = debris % 3 === 0 ? "#6a5e5b" : debris % 2 ? "#9b765f" : "#4f5965";
+      floorContext.save();
+      floorContext.translate(x, y);
+      floorContext.rotate(debris * 0.83);
+      floorContext.fillRect(-5 - debris % 4, -2, 10 + debris % 8, 4 + debris % 5);
+      floorContext.restore();
+    }
+    floorContext.strokeStyle = "rgba(60,51,49,.8)";
+    floorContext.lineWidth = 5;
+    floorContext.beginPath();
+    floorContext.moveTo(20, ground + 5);
+    floorContext.quadraticCurveTo(230, ground - 18, 420, ground + 7);
+    floorContext.quadraticCurveTo(650, ground + 26, 940, ground - 2);
+    floorContext.stroke();
+  }
+
+  function buildCosmicBackdropLayers() {
+    if (cosmicBackdropLayer && cosmicNebulaLayer) return;
+    cosmicBackdropLayer = createCanvasLayer(W, H);
+    const backdropContext = cosmicBackdropLayer.getContext("2d");
+    const arenaGradient = backdropContext.createLinearGradient(0, 0, 0, H);
+    arenaGradient.addColorStop(0, "#05041d");
+    arenaGradient.addColorStop(0.55, "#15105a");
+    arenaGradient.addColorStop(1, "#030615");
+    backdropContext.fillStyle = arenaGradient;
+    backdropContext.fillRect(0, 0, W, H);
+    cosmicNebulaLayer = createCanvasLayer(W, H);
+    const nebulaContext = cosmicNebulaLayer.getContext("2d");
+    const nebula = nebulaContext.createRadialGradient(480, 150, 20, 480, 150, 390);
+    nebula.addColorStop(0, "rgba(57,230,255,.34)");
+    nebula.addColorStop(0.45, "rgba(111,45,255,.24)");
+    nebula.addColorStop(1, "rgba(4,2,24,0)");
+    nebulaContext.fillStyle = nebula;
+    nebulaContext.fillRect(0, 0, W, H);
+  }
+
+  function buildCosmicOrbitLayer() {
+    if (cosmicOrbitLayer) return;
+    cosmicOrbitLayer = createCanvasLayer(W, H);
+    const orbitContext = cosmicOrbitLayer.getContext("2d");
+    orbitContext.strokeStyle = "#8b6dff";
+    orbitContext.lineWidth = 2.5;
+    for (let ring = 0; ring < 4; ring++) {
+      orbitContext.beginPath();
+      orbitContext.ellipse(480, 150, 210 + ring * 76, 56 + ring * 25, -0.08 + ring * 0.035, 0, Math.PI * 2);
+      orbitContext.stroke();
+    }
+  }
+
+  function buildCosmicGridLayer() {
+    if (cosmicGridLayer) return;
+    cosmicGridLayer = createCanvasLayer(W, H);
+    const gridContext = cosmicGridLayer.getContext("2d");
+    const horizon = 262;
+    gridContext.strokeStyle = "#36dfff";
+    gridContext.lineWidth = 2;
+    for (let line = 0; line < 9; line++) {
+      const y = horizon + Math.pow(line / 8, 1.55) * (H - horizon);
+      gridContext.beginPath();
+      gridContext.moveTo(0, y);
+      gridContext.lineTo(W, y);
+      gridContext.stroke();
+    }
+    for (let line = -8; line <= 8; line++) {
+      gridContext.beginPath();
+      gridContext.moveTo(480, horizon);
+      gridContext.lineTo(480 + line * 105, H);
+      gridContext.stroke();
+    }
+  }
+
+  function drawRepeatingLayer(layer, scroll, y) {
+    for (let x = -scroll; x < W; x += layer.width) ctx.drawImage(layer, x, y);
+  }
+
   function drawShowroom() {
     ctx.fillStyle = "#f8f1e8";
     ctx.fillRect(0, 0, W, H);
@@ -1573,59 +1934,11 @@
       ctx.stroke();
     }
 
-    if (showroomDamaged) {
-      ctx.save();
+    if (showroomDamaged && showroomWallDamageTile && showroomFloorDamageTile) {
       const wallDamageScroll = (distance * 6) % 960;
-      for (let damagePanel = -wallDamageScroll; damagePanel < W + 960; damagePanel += 960) {
-        for (let scorch = 0; scorch < 5; scorch++) {
-          const x = damagePanel + 82 + scorch * 202 + Math.sin(scorch * 4.2) * 29;
-          const y = 72 + (scorch % 2) * 94;
-          const soot = ctx.createRadialGradient(x, y, 3, x, y, 58 + scorch % 3 * 13);
-          soot.addColorStop(0, "rgba(29,27,31,.48)");
-          soot.addColorStop(0.48, "rgba(61,52,53,.22)");
-          soot.addColorStop(1, "rgba(42,37,42,0)");
-          ctx.fillStyle = soot;
-          ctx.fillRect(x - 85, y - 85, 170, 170);
-        }
-
-        ctx.strokeStyle = "rgba(74,57,53,.72)";
-        ctx.lineWidth = 2.2;
-        for (let crack = 0; crack < 8; crack++) {
-          const rootX = damagePanel + 54 + crack * 124;
-          const rootY = 31 + crack % 3 * 61;
-          for (let branch = 0; branch < 4; branch++) {
-            const angle = branch * 1.45 + crack * 0.7;
-            ctx.beginPath();
-            ctx.moveTo(rootX, rootY);
-            ctx.lineTo(rootX + Math.cos(angle) * 19, rootY + Math.sin(angle) * 18);
-            ctx.lineTo(rootX + Math.cos(angle + 0.24) * 37, rootY + Math.sin(angle + 0.24) * 34);
-            ctx.stroke();
-          }
-        }
-      }
-
+      drawRepeatingLayer(showroomWallDamageTile, wallDamageScroll, 0);
       const floorDamageScroll = (distance * 10) % 960;
-      for (let floorPanel = -floorDamageScroll; floorPanel < W + 960; floorPanel += 960) {
-        for (let debris = 0; debris < 13; debris++) {
-          const x = floorPanel + 35 + debris * 76 + Math.sin(debris * 2.7) * 14;
-          const y = ground + 12 + (debris * 31 % 68);
-          ctx.fillStyle = debris % 3 === 0 ? "#6a5e5b" : debris % 2 ? "#9b765f" : "#4f5965";
-          ctx.save();
-          ctx.translate(x, y);
-          ctx.rotate(debris * 0.83);
-          ctx.fillRect(-5 - debris % 4, -2, 10 + debris % 8, 4 + debris % 5);
-          ctx.restore();
-        }
-
-        ctx.strokeStyle = "rgba(60,51,49,.8)";
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(floorPanel + 20, ground + 5);
-        ctx.quadraticCurveTo(floorPanel + 230, ground - 18, floorPanel + 420, ground + 7);
-        ctx.quadraticCurveTo(floorPanel + 650, ground + 26, floorPanel + 940, ground - 2);
-        ctx.stroke();
-      }
-      ctx.restore();
+      drawRepeatingLayer(showroomFloorDamageTile, floorDamageScroll, 0);
     }
 
   }
@@ -1915,6 +2228,76 @@
     ctx.fill();
   }
 
+  function drawCouchDamage(x, y) {
+    const damageStage = maxCouchCondition - couchCondition;
+    if (damageStage < 1) return;
+
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#31564f";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(x + 70, y + 18);
+    ctx.lineTo(x + 76, y + 23);
+    ctx.lineTo(x + 72, y + 29);
+    ctx.lineTo(x + 82, y + 33);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(255,240,218,.72)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x + 53, y + 45);
+    ctx.lineTo(x + 67, y + 42);
+    ctx.moveTo(x + 57, y + 51);
+    ctx.lineTo(x + 72, y + 48);
+    ctx.stroke();
+
+    if (damageStage >= 2) {
+      ctx.save();
+      ctx.translate(x + 118, y + 45);
+      ctx.rotate(0.13);
+      roundedRect(-29, -10, 58, 22, 7, "#466f67");
+      ctx.strokeStyle = "#31564f";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-22, 7, 42, 1);
+      ctx.restore();
+
+      ctx.fillStyle = "#f5e1c3";
+      [[137, 46, 5], [143, 49, 4], [138, 53, 4], [147, 54, 3]].forEach(([offsetX, offsetY, radius]) => {
+        ctx.beginPath();
+        ctx.arc(x + offsetX, y + offsetY, radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.strokeStyle = "#46555a";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(x + 137, y + 55);
+      ctx.lineTo(x + 141, y + 59);
+      ctx.lineTo(x + 137, y + 63);
+      ctx.lineTo(x + 142, y + 67);
+      ctx.stroke();
+    }
+
+    if (damageStage >= 3) {
+      ctx.strokeStyle = "#283f3b";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(x + 96, y + 30);
+      ctx.lineTo(x + 91, y + 40);
+      ctx.lineTo(x + 99, y + 49);
+      ctx.lineTo(x + 93, y + 62);
+      ctx.stroke();
+      ctx.fillStyle = "#f5e1c3";
+      for (let tuft = 0; tuft < 5; tuft++) {
+        ctx.beginPath();
+        ctx.arc(x + 86 + tuft * 6, y + 57 + (tuft % 2) * 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
   function drawPlayer() {
     const bounce = player.grounded ? Math.sin(elapsed * 13) * 2 : 0;
     const y = player.y + bounce;
@@ -1926,7 +2309,7 @@
     const couchCenterY = y + 42;
     ctx.save();
     ctx.translate(couchCenterX, couchCenterY);
-    ctx.rotate(0.055);
+    ctx.rotate(0.055 + (couchCondition === 0 ? 0.12 : 0));
     ctx.translate(-couchCenterX, -couchCenterY);
     roundedRect(player.x + 30, y + 23, 130, 49, 13, "#6f998f");
     roundedRect(player.x + 43, y + 8, 104, 43, 15, "#527a72");
@@ -1939,6 +2322,7 @@
     ctx.beginPath();
     ctx.arc(player.x + 95, y + 38, 5, 0, Math.PI * 2);
     ctx.fill();
+    drawCouchDamage(player.x, y);
     ctx.restore();
     drawCarrierGrip(player.x + 18, y + 45, player.x + 28, y + 49, "#202124");
     drawCarrierGrip(player.x + 172, y + 45, player.x + 164, y + 51, "#c7c9cb");
@@ -4510,25 +4894,15 @@
   }
 
   function drawCosmicShowroomArena(opacity, blend) {
+    if (!cosmicBackdropLayer || !cosmicNebulaLayer || !cosmicOrbitLayer || !cosmicGridLayer) return;
     ctx.save();
     const arenaAlpha = opacity * blend;
     const starBlend = Math.max(0, Math.min(1, (blend - 0.12) / 0.88));
     const orbitBlend = Math.max(0, Math.min(1, (blend - 0.28) / 0.72));
     const gridBlend = Math.max(0, Math.min(1, (blend - 0.42) / 0.58));
     ctx.globalAlpha = arenaAlpha;
-    const arenaGradient = ctx.createLinearGradient(0, 0, 0, H);
-    arenaGradient.addColorStop(0, "#05041d");
-    arenaGradient.addColorStop(0.55, "#15105a");
-    arenaGradient.addColorStop(1, "#030615");
-    ctx.fillStyle = arenaGradient;
-    ctx.fillRect(0, 0, W, H);
-
-    const nebula = ctx.createRadialGradient(480, 150, 20, 480, 150, 390);
-    nebula.addColorStop(0, "rgba(57,230,255,.34)");
-    nebula.addColorStop(0.45, "rgba(111,45,255,.24)");
-    nebula.addColorStop(1, "rgba(4,2,24,0)");
-    ctx.fillStyle = nebula;
-    ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(cosmicBackdropLayer, 0, 0);
+    ctx.drawImage(cosmicNebulaLayer, 0, 0);
 
     ctx.globalCompositeOperation = "lighter";
     for (let star = 0; star < 56; star++) {
@@ -4543,13 +4917,7 @@
     }
 
     ctx.globalAlpha = opacity * orbitBlend * 0.55;
-    ctx.strokeStyle = "#8b6dff";
-    ctx.lineWidth = 2.5;
-    for (let ring = 0; ring < 4; ring++) {
-      ctx.beginPath();
-      ctx.ellipse(480, 150, 210 + ring * 76, 56 + ring * 25, -0.08 + ring * 0.035, 0, Math.PI * 2);
-      ctx.stroke();
-    }
+    ctx.drawImage(cosmicOrbitLayer, 0, 0);
 
     for (let item = 0; item < 12; item++) {
       const orbit = item % 4;
@@ -4562,23 +4930,8 @@
       drawOrbitFurnitureSilhouette(item % 5, x, y, depth, angle * 0.38, item % 2 ? "#55eeff" : "#a56dff");
     }
 
-    const horizon = 262;
     ctx.globalAlpha = opacity * gridBlend * 0.52;
-    ctx.strokeStyle = "#36dfff";
-    ctx.lineWidth = 2;
-    for (let line = 0; line < 9; line++) {
-      const y = horizon + Math.pow(line / 8, 1.55) * (H - horizon);
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(W, y);
-      ctx.stroke();
-    }
-    for (let line = -8; line <= 8; line++) {
-      ctx.beginPath();
-      ctx.moveTo(480, horizon);
-      ctx.lineTo(480 + line * 105, H);
-      ctx.stroke();
-    }
+    ctx.drawImage(cosmicGridLayer, 0, 0);
     ctx.restore();
   }
 
@@ -4658,21 +5011,21 @@
     };
   }
 
-  function drawLaserHeroSprite(x, y, alpha = 1) {
+  function drawLaserHeroSprite(x, y, alpha = 1, glow = true) {
     ctx.save();
     ctx.globalAlpha *= alpha;
-    if (superKids?.powerStage >= 4) {
+    if (glow && superKids?.powerStage >= 4) {
       ctx.shadowColor = "#c8fbff";
       ctx.shadowBlur = 28 + Math.sin(superKids.phase * 1.3) * 8;
     }
-    ctx.drawImage(laserHeroImage, x, y, laserHeroW, laserHeroH);
+    ctx.drawImage(laserHeroSprite, x, y, laserHeroW, laserHeroH);
     ctx.restore();
   }
 
   function drawVortexHeroSprite(x, y, alpha = 1) {
     ctx.save();
     ctx.globalAlpha *= alpha;
-    ctx.drawImage(vortexHeroImage, x, y, vortexHeroW, vortexHeroH);
+    ctx.drawImage(vortexHeroSprite, x, y, vortexHeroW, vortexHeroH);
     ctx.restore();
   }
 
@@ -4917,12 +5270,12 @@
       ctx.globalAlpha = opacity;
     }
 
-    const spritesReady = laserHeroImage.complete && laserHeroImage.naturalWidth && vortexHeroImage.complete && vortexHeroImage.naturalWidth;
+    const spritesReady = laserHeroSprite && vortexHeroSprite;
     if (spritesReady) {
       const trailStrength = age < 1.2 || superKids.comboLife > 0 || superKids.life < 1 ? 1 : 0.35;
-      for (let trail = 3; trail >= 1; trail--) {
+      for (let trail = 2; trail >= 1; trail--) {
         drawVortexHeroSprite(vortexSpriteX - trail * 8, vortexSpriteY + trail * 2, trailStrength * (0.025 + trail * 0.02));
-        drawLaserHeroSprite(laserX - trail * 15, laserY + trail * 2, trailStrength * (0.035 + trail * 0.025));
+        drawLaserHeroSprite(laserX - trail * 15, laserY + trail * 2, trailStrength * (0.035 + trail * 0.025), false);
       }
       drawVortexHeroSprite(vortexSpriteX, vortexSpriteY);
       drawLaserHeroSprite(laserX, laserY);
@@ -4984,14 +5337,14 @@
     }
     ctx.globalCompositeOperation = "source-over";
 
-    if (willFinaleImage.complete && willFinaleImage.naturalWidth) {
+    if (willFinaleSprite) {
       const zoom = 1 + Math.sin(Math.min(1, chargeProgress) * Math.PI * 0.5) * 0.075;
       const drawW = 760 * zoom;
       const drawH = 507 * zoom;
       ctx.save();
       ctx.shadowColor = "#4deaff";
       ctx.shadowBlur = 32 + chargeProgress * 28;
-      ctx.drawImage(willFinaleImage, -14 - (drawW - 760) * 0.36, -28 - (drawH - 507) * 0.34, drawW, drawH);
+      ctx.drawImage(willFinaleSprite, -14 - (drawW - 760) * 0.36, -28 - (drawH - 507) * 0.34, drawW, drawH);
       ctx.restore();
     }
 
@@ -5092,6 +5445,10 @@
     ctx.restore();
   }
 
+  function withinDrawRange(item, margin = 0) {
+    return item.x < W + margin && item.x + item.w > -margin;
+  }
+
   function draw() {
     let locomotive = null;
     let tRex = null;
@@ -5101,7 +5458,7 @@
     let dragon = null;
     for (let index = 0; index < obstacles.length; index++) {
       const item = obstacles[index];
-      if (item.x >= W || item.x + item.w <= 0) continue;
+      if (!withinDrawRange(item)) continue;
       if (item.prop === "steam-locomotive") locomotive = item;
       else if (item.prop === "t-rex") tRex = item;
       else if (item.prop === "thundercloud") thundercloud = item;
@@ -5123,10 +5480,14 @@
     if (totalRumble) ctx.translate(Math.sin(elapsed * 73) * totalRumble, Math.cos(elapsed * 91) * totalRumble * 0.55);
     drawShowroom();
     drawSuperKidsAtmosphere();
-    for (let index = 0; index < collectibles.length; index++) drawTag(collectibles[index]);
+    for (let index = 0; index < collectibles.length; index++) {
+      const item = collectibles[index];
+      if (withinDrawRange(item, 60)) drawTag(item);
+    }
     let clearanceItem = null;
     for (let index = 0; index < obstacles.length; index++) {
       const item = obstacles[index];
+      if (!withinDrawRange(item, 240)) continue;
       drawObstacle(item);
       drawLaserLeagueWaveMark(item);
       drawHeroBlast(item);
@@ -5144,7 +5505,10 @@
       ctx.fill();
       ctx.globalAlpha = 1;
     }
+    ctx.save();
+    if (recoveryGrace > 0) ctx.globalAlpha = Math.sin(recoveryGrace * 22) > 0 ? 0.35 : 1;
     drawPlayer();
+    ctx.restore();
     drawSuperKids();
     drawLaserLeagueFinale();
     ctx.restore();
