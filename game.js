@@ -1,6 +1,15 @@
 (() => {
   const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  const compactRender = window.matchMedia("(max-width: 38rem), (max-height: 32rem)").matches;
+  const renderScale = compactRender ? 0.8 : 1;
+  if (renderScale < 1) {
+    canvas.width = Math.round(W * renderScale);
+    canvas.height = Math.round(H * renderScale);
+  }
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (renderScale < 1) ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
   const startButton = document.getElementById("start-button");
   const jumpButton = document.getElementById("jump-button");
   const fullscreenButton = document.getElementById("fullscreen-button");
@@ -13,6 +22,9 @@
   const messageKicker = document.getElementById("message-kicker");
   const messageTitle = document.getElementById("message-title");
   const messageCopy = document.getElementById("message-copy");
+  const scoreBreakdown = document.getElementById("score-breakdown");
+  const finalScoreNode = document.getElementById("final-score");
+  const scoreRowsNode = document.getElementById("score-rows");
   const scoreNode = document.getElementById("score");
   const tagsNode = document.getElementById("tags");
   const couchConditionNode = document.getElementById("couch-condition");
@@ -31,8 +43,6 @@
   const vortexHeroImage = new Image();
   const willFinaleImage = new Image();
 
-  const W = canvas.width;
-  const H = canvas.height;
   const ground = 330;
   const laserHeroW = 335;
   const laserHeroH = 223;
@@ -104,6 +114,7 @@
       .then((sprite) => { willFinaleSprite = sprite; });
     const cachePromise = runIdlePreparation(buildShowroomWallDamageTile)
       .then(() => runIdlePreparation(buildShowroomFloorDamageTile))
+      .then(() => runIdlePreparation(buildDamagedShowroomWallTile))
       .then(() => runIdlePreparation(buildCosmicBackdropLayers))
       .then(() => runIdlePreparation(buildCosmicOrbitLayer))
       .then(() => runIdlePreparation(buildCosmicGridLayer));
@@ -249,6 +260,8 @@
   let distance = 0;
   let tagCount = 0;
   let tagPoints = 0;
+  let brendaBonusPoints = 0;
+  let laserLeagueTagBonusPoints = 0;
   let clearancePoints = 0;
   let heroPoints = 0;
   let couchCondition = maxCouchCondition;
@@ -747,6 +760,8 @@
     distance = 0;
     tagCount = 0;
     tagPoints = 0;
+    brendaBonusPoints = 0;
+    laserLeagueTagBonusPoints = 0;
     clearancePoints = 0;
     heroPoints = 0;
     couchCondition = maxCouchCondition;
@@ -775,7 +790,10 @@
     kamden = null;
     superKids = null;
     gameCard.classList.remove("laser-league-active");
+    message.classList.remove("has-results");
     boostStatusNode.textContent = "";
+    scoreBreakdown.hidden = true;
+    messageCopy.hidden = false;
     hideGameToast();
     obstacles = [];
     collectibles = [];
@@ -868,9 +886,6 @@
 
     recoveryGrace = recoveryDuration;
     conditionStatusTime = recoveryDuration;
-    player.y = ground - player.h;
-    player.vy = 0;
-    player.grounded = true;
     const recoveryLeft = player.x - 90;
     const recoveryRight = player.x + player.w + 240;
     for (let index = 0; index < obstacles.length; index++) {
@@ -893,9 +908,42 @@
       couchCondition === 1 ? "Couch critical!" : "Couch scuffed!",
       couchCondition === 1 ? "One hit left." : "Two hits left.",
       "damage",
-      2.2,
+      1.45,
     );
     playSound("couch-damage");
+  }
+
+  function appendScoreRow(label, points, detail = "", bonus = false) {
+    const row = document.createElement("div");
+    row.className = "score-row";
+    const labelNode = document.createElement("span");
+    labelNode.className = "score-row-label";
+    labelNode.textContent = label;
+    if (detail) {
+      const detailNode = document.createElement("small");
+      detailNode.textContent = ` · ${detail}`;
+      labelNode.append(detailNode);
+    }
+    const pointsNode = document.createElement("strong");
+    pointsNode.className = "score-row-points";
+    pointsNode.textContent = `${bonus ? "+" : ""}${points.toLocaleString("en-US")}`;
+    row.append(labelNode, pointsNode);
+    scoreRowsNode.append(row);
+  }
+
+  function renderScoreBreakdown(score) {
+    const distancePoints = Math.floor(distance);
+    const baseTagPoints = tagCount * 50;
+    const laserLeaguePoints = heroPoints + laserLeagueTagBonusPoints;
+    finalScoreNode.textContent = score.toLocaleString("en-US");
+    scoreRowsNode.replaceChildren();
+    appendScoreRow("Distance", distancePoints, `${distancePoints.toLocaleString("en-US")} ft`);
+    appendScoreRow("Price tags", baseTagPoints, `${tagCount.toLocaleString("en-US")} collected`);
+    if (brendaBonusPoints > 0) appendScoreRow("Brenda Boost", brendaBonusPoints, "", true);
+    if (clearancePoints > 0) appendScoreRow("Kamden Clearance", clearancePoints, "", true);
+    if (laserLeaguePoints > 0) appendScoreRow("Laser League", laserLeaguePoints, "", true);
+    messageCopy.hidden = true;
+    scoreBreakdown.hidden = false;
   }
 
   function gameOver() {
@@ -913,9 +961,8 @@
       messageKicker.textContent = "Delivery delayed!";
       messageTitle.textContent = "Couch down!";
     }
-    const clearanceSummary = clearancePoints ? ` + ${clearancePoints} Kamden clearance bonus` : "";
-    const heroSummary = heroPoints ? ` + ${heroPoints} Laser League bonus` : "";
-    messageCopy.textContent = `Score ${score}: ${Math.floor(distance)} feet + ${tagPoints} tag bonus${clearanceSummary}${heroSummary}. You saved ${tagCount} price tag${tagCount === 1 ? "" : "s"}.`;
+    renderScoreBreakdown(score);
+    message.classList.add("has-results");
     startButton.textContent = "Try again";
     message.hidden = false;
   }
@@ -1020,9 +1067,17 @@
 
   function activateKamden(forceTarget = false) {
     if (kamden || brenda || superKids) return false;
-    let target = obstacles
-      .filter((item) => clearanceItemTypes.has(item.type) && !item.clearance && item.x > player.x + player.w + 150)
-      .sort((a, b) => a.x - b.x)[0];
+    let target = null;
+    const targetFloor = player.x + player.w + 150;
+    for (let index = 0; index < obstacles.length; index++) {
+      const item = obstacles[index];
+      if (
+        clearanceItemTypes.has(item.type)
+        && !item.clearance
+        && item.x > targetFloor
+        && (!target || item.x < target.x)
+      ) target = item;
+    }
     if (!target && forceTarget) {
       target = {
         type: "chair", variant: "armchair", color: "#62806f",
@@ -1047,7 +1102,6 @@
     brenda = { life: 6, total: 6, phase: 0 };
     playSound("brenda");
     brendaBoost = 6;
-    wallHelpers = [];
     helperIn = Math.max(helperIn, 7);
     kamdenIn = Math.max(kamdenIn, 7);
     boostStatusNode.textContent = "Brenda Boost active. Price tags are worth double and jumps are stronger.";
@@ -1324,12 +1378,17 @@
         playSound("hero-combo");
       }
       if (superKids.comboLife <= 0 && superKids.laserCooldown <= 0) {
-        const target = obstacles
-          .filter((item) => {
-            const centerX = item.x + item.w / 2;
-            return !item.heroBlast && centerX > superKidsFrontX && visibleToLaserLeague(item);
-          })
-          .sort((a, b) => a.x - b.x)[0];
+        let target = null;
+        for (let index = 0; index < obstacles.length; index++) {
+          const item = obstacles[index];
+          const centerX = item.x + item.w / 2;
+          if (
+            !item.heroBlast
+            && centerX > superKidsFrontX
+            && visibleToLaserLeague(item)
+            && (!target || item.x < target.x)
+          ) target = item;
+        }
         if (target) {
           target.heroBlast = 0.28;
           target.heroBlastTotal = 0.28;
@@ -1404,14 +1463,15 @@
     }
     obstacles.length = writeIndex;
 
+    const vortexAnchor = superKids ? superKidsAnchors() : null;
     writeIndex = 0;
     for (let index = 0; index < collectibles.length; index++) {
       const item = collectibles[index];
       item.x -= speed * heroWorldScale * dt;
       item.phase += dt * 5;
       let vortexCaught = false;
-      if (superKids && item.x + item.w / 2 > player.x + player.w) {
-        const { vortexX, vortexY } = superKidsAnchors();
+      if (vortexAnchor && item.x + item.w / 2 > player.x + player.w) {
+        const { vortexX, vortexY } = vortexAnchor;
         const distanceToVortex = Math.hypot(item.x + item.w / 2 - vortexX, item.y + item.h / 2 - vortexY);
         const orbitRadius = Math.min(30, distanceToVortex * 0.12);
         const orbitX = vortexX + Math.cos(item.phase * 0.72) * orbitRadius;
@@ -1423,7 +1483,11 @@
       }
       if (intersects(player, item, 18) || vortexCaught) {
         tagCount++;
-        tagPoints += brendaBoost > 0 || superKids ? 100 : 50;
+        const brendaBoosted = brendaBoost > 0;
+        const laserLeagueBoosted = Boolean(superKids);
+        tagPoints += brendaBoosted || laserLeagueBoosted ? 100 : 50;
+        if (brendaBoosted) brendaBonusPoints += 50;
+        else if (laserLeagueBoosted) laserLeagueTagBonusPoints += 50;
         if (superKids && vortexCaught) {
           superKids.captures++;
           chargeWillPower(6);
@@ -1502,11 +1566,15 @@
     }
   }
 
+  function fillRoundedRect(targetContext, x, y, w, h, r, fill) {
+    targetContext.beginPath();
+    targetContext.roundRect(x, y, w, h, r);
+    targetContext.fillStyle = fill;
+    targetContext.fill();
+  }
+
   function roundedRect(x, y, w, h, r, fill) {
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, r);
-    ctx.fillStyle = fill;
-    ctx.fill();
+    fillRoundedRect(ctx, x, y, w, h, r, fill);
   }
 
   function drawSpeechBubble(x, y, w, h, tailX, tailY) {
@@ -1697,16 +1765,104 @@
 
   let showroomWallDamageTile = null;
   let showroomFloorDamageTile = null;
+  let showroomWallTile = null;
+  let showroomDamagedWallTile = null;
+  let showroomFloorTile = null;
   let cosmicBackdropLayer = null;
   let cosmicNebulaLayer = null;
+  let cosmicStarsLayer = null;
   let cosmicOrbitLayer = null;
   let cosmicGridLayer = null;
+  let laserFinaleBackdropLayer = null;
 
   function createCanvasLayer(width, height) {
     const layer = document.createElement("canvas");
     layer.width = width;
     layer.height = height;
     return layer;
+  }
+
+  function buildShowroomWallTile(damaged = false) {
+    const layer = createCanvasLayer(960, ground);
+    const layerContext = layer.getContext("2d", { alpha: false });
+    layerContext.fillStyle = "#f8f1e8";
+    layerContext.fillRect(0, 0, layer.width, layer.height);
+    layerContext.fillStyle = "#fffaf4";
+    layerContext.fillRect(0, 0, layer.width, 240);
+
+    for (let frameIndex = 0; frameIndex < 4; frameIndex++) {
+      const centerX = frameIndex * 240 + 120;
+      const crookedAngle = damaged ? Math.sin(frameIndex * 2.3 + 0.7) * 0.11 : 0;
+      layerContext.save();
+      layerContext.translate(centerX, 96);
+      layerContext.rotate(crookedAngle);
+      layerContext.strokeStyle = "#d8cec2";
+      layerContext.lineWidth = 8;
+      layerContext.strokeRect(-75, -54, 150, 108);
+      layerContext.fillStyle = frameIndex % 2 ? "#d9b69e" : "#97b1aa";
+      layerContext.fillRect(-63, -42, 126, 84);
+      layerContext.fillStyle = "rgba(255,255,255,.36)";
+      layerContext.beginPath();
+      layerContext.arc(0, -3, 26, 0, Math.PI * 2);
+      layerContext.fill();
+      if (damaged && frameIndex % 3 === 0) {
+        layerContext.strokeStyle = "rgba(38,31,29,.62)";
+        layerContext.lineWidth = 2;
+        layerContext.beginPath();
+        layerContext.moveTo(-56, -35);
+        layerContext.lineTo(42, 32);
+        layerContext.moveTo(12, -38);
+        layerContext.lineTo(-32, 36);
+        layerContext.stroke();
+      }
+      layerContext.restore();
+    }
+
+    const signCenter = 720;
+    fillRoundedRect(layerContext, signCenter - 82, 166, 164, 46, 9, "#d8cec2");
+    fillRoundedRect(layerContext, signCenter - 77, 171, 154, 36, 6, "#fffdf6");
+    layerContext.fillStyle = colors.forest;
+    layerContext.font = "700 14px Poppins, sans-serif";
+    layerContext.textAlign = "center";
+    layerContext.fillText("LOADING BAY", signCenter - 9, 195);
+    layerContext.strokeStyle = colors.forest;
+    layerContext.lineWidth = 3;
+    layerContext.lineCap = "round";
+    layerContext.beginPath();
+    layerContext.moveTo(signCenter + 47, 189);
+    layerContext.lineTo(signCenter + 66, 189);
+    layerContext.lineTo(signCenter + 59, 183);
+    layerContext.moveTo(signCenter + 66, 189);
+    layerContext.lineTo(signCenter + 59, 195);
+    layerContext.stroke();
+    return layer;
+  }
+
+  function buildShowroomFloorTile() {
+    const layer = createCanvasLayer(900, H - ground);
+    const layerContext = layer.getContext("2d", { alpha: false });
+    layerContext.fillStyle = colors.sand;
+    layerContext.fillRect(0, 0, layer.width, layer.height);
+    layerContext.fillStyle = "#cfc0b0";
+    layerContext.fillRect(0, 0, layer.width, 7);
+    layerContext.strokeStyle = "rgba(138,76,54,.13)";
+    layerContext.lineWidth = 2;
+    for (let x = 0; x <= layer.width; x += 90) {
+      layerContext.beginPath();
+      layerContext.moveTo(x, 7);
+      layerContext.lineTo(x - 25, layer.height);
+      layerContext.stroke();
+    }
+    return layer;
+  }
+
+  function buildBaseShowroomLayers() {
+    if (!showroomWallTile) showroomWallTile = buildShowroomWallTile(false);
+    if (!showroomFloorTile) showroomFloorTile = buildShowroomFloorTile();
+  }
+
+  function buildDamagedShowroomWallTile() {
+    if (!showroomDamagedWallTile) showroomDamagedWallTile = buildShowroomWallTile(true);
   }
 
   function buildShowroomWallDamageTile() {
@@ -1763,7 +1919,7 @@
   }
 
   function buildCosmicBackdropLayers() {
-    if (cosmicBackdropLayer && cosmicNebulaLayer) return;
+    if (cosmicBackdropLayer && cosmicNebulaLayer && cosmicStarsLayer && laserFinaleBackdropLayer) return;
     cosmicBackdropLayer = createCanvasLayer(W, H);
     const backdropContext = cosmicBackdropLayer.getContext("2d");
     const arenaGradient = backdropContext.createLinearGradient(0, 0, 0, H);
@@ -1780,6 +1936,28 @@
     nebula.addColorStop(1, "rgba(4,2,24,0)");
     nebulaContext.fillStyle = nebula;
     nebulaContext.fillRect(0, 0, W, H);
+
+    cosmicStarsLayer = createCanvasLayer(W, H);
+    const starsContext = cosmicStarsLayer.getContext("2d");
+    for (let star = 0; star < 56; star++) {
+      const x = (star * 157 + 43) % W;
+      const y = (star * 83 + 29) % 252;
+      starsContext.globalAlpha = 0.35 + Math.sin(star) * 0.25;
+      starsContext.fillStyle = star % 5 ? "#9fefff" : "#ffffff";
+      starsContext.beginPath();
+      starsContext.arc(x, y, 1 + star % 3 * 0.65, 0, Math.PI * 2);
+      starsContext.fill();
+    }
+    starsContext.globalAlpha = 1;
+
+    laserFinaleBackdropLayer = createCanvasLayer(W, H);
+    const finaleContext = laserFinaleBackdropLayer.getContext("2d", { alpha: false });
+    const finaleGradient = finaleContext.createLinearGradient(0, 0, W, H);
+    finaleGradient.addColorStop(0, "#06031d");
+    finaleGradient.addColorStop(0.55, "#15126a");
+    finaleGradient.addColorStop(1, "#03020d");
+    finaleContext.fillStyle = finaleGradient;
+    finaleContext.fillRect(0, 0, W, H);
   }
 
   function buildCosmicOrbitLayer() {
@@ -1822,77 +2000,13 @@
   }
 
   function drawShowroom() {
-    ctx.fillStyle = "#f8f1e8";
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#fffaf4";
-    ctx.fillRect(0, 0, W, 240);
-
-    const scroll = (distance * 6) % 240;
-    for (let x = -scroll; x < W + 240; x += 240) {
-      const frameIndex = Math.floor((x + scroll) / 240);
-      const crookedAngle = showroomDamaged ? Math.sin(frameIndex * 2.3 + 0.7) * 0.11 : 0;
-      ctx.save();
-      ctx.translate(x + 120, 96);
-      ctx.rotate(crookedAngle);
-      ctx.strokeStyle = "#d8cec2";
-      ctx.lineWidth = 8;
-      ctx.strokeRect(-75, -54, 150, 108);
-      ctx.fillStyle = frameIndex % 2 ? "#d9b69e" : "#97b1aa";
-      ctx.fillRect(-63, -42, 126, 84);
-      ctx.fillStyle = "rgba(255,255,255,.36)";
-      ctx.beginPath();
-      ctx.arc(0, -3, 26, 0, Math.PI * 2);
-      ctx.fill();
-      if (showroomDamaged && frameIndex % 3 === 0) {
-        ctx.strokeStyle = "rgba(38,31,29,.62)";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(-56, -35);
-        ctx.lineTo(42, 32);
-        ctx.moveTo(12, -38);
-        ctx.lineTo(-32, 36);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
+    const wallLayer = showroomDamaged && showroomDamagedWallTile ? showroomDamagedWallTile : showroomWallTile;
+    const wallScroll = (distance * 6) % 960;
+    drawRepeatingLayer(wallLayer, wallScroll, 0);
 
     if (!brenda) wallHelpers.forEach(drawWallHelper);
-
-    // A wall-mounted loading-bay placard occupies every fourth gap between
-    // framed pictures and scrolls with the showroom instead of the HUD.
-    const signScroll = (distance * 6) % 960;
-    for (let signCenter = 720 - signScroll; signCenter < W + 180; signCenter += 960) {
-      if (signCenter < -180) continue;
-      roundedRect(signCenter - 82, 166, 164, 46, 9, "#d8cec2");
-      roundedRect(signCenter - 77, 171, 154, 36, 6, "#fffdf6");
-      ctx.fillStyle = colors.forest;
-      ctx.font = "700 14px Poppins, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("LOADING BAY", signCenter - 9, 195);
-      ctx.strokeStyle = colors.forest;
-      ctx.lineWidth = 3;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(signCenter + 47, 189);
-      ctx.lineTo(signCenter + 66, 189);
-      ctx.lineTo(signCenter + 59, 183);
-      ctx.moveTo(signCenter + 66, 189);
-      ctx.lineTo(signCenter + 59, 195);
-      ctx.stroke();
-    }
-
-    ctx.fillStyle = colors.sand;
-    ctx.fillRect(0, ground, W, H - ground);
-    ctx.fillStyle = "#cfc0b0";
-    ctx.fillRect(0, ground, W, 7);
-    ctx.strokeStyle = "rgba(138,76,54,.13)";
-    ctx.lineWidth = 2;
-    for (let x = -(distance * 10 % 90); x < W; x += 90) {
-      ctx.beginPath();
-      ctx.moveTo(x, ground + 7);
-      ctx.lineTo(x - 25, H);
-      ctx.stroke();
-    }
+    const floorScroll = (distance * 10) % showroomFloorTile.width;
+    drawRepeatingLayer(showroomFloorTile, floorScroll, ground);
 
     if (showroomDamaged && showroomWallDamageTile && showroomFloorDamageTile) {
       const wallDamageScroll = (distance * 6) % 960;
@@ -4854,7 +4968,7 @@
   }
 
   function drawCosmicShowroomArena(opacity, blend) {
-    if (!cosmicBackdropLayer || !cosmicNebulaLayer || !cosmicOrbitLayer || !cosmicGridLayer) return;
+    if (!cosmicBackdropLayer || !cosmicNebulaLayer || !cosmicStarsLayer || !cosmicOrbitLayer || !cosmicGridLayer) return;
     ctx.save();
     const arenaAlpha = opacity * blend;
     const starBlend = Math.max(0, Math.min(1, (blend - 0.12) / 0.88));
@@ -4865,23 +4979,17 @@
     ctx.drawImage(cosmicNebulaLayer, 0, 0);
 
     ctx.globalCompositeOperation = "lighter";
-    for (let star = 0; star < 56; star++) {
-      const x = (star * 157 + 43) % W;
-      const y = (star * 83 + 29) % 252;
-      const twinkle = 0.35 + Math.sin(superKids.phase * 0.22 + star) * 0.25;
-      ctx.globalAlpha = opacity * starBlend * Math.max(0.12, twinkle);
-      ctx.fillStyle = star % 5 ? "#9fefff" : "#ffffff";
-      ctx.beginPath();
-      ctx.arc(x, y, 1 + star % 3 * 0.65, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    const starPulse = 0.78 + Math.sin(superKids.phase * 0.22) * 0.16;
+    ctx.globalAlpha = opacity * starBlend * starPulse;
+    ctx.drawImage(cosmicStarsLayer, 0, 0);
 
     ctx.globalAlpha = opacity * orbitBlend * 0.55;
     ctx.drawImage(cosmicOrbitLayer, 0, 0);
 
-    for (let item = 0; item < 12; item++) {
+    const orbitingItemCount = compactRender ? 8 : 12;
+    for (let item = 0; item < orbitingItemCount; item++) {
       const orbit = item % 4;
-      const angle = superKids.phase * (0.035 + orbit * 0.008) + item * Math.PI / 6;
+      const angle = superKids.phase * (0.035 + orbit * 0.008) + item * Math.PI * 2 / orbitingItemCount;
       const radiusX = 220 + orbit * 72;
       const radiusY = 62 + orbit * 23;
       const x = 480 + Math.cos(angle) * radiusX;
@@ -4976,7 +5084,7 @@
     ctx.globalAlpha *= alpha;
     if (glow && superKids?.powerStage >= 4) {
       ctx.shadowColor = "#c8fbff";
-      ctx.shadowBlur = 28 + Math.sin(superKids.phase * 1.3) * 8;
+      ctx.shadowBlur = (28 + Math.sin(superKids.phase * 1.3) * 8) * (compactRender ? 0.6 : 1);
     }
     ctx.drawImage(laserHeroSprite, x, y, laserHeroW, laserHeroH);
     ctx.restore();
@@ -5233,7 +5341,8 @@
     const spritesReady = laserHeroSprite && vortexHeroSprite;
     if (spritesReady) {
       const trailStrength = age < 1.2 || superKids.comboLife > 0 || superKids.life < 1 ? 1 : 0.35;
-      for (let trail = 2; trail >= 1; trail--) {
+      const trailCount = compactRender ? 1 : 2;
+      for (let trail = trailCount; trail >= 1; trail--) {
         drawVortexHeroSprite(vortexSpriteX - trail * 8, vortexSpriteY + trail * 2, trailStrength * (0.025 + trail * 0.02));
         drawLaserHeroSprite(laserX - trail * 15, laserY + trail * 2, trailStrength * (0.035 + trail * 0.025), false);
       }
@@ -5254,7 +5363,8 @@
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     const energyAnchors = [[eyeX, eyeY], [handX, handY], [handTwoX, handTwoY], [vortexX, vortexY], [gravityBallX, gravityBallY]];
-    for (let spark = 0; spark < 26; spark++) {
+    const energySparkCount = compactRender ? 18 : 26;
+    for (let spark = 0; spark < energySparkCount; spark++) {
       const anchor = energyAnchors[spark % energyAnchors.length];
       const angle = superKids.phase * (0.12 + spark % 4 * 0.025) + spark * 2.1;
       const radius = 8 + spark % 7 * 4;
@@ -5275,16 +5385,16 @@
     const blastProgress = Math.max(0, Math.min(1, (progress - 0.62) / 0.38));
     ctx.save();
 
-    const backdrop = ctx.createLinearGradient(0, 0, W, H);
-    backdrop.addColorStop(0, "#06031d");
-    backdrop.addColorStop(0.55, "#15126a");
-    backdrop.addColorStop(1, "#03020d");
-    ctx.fillStyle = backdrop;
-    ctx.fillRect(0, 0, W, H);
+    if (laserFinaleBackdropLayer) ctx.drawImage(laserFinaleBackdropLayer, 0, 0);
+    else {
+      ctx.fillStyle = "#09072c";
+      ctx.fillRect(0, 0, W, H);
+    }
 
     ctx.globalCompositeOperation = "lighter";
-    for (let ray = 0; ray < 24; ray++) {
-      const angle = ray * Math.PI / 12 + laserLeagueFinale.phase * 0.015;
+    const finaleRayCount = compactRender ? 16 : 24;
+    for (let ray = 0; ray < finaleRayCount; ray++) {
+      const angle = ray * Math.PI * 2 / finaleRayCount + laserLeagueFinale.phase * 0.015;
       const inner = 55 + chargeProgress * 22;
       const outer = 620 + ray % 4 * 80;
       ctx.globalAlpha = 0.12 + ray % 3 * 0.035;
@@ -5303,7 +5413,7 @@
       const drawH = 507 * zoom;
       ctx.save();
       ctx.shadowColor = "#4deaff";
-      ctx.shadowBlur = 32 + chargeProgress * 28;
+      ctx.shadowBlur = (32 + chargeProgress * 28) * (compactRender ? 0.58 : 1);
       ctx.drawImage(willFinaleSprite, -14 - (drawW - 760) * 0.36, -28 - (drawH - 507) * 0.34, drawW, drawH);
       ctx.restore();
     }
@@ -5659,5 +5769,6 @@
     }
   });
 
+  buildBaseShowroomLayers();
   draw();
 })();

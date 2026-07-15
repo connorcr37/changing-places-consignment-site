@@ -222,6 +222,55 @@ canvas {
 
 #message-copy { color: var(--muted); }
 
+.score-breakdown {
+  display: grid;
+  width: min(27rem, calc(100% - 1rem));
+  gap: 0.3rem;
+  margin: 0.25rem auto 0.45rem;
+  color: var(--forest-dark);
+  text-align: left;
+}
+
+.score-breakdown[hidden] { display: none; }
+
+.score-total,
+.score-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.score-total {
+  padding: 0.42rem 0.7rem;
+  border-radius: 0.65rem;
+  color: #fff;
+  background: var(--forest-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.score-total strong {
+  color: #fff;
+  font-size: 1.25rem;
+  letter-spacing: 0.03em;
+}
+
+.score-rows { display: grid; gap: 0.18rem; }
+
+.score-row {
+  padding: 0.25rem 0.7rem;
+  border-bottom: 1px solid rgba(46, 92, 80, 0.14);
+  font-size: 0.76rem;
+}
+
+.score-row:last-child { border-bottom: 0; }
+.score-row-label { min-width: 0; font-weight: 700; }
+.score-row-label small { margin-left: 0.32rem; color: var(--muted); font-size: 0.9em; font-weight: 500; }
+.score-row-points { color: var(--clay); font-variant-numeric: tabular-nums; font-weight: 800; white-space: nowrap; }
+
 #start-button,
 .jump-button,
 .fullscreen-button,
@@ -600,24 +649,163 @@ kbd {
   .scoreboard {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.35rem;
-    padding: 0.65rem 0.4rem;
-    font-size: clamp(0.62rem, 2.8vw, 0.78rem);
+    gap: 0.25rem;
+    padding: 0.42rem 0.3rem;
+    font-size: clamp(0.58rem, 2.65vw, 0.72rem);
   }
   .scoreboard span {
-    justify-content: center;
+    display: grid;
+    grid-template-rows: auto auto;
+    justify-items: center;
+    align-content: center;
     min-width: 0;
-    gap: 0.25rem;
-    padding: 0.3rem 0.25rem;
+    gap: 0.08rem;
+    padding: 0.22rem 0.08rem;
+    line-height: 1;
     white-space: nowrap;
     overflow: hidden;
   }
-  .scoreboard strong { letter-spacing: 0.03em; }
+  .scoreboard strong { font-size: 0.96em; letter-spacing: 0.025em; }
+
+  .game-toast {
+    top: 0.35rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: max-content;
+    min-width: 0;
+    max-width: calc(100% - 1rem);
+    gap: 0.32rem;
+    padding: 0.28rem 0.58rem;
+    border-width: 1px;
+    border-radius: 999px;
+    box-shadow: 0 0.28rem 0.8rem rgba(27, 42, 37, 0.22);
+  }
+  .game-toast strong { font-size: 0.62rem; white-space: nowrap; }
+  .game-toast span { margin: 0; font-size: 0.58rem; line-height: 1.1; white-space: nowrap; }
+
+  .game-message {
+    grid-template-columns: minmax(0, min(22rem, calc(100% - 0.7rem)));
+    padding: 0.22rem 0.4rem;
+  }
+  .game-message .message-kicker { font-size: 0.52rem; line-height: 1; letter-spacing: 0.09em; }
+  .game-message .message-title { margin: 0.08rem 0 0.12rem !important; font-size: 1.18rem; line-height: 1; }
+  .game-message #message-copy { font-size: 0.66rem; line-height: 1.18; }
+  .game-message #start-button {
+    justify-self: center;
+    margin-top: 0.28rem;
+    padding: 0.38rem 0.85rem;
+    font-size: 0.7rem;
+    box-shadow: 0 0.18rem 0 var(--forest-dark);
+  }
+
   .controls { flex-direction: column; }
   .controls > p:not(.rotate-hint) { display: none; }
   .jump-button { width: min(16rem, 80%); }
   .fullscreen-button.is-available { width: min(16rem, 80%); }
   .sound-button { width: min(16rem, 80%); }
+
+  .crew-modal { padding: 0.45rem; }
+  .crew-card {
+    max-height: calc(100dvh - 0.9rem);
+    padding: 0.82rem;
+    border-radius: 0.85rem;
+  }
+  .crew-card > .eyebrow { margin-bottom: 0.25rem; font-size: 0.62rem; }
+  .crew-card h2 { margin: 0 2rem 0.55rem 0; font-size: 1.42rem; }
+  .crew-close { top: 0.45rem; right: 0.45rem; width: 1.9rem; height: 1.9rem; font-size: 1.25rem; }
+  .crew-list { gap: 0.38rem; }
+  .crew-list article { grid-template-columns: 2.15rem minmax(0, 1fr); gap: 0.5rem; padding: 0.5rem; }
+  .crew-list h3 { font-size: 0.76rem; }
+  .crew-list p { font-size: 0.66rem; line-height: 1.28; }
+  .crew-badge { width: 2.15rem; height: 2.15rem; font-size: 0.78rem; }
+
+  .game-message.has-results {
+    grid-template-columns: minmax(0, min(22rem, calc(100% - 0.7rem)));
+    padding: 0.18rem 0.4rem;
+  }
+  .game-message.has-results .message-kicker { font-size: 0.5rem; line-height: 1; }
+  .game-message.has-results .message-title { margin: 0.1rem 0 0.18rem !important; font-size: 1.08rem; line-height: 1; }
+  .game-message.has-results .score-breakdown {
+    width: 100%;
+    gap: 0;
+    margin: 0 auto 0.18rem;
+  }
+  .game-message.has-results .score-total {
+    padding: 0.22rem 0.55rem;
+    border-radius: 0.72rem 0.72rem 0.3rem 0.3rem;
+    font-size: 0.54rem;
+  }
+  .game-message.has-results .score-total strong { font-size: 0.82rem; }
+  .game-message.has-results .score-rows {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 0.08rem 0.4rem 0.12rem;
+    border: 1px solid rgba(46, 92, 80, 0.16);
+    border-top: 0;
+    border-radius: 0 0 0.72rem 0.72rem;
+    background: rgba(255, 255, 255, 0.68);
+  }
+  .game-message.has-results .score-row {
+    padding: 0.16rem 0.15rem;
+    font-size: 0.6rem;
+    line-height: 1.05;
+  }
+  .game-message.has-results .score-row-label { white-space: nowrap; }
+  .game-message.has-results .score-row-label small { margin-left: 0.24rem; }
+  .game-message.has-results #start-button { margin-top: 0.08rem; padding: 0.32rem 0.8rem; font-size: 0.66rem; box-shadow: 0 0.18rem 0 var(--forest-dark); }
+}
+
+@media (max-height: 32rem) {
+  .scoreboard {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.3rem;
+    padding: 0.35rem max(0.35rem, env(safe-area-inset-right)) 0.35rem max(0.35rem, env(safe-area-inset-left));
+    font-size: 0.64rem;
+  }
+  .scoreboard span { justify-content: center; min-width: 0; gap: 0.2rem; padding: 0.22rem 0.18rem; overflow: hidden; white-space: nowrap; }
+  .scoreboard strong { letter-spacing: 0.02em; }
+
+  .game-toast {
+    top: 0.3rem;
+    display: flex;
+    align-items: center;
+    width: max-content;
+    min-width: 0;
+    max-width: calc(100% - 1rem);
+    gap: 0.32rem;
+    padding: 0.26rem 0.55rem;
+    border-width: 1px;
+    border-radius: 999px;
+    box-shadow: 0 0.28rem 0.8rem rgba(27, 42, 37, 0.22);
+  }
+  .game-toast strong { font-size: 0.62rem; white-space: nowrap; }
+  .game-toast span { margin: 0; font-size: 0.58rem; white-space: nowrap; }
+
+  .game-message {
+    grid-template-columns: minmax(0, min(24rem, calc(100% - 0.8rem)));
+    padding: 0.2rem 0.45rem;
+  }
+  .game-message .message-kicker { font-size: 0.52rem; line-height: 1; }
+  .game-message .message-title { margin: 0.08rem 0 0.12rem !important; font-size: 1.28rem; line-height: 1; }
+  .game-message #message-copy { font-size: 0.68rem; line-height: 1.18; }
+  .game-message #start-button { justify-self: center; margin-top: 0.25rem; padding: 0.38rem 0.9rem; font-size: 0.7rem; box-shadow: 0 0.18rem 0 var(--forest-dark); }
+
+  .game-message.has-results { grid-template-columns: minmax(0, min(23rem, calc(100% - 0.8rem))); }
+  .game-message.has-results .message-title { font-size: 1.08rem; }
+  .game-message.has-results .score-breakdown { width: 100%; gap: 0; margin: 0 auto 0.12rem; }
+  .game-message.has-results .score-total { padding: 0.2rem 0.5rem; font-size: 0.54rem; }
+  .game-message.has-results .score-total strong { font-size: 0.82rem; }
+  .game-message.has-results .score-rows { gap: 0; }
+  .game-message.has-results .score-row { padding: 0.12rem 0.4rem; font-size: 0.58rem; line-height: 1.05; }
+  .game-message.has-results #start-button { margin-top: 0.06rem; padding: 0.32rem 0.8rem; font-size: 0.66rem; }
+
+  .crew-modal { padding: 0.35rem; }
+  .crew-card { max-height: calc(100dvh - 0.7rem); padding: 0.72rem; }
+  .crew-card h2 { margin-bottom: 0.45rem; font-size: 1.3rem; }
+  .crew-list { gap: 0.3rem; }
+  .crew-list article { padding: 0.42rem; }
 }
 
 @media (max-width: 22.5rem) {
@@ -639,6 +827,18 @@ kbd {
     font-size: 0.68rem;
     line-height: 1.2;
   }
+
+  .score-breakdown {
+    width: 100%;
+    gap: 0.12rem;
+    margin: 0.08rem auto 0.18rem;
+  }
+
+  .score-total { padding: 0.2rem 0.45rem; font-size: 0.58rem; }
+  .score-total strong { font-size: 0.86rem; }
+  .score-rows { gap: 0; }
+  .score-row { padding: 0.1rem 0.45rem; font-size: 0.58rem; line-height: 1.05; }
+  .score-row-label small { margin-left: 0.2rem; }
 
   #start-button {
     margin-top: 0.38rem;
