@@ -34,6 +34,8 @@
   const gameToastTitle = document.getElementById("game-toast-title");
   const gameToastCopy = document.getElementById("game-toast-copy");
   const testPanel = document.getElementById("test-panel");
+  const testPanelMinimizeButton = document.getElementById("test-panel-minimize");
+  const testPanelCloseButton = document.getElementById("test-panel-close");
   const tierTestButtons = document.getElementById("tier-test-buttons");
   const testStatus = document.getElementById("test-status");
   const characterTestStatus = document.getElementById("character-test-status");
@@ -5674,6 +5676,17 @@
 
   if (testMode) {
     testPanel.hidden = false;
+    testPanelMinimizeButton.addEventListener("click", () => {
+      const minimized = testPanel.classList.toggle("is-minimized");
+      const action = minimized ? "Expand" : "Minimize";
+      testPanelMinimizeButton.textContent = minimized ? "+" : "−";
+      testPanelMinimizeButton.setAttribute("aria-expanded", String(!minimized));
+      testPanelMinimizeButton.setAttribute("aria-label", `${action} Test Lab`);
+      testPanelMinimizeButton.title = `${action} Test Lab`;
+    });
+    testPanelCloseButton.addEventListener("click", () => {
+      testPanel.hidden = true;
+    });
     sandyPropTiers.forEach((props, tierIndex) => {
       const button = document.createElement("button");
       button.type = "button";

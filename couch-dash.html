@@ -7,8 +7,8 @@
     <meta name="description" content="Help Corey and his moving partner carry a couch through the Changing Places showroom in this hidden mini game." />
     <meta name="robots" content="noindex" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&amp;family=Poppins:wght@400;500;600;700&amp;display=swap" />
-    <link rel="stylesheet" href="game.css?v=cosmic-overdrive-74" />
-    <script src="game.js?v=cosmic-overdrive-74" defer></script>
+    <link rel="stylesheet" href="game.css?v=cosmic-overdrive-77" />
+    <script src="game.js?v=cosmic-overdrive-77" defer></script>
     <link rel="icon" href="images/favicon/favicon.ico" type="image/x-icon" />
   </head>
   <body>
@@ -99,41 +99,49 @@
       </section>
 
       <aside class="test-panel" id="test-panel" aria-label="Couch Dash tester" hidden>
-        <strong class="test-panel-title">Couch Dash Test Lab</strong>
+        <div class="test-panel-header">
+          <strong class="test-panel-title">Couch Dash Test Lab</strong>
+          <div class="test-panel-actions">
+            <button class="test-panel-control" id="test-panel-minimize" type="button" aria-label="Minimize Test Lab" aria-controls="test-panel-body" aria-expanded="true" title="Minimize Test Lab">−</button>
+            <button class="test-panel-control test-panel-close" id="test-panel-close" type="button" aria-label="Close Test Lab" title="Close Test Lab">×</button>
+          </div>
+        </div>
 
-        <section class="test-section" aria-labelledby="character-test-heading">
-          <h3 id="character-test-heading">Character moments</h3>
-          <div class="test-group">
-            <strong>Sandy's Item Run</strong>
-            <div class="tier-test-buttons" id="tier-test-buttons"></div>
-            <span id="test-status" role="status" aria-live="polite">Choose a tier</span>
-          </div>
-          <div class="test-group">
-            <strong>Team assists</strong>
-            <div class="assist-test-buttons">
-              <button type="button" data-test-character="brenda">Brenda Boost</button>
-              <button type="button" data-test-character="kamden">Kamden Clearance</button>
+        <div class="test-panel-body" id="test-panel-body">
+          <section class="test-section" aria-labelledby="character-test-heading">
+            <h3 id="character-test-heading">Character moments</h3>
+            <div class="test-group">
+              <strong>Sandy's Item Run</strong>
+              <div class="tier-test-buttons" id="tier-test-buttons"></div>
+              <span id="test-status" role="status" aria-live="polite">Choose a tier</span>
             </div>
-            <div class="laser-test-buttons" aria-label="Laser League tests">
-              <button class="laser-test-button" type="button" data-test-character="super-kids">Laser League</button>
-              <button class="laser-test-button" type="button" data-test-character="super-kids-2" title="Cosmic Overdrive">Laser League 2</button>
+            <div class="test-group">
+              <strong>Team assists</strong>
+              <div class="assist-test-buttons">
+                <button type="button" data-test-character="brenda">Brenda Boost</button>
+                <button type="button" data-test-character="kamden">Kamden Clearance</button>
+              </div>
+              <div class="laser-test-buttons" aria-label="Laser League tests">
+                <button class="laser-test-button" type="button" data-test-character="super-kids">Laser League</button>
+                <button class="laser-test-button" type="button" data-test-character="super-kids-2" title="Cosmic Overdrive">Laser League 2</button>
+              </div>
+              <span id="character-test-status" role="status" aria-live="polite">Select an assist to see its player benefit.</span>
             </div>
-            <span id="character-test-status" role="status" aria-live="polite">Select an assist to see its player benefit.</span>
-          </div>
-        </section>
+          </section>
 
-        <section class="test-section" aria-labelledby="radio-test-heading">
-          <h3 id="radio-test-heading">Shop radio</h3>
-          <div class="test-group">
-            <div>
-              <button type="button" data-test-radio="boardwalk">Boardwalk Beat</button>
-              <button type="button" data-test-radio="gogo">Go-Go Showroom</button>
-              <button type="button" data-test-radio="garage">Garage Sale Stomp</button>
-              <button type="button" data-test-radio="sunset">Sunset Stereo</button>
+          <section class="test-section" aria-labelledby="radio-test-heading">
+            <h3 id="radio-test-heading">Shop radio</h3>
+            <div class="test-group">
+              <div>
+                <button type="button" data-test-radio="boardwalk">Boardwalk Beat</button>
+                <button type="button" data-test-radio="gogo">Go-Go Showroom</button>
+                <button type="button" data-test-radio="garage">Garage Sale Stomp</button>
+                <button type="button" data-test-radio="sunset">Sunset Stereo</button>
+              </div>
+              <span id="radio-test-status" role="status" aria-live="polite">Choose a station</span>
             </div>
-            <span id="radio-test-status" role="status" aria-live="polite">Choose a station</span>
-          </div>
-        </section>
+          </section>
+        </div>
       </aside>
 
       <p class="game-note">No couches — or customers — were harmed in the making of this game.</p>
