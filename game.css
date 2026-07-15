@@ -179,7 +179,6 @@ h1 {
   transform: translate(-50%, 0) scale(1);
 }
 
-.game-toast[data-kind="tutorial"] { background: rgba(36, 75, 66, 0.94); }
 .game-toast[data-kind="damage"] { background: rgba(138, 76, 54, 0.96); }
 .game-toast strong { font-size: 1.05rem; line-height: 1.1; }
 .game-toast span { margin-top: 0.15rem; font-size: 0.82rem; font-weight: 700; }

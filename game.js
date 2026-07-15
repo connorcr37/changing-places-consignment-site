@@ -300,12 +300,7 @@
   let displayedScore = -1;
   let displayedTags = "";
   let displayedCouchCondition = -1;
-  const tutorialStorageKey = "couchDashTutorialComplete";
-  let tutorialComplete = testMode || localStorage.getItem(tutorialStorageKey) === "yes";
-  let tutorialJumpDone = tutorialComplete;
-  let tutorialTagDone = tutorialComplete;
   let activeToastKey = "";
-  let activeToastKind = "";
   let toastTime = 0;
   const shopRadios = {
     boardwalk: {
@@ -724,10 +719,9 @@
   if (!AudioContextClass) soundButton.hidden = true;
   updateSoundButton();
 
-  function showGameToast(key, title, copy, kind = "tutorial", duration = 0) {
+  function showGameToast(key, title, copy, kind = "damage", duration = 0) {
     if (activeToastKey === key && gameToast.classList.contains("is-visible")) return;
     activeToastKey = key;
-    activeToastKind = kind;
     toastTime = duration;
     gameToastTitle.textContent = title;
     gameToastCopy.textContent = copy;
@@ -739,29 +733,7 @@
     if (key && activeToastKey !== key) return;
     gameToast.classList.remove("is-visible");
     activeToastKey = "";
-    activeToastKind = "";
     toastTime = 0;
-  }
-
-  function finishTutorialIfReady() {
-    if (tutorialComplete || !tutorialJumpDone || !tutorialTagDone) return;
-    tutorialComplete = true;
-    localStorage.setItem(tutorialStorageKey, "yes");
-  }
-
-  function updateTutorialPrompt() {
-    if (tutorialComplete || state !== "running" || activeToastKind === "damage") return;
-    if (!tutorialJumpDone) {
-      const obstacleApproaching = obstacles.some((item) => item.x < W - 30 && item.x > player.x + player.w + 70);
-      if (obstacleApproaching) showGameToast("jump", "Jump!", "Press Space, ↑, or tap the game.");
-      else hideGameToast("jump");
-      return;
-    }
-    if (!tutorialTagDone) {
-      const tagApproaching = collectibles.some((item) => item.x < W - 30 && item.x > player.x + player.w + 30);
-      if (tagApproaching) showGameToast("tag", "Grab the price tag!", "Tags add bonus points to your score.");
-      else hideGameToast("tag");
-    }
   }
 
   function pulseCouchCondition() {
@@ -845,11 +817,6 @@
     if (state === "running" && player.grounded) {
       player.vy = brendaBoost > 0 ? jumpVelocity * 1.12 : jumpVelocity;
       player.grounded = false;
-      if (!tutorialComplete && !tutorialJumpDone) {
-        tutorialJumpDone = true;
-        hideGameToast("jump");
-        finishTutorialIfReady();
-      }
       playSound("jump");
       for (let i = 0; i < 5; i++) dust.push({ x: player.x + 35, y: ground - 4, life: 0.45, vx: -45 - Math.random() * 75 });
     }
@@ -1457,11 +1424,6 @@
       if (intersects(player, item, 18) || vortexCaught) {
         tagCount++;
         tagPoints += brendaBoost > 0 || superKids ? 100 : 50;
-        if (!tutorialComplete && !tutorialTagDone) {
-          tutorialTagDone = true;
-          hideGameToast("tag");
-          finishTutorialIfReady();
-        }
         if (superKids && vortexCaught) {
           superKids.captures++;
           chargeWillPower(6);
@@ -1472,8 +1434,6 @@
       }
     }
     collectibles.length = writeIndex;
-    updateTutorialPrompt();
-
     writeIndex = 0;
     for (let index = 0; index < dust.length; index++) {
       const particle = dust[index];
