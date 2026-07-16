@@ -3,7 +3,7 @@
   const W = canvas.width;
   const H = canvas.height;
   const compactRender = window.matchMedia("(max-width: 38rem), (max-height: 32rem)").matches;
-  const renderScale = compactRender ? 0.8 : 1;
+  const renderScale = compactRender ? 0.7 : 1;
   if (renderScale < 1) {
     canvas.width = Math.round(W * renderScale);
     canvas.height = Math.round(H * renderScale);
@@ -302,6 +302,8 @@
   const clearanceCollisionBox = { x: 0, y: 0, w: 0, h: 0 };
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   const musicSilence = 0.00001;
+  const musicScheduleAhead = 0.34;
+  const musicPumpInterval = 150;
   let soundEnabled = localStorage.getItem("couchDashSound") !== "off";
   let audioContext = null;
   let audioMasterGain = null;
@@ -574,7 +576,7 @@
       }
       nextMusicTime = safeStart;
     }
-    while (nextMusicTime < audio.currentTime + 0.18) {
+    while (nextMusicTime < audio.currentTime + musicScheduleAhead) {
       scheduleMusicStep(audio, musicStep, nextMusicTime);
       musicStep = (musicStep + 1) % 32;
       nextMusicTime += eighthNote;
@@ -595,7 +597,7 @@
     musicStep = 0;
     nextMusicTime = audio.currentTime + 0.06;
     pumpMusic();
-    musicTimer = setInterval(pumpMusic, 75);
+    musicTimer = setInterval(pumpMusic, musicPumpInterval);
   }
 
   function stopMusic() {
@@ -838,7 +840,16 @@
       player.vy = brendaBoost > 0 ? jumpVelocity * 1.12 : jumpVelocity;
       player.grounded = false;
       playSound("jump");
-      for (let i = 0; i < 5; i++) dust.push({ x: player.x + 35, y: ground - 4, life: 0.45, vx: -45 - Math.random() * 75 });
+      for (let puff = 0; puff < 6; puff++) {
+        const coreyPuff = puff % 2 === 1;
+        dust.push({
+          x: player.x + (coreyPuff ? 182 : 8) + (Math.random() - 0.5) * 12,
+          y: ground - 4,
+          life: 0.4 + Math.random() * 0.08,
+          vx: -(coreyPuff ? 38 : 52) - Math.random() * 68,
+          size: 3.5 + Math.random() * 2,
+        });
+      }
     }
   }
 
@@ -1091,8 +1102,6 @@
     target.clearance = true;
     kamden = { life: 5.5, total: 5.5, phase: 0, target };
     playSound("kamden");
-    wallHelpers = [];
-    helperIn = Math.max(helperIn, 7);
     brendaIn = Math.max(brendaIn, 7);
     kamdenIn = 23 + Math.random() * 8;
     boostStatusNode.textContent = "Kamden Clearance Run active. The marked item has a smaller collision area.";
@@ -1104,7 +1113,6 @@
     brenda = { life: 6, total: 6, phase: 0 };
     playSound("brenda");
     brendaBoost = 6;
-    helperIn = Math.max(helperIn, 7);
     kamdenIn = Math.max(kamdenIn, 7);
     boostStatusNode.textContent = "Brenda Boost active. Price tags are worth double and jumps are stronger.";
     tagIn = Math.min(tagIn, 0.55);
@@ -1170,8 +1178,6 @@
     else superKidsTwoTriggered = true;
     superKidsPending = 0;
     superKidsPendingVariant = 1;
-    wallHelpers = [];
-    helperIn = Math.max(helperIn, 9);
     brendaIn = Math.max(brendaIn, 19);
     kamdenIn = Math.max(kamdenIn, 19);
     tagIn = Math.min(tagIn, 0.3);
@@ -1287,9 +1293,7 @@
           heroPoints += obstacles[index].type === "sandy" ? 250 : 100;
         }
         obstacles = [];
-        wallHelpers = [];
         spawnIn = Math.max(spawnIn, 2.2);
-        helperIn = Math.max(helperIn, 8);
         brendaIn = Math.max(brendaIn, 8);
         kamdenIn = Math.max(kamdenIn, 8);
         gameCard.classList.remove("laser-league-active");
@@ -2006,7 +2010,7 @@
     const wallScroll = (distance * 6) % 960;
     drawRepeatingLayer(wallLayer, wallScroll, 0);
 
-    if (!brenda) wallHelpers.forEach(drawWallHelper);
+    wallHelpers.forEach(drawWallHelper);
     const floorScroll = (distance * 10) % showroomFloorTile.width;
     drawRepeatingLayer(showroomFloorTile, floorScroll, ground);
 
@@ -2206,9 +2210,13 @@
     if (!item.clearance) return;
     const stickerX = item.x + item.w * 0.58;
     const stickerY = Math.max(45, item.y + 13);
+    const stickerAge = kamden ? kamden.total - kamden.life : 1;
+    const land = Math.min(1, stickerAge / 0.38);
+    const easedLand = 1 - Math.pow(1 - land, 3);
+    const landingWobble = Math.sin(land * Math.PI * 3) * (1 - land) * 0.24;
     ctx.save();
-    ctx.translate(stickerX, stickerY);
-    ctx.rotate(-0.1 + Math.sin(item.phase * 0.25) * 0.035);
+    ctx.translate(stickerX, stickerY - (1 - easedLand) * 28);
+    ctx.rotate(-0.16 - (1 - easedLand) * 0.34 + landingWobble);
     roundedRect(-31, -11, 62, 22, 5, "#3f8a5b");
     ctx.fillStyle = "#fffdf6";
     ctx.font = "800 8px Poppins, sans-serif";
@@ -2353,6 +2361,28 @@
       ctx.lineTo(x + 137, y + 63);
       ctx.lineTo(x + 142, y + 67);
       ctx.stroke();
+
+      const springPeek = Math.max(0, (Math.sin(elapsed * 1.7) - 0.74) / 0.26);
+      if (springPeek > 0) {
+        const springHeight = 4 + springPeek * 15;
+        ctx.save();
+        ctx.translate(x + 143, y + 52);
+        ctx.rotate(0.38);
+        ctx.strokeStyle = "#5d6264";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        for (let coil = 1; coil <= 6; coil++) {
+          ctx.lineTo((coil % 2 ? -3 : 3), -springHeight * coil / 7);
+        }
+        ctx.lineTo(0, -springHeight);
+        ctx.stroke();
+        ctx.fillStyle = "#d5a856";
+        ctx.beginPath();
+        ctx.arc(0, -springHeight - 2, 2.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     if (damageStage >= 3) {
@@ -5573,7 +5603,7 @@
       ctx.globalAlpha = Math.max(0, particle.life * 1.8);
       ctx.fillStyle = "#b9a795";
       ctx.beginPath();
-      ctx.arc(particle.x, particle.y, 5, 0, Math.PI * 2);
+      ctx.arc(particle.x, particle.y, particle.size || 5, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
     }
