@@ -25,7 +25,7 @@ if (instagramFrame) {
         observer.disconnect();
         loadInstagramWidget();
       },
-      { rootMargin: "400px 0px" },
+      { rootMargin: "0px" },
     );
 
     instagramObserver.observe(instagramFrame);
@@ -77,25 +77,7 @@ const sections = navLinks
   .map((link) => document.querySelector(link.getAttribute("href")))
   .filter(Boolean);
 
-const updatePageState = () => {
-  if (desktop.matches) closeMenu();
-
-  logo?.classList.toggle(
-    "logo-scrolled",
-    desktop.matches && window.scrollY > 80,
-  );
-
-  if (!sections.length) return;
-
-  let current = "";
-  sections.forEach((section) => {
-    if (window.scrollY >= section.offsetTop - 120) current = section.id;
-  });
-
-  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 10) {
-    current = "contact";
-  }
-
+const setActiveNavLink = (current) => {
   navLinks.forEach((link) => {
     const isActive = link.getAttribute("href") === `#${current}`;
     link.classList.toggle("active", isActive);
@@ -107,7 +89,44 @@ const updatePageState = () => {
   });
 };
 
-window.addEventListener("scroll", updatePageState, { passive: true });
-window.addEventListener("resize", updatePageState);
-window.addEventListener("load", updatePageState);
-updatePageState();
+if ("IntersectionObserver" in window && sections.length) {
+  const sectionObserver = new IntersectionObserver(
+    (entries) => {
+      const activeSection = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort(
+          (first, second) =>
+            first.boundingClientRect.top - second.boundingClientRect.top,
+        )[0];
+
+      if (activeSection) setActiveNavLink(activeSection.target.id);
+    },
+    { rootMargin: "-120px 0px -60% 0px" },
+  );
+
+  sections.forEach((section) => sectionObserver.observe(section));
+}
+
+let logoUpdateQueued = false;
+
+const updateLogo = () => {
+  logoUpdateQueued = false;
+  logo?.classList.toggle(
+    "logo-scrolled",
+    desktop.matches && window.scrollY > 80,
+  );
+};
+
+const queueLogoUpdate = () => {
+  if (logoUpdateQueued) return;
+  logoUpdateQueued = true;
+  window.requestAnimationFrame(updateLogo);
+};
+
+desktop.addEventListener("change", () => {
+  if (desktop.matches) closeMenu();
+  queueLogoUpdate();
+});
+
+window.addEventListener("scroll", queueLogoUpdate, { passive: true });
+updateLogo();
