@@ -2,6 +2,38 @@ document.querySelectorAll("[data-current-year]").forEach((year) => {
   year.textContent = String(new Date().getFullYear());
 });
 
+const instagramFrame = document.querySelector("[data-lightwidget-src]");
+
+const loadInstagramWidget = () => {
+  if (!instagramFrame || !instagramFrame.dataset.lightwidgetSrc) return;
+
+  instagramFrame.src = instagramFrame.dataset.lightwidgetSrc;
+  delete instagramFrame.dataset.lightwidgetSrc;
+
+  const widgetScript = document.createElement("script");
+  widgetScript.src = "https://cdn.lightwidget.com/widgets/lightwidget.js";
+  widgetScript.async = true;
+  widgetScript.dataset.lightwidgetLoader = "";
+  document.body.append(widgetScript);
+};
+
+if (instagramFrame) {
+  if ("IntersectionObserver" in window) {
+    const instagramObserver = new IntersectionObserver(
+      (entries, observer) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        loadInstagramWidget();
+      },
+      { rootMargin: "400px 0px" },
+    );
+
+    instagramObserver.observe(instagramFrame);
+  } else {
+    loadInstagramWidget();
+  }
+}
+
 const desktop = window.matchMedia("(min-width: 48.01rem)");
 const toggle = document.getElementById("menu-toggle");
 const menu = document.getElementById("primary-navigation");
