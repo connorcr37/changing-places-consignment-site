@@ -1,0 +1,41 @@
+<header>
+  <div class="container header-flex">
+    <a href="{{homeHref}}" aria-label="{{homeLabel}}">
+      <img
+        src="images/logo.jpg"
+        alt="Changing Places Consignment Shop logo"
+        class="logo-img"
+        width="200"
+        height="200"
+      />
+    </a>
+    <button
+      class="menu-toggle"
+      id="menu-toggle"
+      type="button"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="primary-navigation"
+    >
+      <span class="menu-toggle-icon" aria-hidden="true"></span>
+    </button>
+    <nav id="mobile-menu" aria-label="Primary">
+      <ul id="primary-navigation">
+        <li><a href="{{sectionPrefix}}#gallery">Gallery</a></li>
+        <li><a href="{{sectionPrefix}}#consign">Consign</a></li>
+        <li><a href="{{sectionPrefix}}#faq">FAQ</a></li>
+        <li><a href="{{sectionPrefix}}#about">About</a></li>
+        <li><a href="{{sectionPrefix}}#contact">Visit</a></li>
+        <li>
+          <a
+            href="https://changingplaces.consignoraccess.com/login"
+            class="button"
+            target="_blank"
+            rel="noopener"
+            aria-label="Consignor Login opens in a new tab"
+          >Consignor Login</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</header>

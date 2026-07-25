@@ -17,6 +17,16 @@
   <meta property="og:url" content="https://changing-places-dsm.com/privacy" />
   <meta property="og:site_name" content="Changing Places Consignment Shop" />
   <meta property="og:locale" content="en_US" />
+  <meta property="og:image" content="https://changing-places-dsm.com/images/banner.jpg" />
+  <meta property="og:image:alt" content="A styled furniture display at Changing Places Consignment Shop" />
+  <meta property="og:image:width" content="1536" />
+  <meta property="og:image:height" content="1024" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Privacy Policy | Changing Places Consignment Shop" />
+  <meta name="twitter:description" content="How Changing Places Consignment Shop handles website privacy, third-party embeds, social links, and contact actions." />
+  <meta name="twitter:image" content="https://changing-places-dsm.com/images/banner.jpg" />
+  <meta name="twitter:image:alt" content="A styled furniture display at Changing Places Consignment Shop" />
 
   <link rel="stylesheet" href="styles.css" />
   <script src="site.js" defer></script>
@@ -29,13 +39,27 @@
 
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
+  <!-- shared-site-header:start -->
   <header>
     <div class="container header-flex">
-      <a href="/" aria-label="Go to homepage"><img src="images/logo.jpg" alt="Changing Places Consignment Shop logo"
-          class="logo-img" width="200" height="200" /></a>
-      <button class="menu-toggle" id="menu-toggle" aria-label="Toggle Menu" aria-expanded="false"
-        aria-controls="primary-navigation">
-        &#9776;
+      <a href="/" aria-label="Changing Places home">
+        <img
+          src="images/logo.jpg"
+          alt="Changing Places Consignment Shop logo"
+          class="logo-img"
+          width="200"
+          height="200"
+        />
+      </a>
+      <button
+        class="menu-toggle"
+        id="menu-toggle"
+        type="button"
+        aria-label="Open menu"
+        aria-expanded="false"
+        aria-controls="primary-navigation"
+      >
+        <span class="menu-toggle-icon" aria-hidden="true"></span>
       </button>
       <nav id="mobile-menu" aria-label="Primary">
         <ul id="primary-navigation">
@@ -44,12 +68,20 @@
           <li><a href="/#faq">FAQ</a></li>
           <li><a href="/#about">About</a></li>
           <li><a href="/#contact">Visit</a></li>
-          <li><a href="https://changingplaces.consignoraccess.com/login" class="button" target="_blank" rel="noopener"
-              aria-label="Consignor Login opens in a new tab">Consignor Login</a></li>
+          <li>
+            <a
+              href="https://changingplaces.consignoraccess.com/login"
+              class="button"
+              target="_blank"
+              rel="noopener"
+              aria-label="Consignor Login opens in a new tab"
+            >Consignor Login</a>
+          </li>
         </ul>
       </nav>
     </div>
   </header>
+  <!-- shared-site-header:end -->
 
   <main id="main-content">
     <section class="privacy-hero">
@@ -122,6 +154,7 @@
     </section>
   </main>
 
+    <!-- shared-site-footer:start -->
     <footer>
       <svg class="footer-wave" viewBox="0 0 1440 96" preserveAspectRatio="none" aria-hidden="true" focusable="false">
         <path class="footer-wave-sand" d="M0 39C170 9 338 21 505 45c198 29 365 34 548 2 151-26 271-30 387-8v57H0Z" />
@@ -157,7 +190,14 @@
             <nav aria-label="For professionals">
               <ul class="footer-link-list">
                 <li><a href="/professional-partners">Professional Services</a></li>
-                <li><a href="https://changingplaces.consignoraccess.com/login" target="_blank" rel="noopener" aria-label="Consignor Login opens in a new tab">Consignor Login</a></li>
+                <li>
+                  <a
+                    href="https://changingplaces.consignoraccess.com/login"
+                    target="_blank"
+                    rel="noopener"
+                    aria-label="Consignor Login opens in a new tab"
+                  >Consignor Login</a>
+                </li>
               </ul>
             </nav>
           </details>
@@ -167,7 +207,13 @@
             <ul>
               <li><a href="/">Home</a></li>
               <li><a href="/#contact">Contact</a></li>
-              <li><a class="after-hours-link" href="/couch-dash.html" aria-label="Play the Couch Dash After Hours game">After Hours<span class="after-hours-spark" aria-hidden="true"></span><span class="after-hours-couch" aria-hidden="true"></span></a></li>
+              <li>
+                <a class="after-hours-link" href="/couch-dash.html" aria-label="Play the Couch Dash After Hours game">
+                  After Hours
+                  <span class="after-hours-spark" aria-hidden="true"></span>
+                  <span class="after-hours-couch" aria-hidden="true"></span>
+                </a>
+              </li>
               <li><a href="/privacy" aria-current="page">Privacy</a></li>
             </ul>
           </nav>
@@ -183,13 +229,14 @@
               </svg>
             </a>
             <a class="footer-social-link" href="https://changingplaces.consignoraccess.com/login" target="_blank" rel="noopener" aria-label="Consignor Login opens in a new tab">
-            <img src="/images/simpleconsign-logo.png" alt="" class="footer-icon" width="35" height="35" loading="lazy" decoding="async" />
+              <img src="images/simpleconsign-logo.png" alt="" class="footer-icon" width="35" height="35" loading="lazy" decoding="async" />
             </a>
           </nav>
         </div>
         <p class="footer-copyright">&copy; <span data-current-year>2026</span> Changing Places Consignment Shop</p>
       </div>
     </footer>
+    <!-- shared-site-footer:end -->
 </body>
 
 </html>

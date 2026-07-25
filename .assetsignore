@@ -7,7 +7,6 @@
 !/*.txt
 !/*.xml
 !/_headers
-!/_redirects
 
 !/fonts/
 !/fonts/**

@@ -3,6 +3,7 @@
   "name": "changing-places-consignment-site",
   "compatibility_date": "2026-07-11",
   "assets": {
-    "directory": "."
+    "directory": ".",
+    "html_handling": "drop-trailing-slash"
   }
 }

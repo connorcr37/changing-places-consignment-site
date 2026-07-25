@@ -37,22 +37,37 @@ if (instagramFrame) {
 const desktop = window.matchMedia("(min-width: 48.01rem)");
 const toggle = document.getElementById("menu-toggle");
 const menu = document.getElementById("primary-navigation");
+const siteHeader = document.querySelector("header");
 
-const closeMenu = () => {
-  menu?.classList.remove("show");
-  toggle?.setAttribute("aria-expanded", "false");
+const setMenuState = (isOpen) => {
+  menu?.classList.toggle("show", isOpen);
+  toggle?.setAttribute("aria-expanded", String(isOpen));
+  toggle?.setAttribute("aria-label", isOpen ? "Close menu" : "Open menu");
+};
+
+const closeMenu = ({ returnFocus = false } = {}) => {
+  setMenuState(false);
+  if (returnFocus) toggle?.focus();
 };
 
 if (toggle && menu) {
   toggle.addEventListener("click", () => {
-    const isOpen = menu.classList.toggle("show");
-    toggle.setAttribute("aria-expanded", String(isOpen));
+    setMenuState(!menu.classList.contains("show"));
   });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && menu.classList.contains("show")) {
+      closeMenu({ returnFocus: true });
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    if (
+      menu.classList.contains("show") &&
+      event.target instanceof Node &&
+      !siteHeader?.contains(event.target)
+    ) {
       closeMenu();
-      toggle.focus();
     }
   });
 
@@ -61,13 +76,28 @@ if (toggle && menu) {
   });
 }
 
-document.querySelectorAll(".faq-question").forEach((button) => {
+const faqButtons = [...document.querySelectorAll(".faq-question")];
+
+const setFaqState = (button, isOpen) => {
   const answer = document.getElementById(button.getAttribute("aria-controls"));
 
+  button.classList.toggle("active", isOpen);
+  button.setAttribute("aria-expanded", String(isOpen));
+  if (answer) answer.hidden = !isOpen;
+};
+
+faqButtons.forEach((button) => {
   button.addEventListener("click", () => {
-    const isOpen = button.classList.toggle("active");
-    button.setAttribute("aria-expanded", String(isOpen));
-    if (answer) answer.hidden = !isOpen;
+    const willOpen = !button.classList.contains("active");
+
+    if (willOpen) {
+      button
+        .closest(".faq-group")
+        ?.querySelectorAll(".faq-question.active")
+        .forEach((openButton) => setFaqState(openButton, false));
+    }
+
+    setFaqState(button, willOpen);
   });
 });
 
@@ -103,7 +133,15 @@ footerColumns.forEach((column) => {
   });
 });
 
-footerMobile.addEventListener("change", updateFooterColumns);
+const listenForMediaChange = (mediaQuery, listener) => {
+  if (typeof mediaQuery.addEventListener === "function") {
+    mediaQuery.addEventListener("change", listener);
+  } else {
+    mediaQuery.addListener(listener);
+  }
+};
+
+listenForMediaChange(footerMobile, updateFooterColumns);
 updateFooterColumns();
 
 const logo = document.querySelector(".logo-img");
@@ -158,7 +196,7 @@ const queueLogoUpdate = () => {
   window.requestAnimationFrame(updateLogo);
 };
 
-desktop.addEventListener("change", () => {
+listenForMediaChange(desktop, () => {
   if (desktop.matches) closeMenu();
   queueLogoUpdate();
 });

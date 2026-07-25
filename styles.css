@@ -239,7 +239,10 @@ nav a.active {
 
 .menu-toggle {
   display: none;
-  font-size: 2rem;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
   background: none;
   border: none;
   color: var(--color-charcoal);
@@ -248,6 +251,48 @@ nav a.active {
   top: 1.5rem;
   right: 1.5rem;
   z-index: 30;
+}
+
+.menu-toggle-icon,
+.menu-toggle-icon::before,
+.menu-toggle-icon::after {
+  width: 1.5rem;
+  height: 0.125rem;
+  border-radius: 999px;
+  background: currentColor;
+  transition: transform 180ms ease, background-color 180ms ease;
+}
+
+.menu-toggle-icon {
+  display: block;
+  position: relative;
+}
+
+.menu-toggle-icon::before,
+.menu-toggle-icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+
+.menu-toggle-icon::before {
+  transform: translateY(-0.45rem);
+}
+
+.menu-toggle-icon::after {
+  transform: translateY(0.45rem);
+}
+
+.menu-toggle[aria-expanded="true"] .menu-toggle-icon {
+  background: transparent;
+}
+
+.menu-toggle[aria-expanded="true"] .menu-toggle-icon::before {
+  transform: rotate(45deg);
+}
+
+.menu-toggle[aria-expanded="true"] .menu-toggle-icon::after {
+  transform: rotate(-45deg);
 }
 
 /* ========== Hero Section ========== */
@@ -598,6 +643,13 @@ nav a.active {
   text-align: left;
   cursor: pointer;
   position: relative;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.faq-question:hover,
+.faq-question.active {
+  background: rgba(46, 92, 80, 0.055);
+  color: var(--color-forest-dark);
 }
 
 .faq-question::after {
@@ -706,7 +758,7 @@ nav a.active {
   justify-content: center;
   gap: 0.9rem;
   width: fit-content;
-  margin: 1rem auto 0;
+  margin: clamp(1.75rem, 3vw, 2.5rem) auto 0;
   color: var(--color-muted);
   text-decoration: none;
 }
@@ -1694,12 +1746,10 @@ footer a:focus-visible,
   }
 
   .menu-toggle {
-    display: block;
+    display: flex;
     top: 50%;
     right: 1rem;
     transform: translateY(-50%);
-    min-width: 2.75rem;
-    min-height: 2.75rem;
     line-height: 1;
   }
 
@@ -1741,8 +1791,12 @@ footer a:focus-visible,
     top: 100%;
     left: 0;
     z-index: 25;
-    padding: 1rem 0;
+    max-height: calc(100vh - 4.75rem);
+    max-height: calc(100dvh - 4.75rem);
+    padding: 0.75rem 0 max(0.75rem, env(safe-area-inset-bottom));
     box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   nav#mobile-menu ul.show {
@@ -1830,6 +1884,14 @@ footer a:focus-visible,
   .resource-hero h1 {
     font-size: clamp(2.5rem, 13vw, 3.45rem);
     line-height: 1.08;
+  }
+
+  .resource-hero .hero-actions {
+    align-items: stretch;
+  }
+
+  .resource-hero .button-link {
+    width: 100%;
   }
 
   .fact-band .container,
@@ -1929,6 +1991,7 @@ footer a:focus-visible,
     align-items: flex-start;
     gap: 0.55rem;
     margin-top: 1.75rem;
+    border-top: 0;
   }
 
   .footer-utility ul {
