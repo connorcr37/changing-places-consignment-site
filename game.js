@@ -859,7 +859,7 @@
     hideGameToast();
     messageKicker.textContent = "Hold that couch!";
     messageTitle.textContent = "Quick breather";
-    messageCopy.textContent = "Press P, Space, or tap continue when you’re ready.";
+    messageCopy.textContent = "Press P, Space, or tap continue when you're ready.";
     startButton.textContent = "Keep moving";
     message.hidden = false;
   }
