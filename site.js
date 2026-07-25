@@ -71,6 +71,41 @@ document.querySelectorAll(".faq-question").forEach((button) => {
   });
 });
 
+const footerMobile = window.matchMedia("(max-width: 48rem)");
+const footerColumns = [...document.querySelectorAll(".footer-column")];
+let footerWasMobile;
+
+const updateFooterColumns = () => {
+  const isMobile = footerMobile.matches;
+
+  footerColumns.forEach((column) => {
+    const heading = column.querySelector(".footer-heading");
+    if (heading) heading.tabIndex = isMobile ? 0 : -1;
+    column.open = isMobile ? footerWasMobile === true && column.open : true;
+  });
+
+  footerWasMobile = isMobile;
+};
+
+footerColumns.forEach((column) => {
+  const heading = column.querySelector(".footer-heading");
+
+  heading?.addEventListener("click", (event) => {
+    if (!footerMobile.matches) event.preventDefault();
+  });
+
+  column.addEventListener("toggle", () => {
+    if (!footerMobile.matches || !column.open) return;
+
+    footerColumns.forEach((otherColumn) => {
+      if (otherColumn !== column) otherColumn.open = false;
+    });
+  });
+});
+
+footerMobile.addEventListener("change", updateFooterColumns);
+updateFooterColumns();
+
 const logo = document.querySelector(".logo-img");
 const navLinks = [...document.querySelectorAll('nav a[href^="#"]')];
 const sections = navLinks
