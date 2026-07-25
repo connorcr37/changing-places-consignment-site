@@ -1,0 +1,16 @@
+# Deny by default, then expose only the static-site surface.
+*
+
+!/*.html
+!/*.css
+!/*.js
+!/*.txt
+!/*.xml
+!/_headers
+!/_redirects
+
+!/fonts/
+!/fonts/**
+!/images/
+!/images/**
+

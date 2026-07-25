@@ -1,0 +1,19 @@
+# Keep all resource-page variants on their extensionless canonical URLs
+/sell-furniture/ /sell-furniture 301
+/sell-furniture.html /sell-furniture 301
+/selling-options/ /selling-options 301
+/selling-options.html /selling-options 301
+/moving-downsizing/ /moving-downsizing 301
+/moving-downsizing.html /moving-downsizing 301
+/estate-furniture/ /estate-furniture 301
+/estate-furniture.html /estate-furniture 301
+/professional-partners/ /professional-partners 301
+/professional-partners.html /professional-partners 301
+/unique-furniture/ /unique-furniture 301
+/unique-furniture.html /unique-furniture 301
+/furnishing-new-home/ /furnishing-new-home 301
+/furnishing-new-home.html /furnishing-new-home 301
+/furniture-for-college-apartments/ /furniture-for-college-apartments 301
+/furniture-for-college-apartments.html /furniture-for-college-apartments 301
+/short-term-rental-furniture/ /short-term-rental-furniture 301
+/short-term-rental-furniture.html /short-term-rental-furniture 301
