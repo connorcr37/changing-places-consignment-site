@@ -24,14 +24,6 @@
 @font-face {
   font-family: "Poppins";
   font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("fonts/poppins-500-latin.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Poppins";
-  font-style: normal;
   font-weight: 600;
   font-display: swap;
   src: url("fonts/poppins-600-latin.woff2") format("woff2");
@@ -1653,7 +1645,7 @@ footer {
 
 .footer-copyright {
   margin-top: 0.75rem;
-  color: rgba(255, 255, 255, 0.58);
+  color: rgba(255, 255, 255, 0.72);
   font-size: 0.7rem;
   letter-spacing: 0.01em;
 }
@@ -1921,7 +1913,7 @@ footer a:focus-visible,
     color: rgba(255, 255, 255, 0.72);
     content: "+";
     font-size: 1.2rem;
-    font-weight: 500;
+    font-weight: 600;
   }
 
   .footer-column[open] > .footer-heading::after {

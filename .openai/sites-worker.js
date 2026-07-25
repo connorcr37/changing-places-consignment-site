@@ -26,7 +26,7 @@ const canonicalResourcePaths = new Set([
 
 const securityHeaders = {
   "Content-Security-Policy":
-    "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'; frame-src https://cdn.lightwidget.com https://www.google.com; img-src 'self' data: https://*.google.com https://*.googleusercontent.com https://*.cdninstagram.com https://*.fbcdn.net; font-src 'self'; style-src 'self'; script-src 'self'; upgrade-insecure-requests",
+    "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'; frame-src https://cdn.lightwidget.com https://www.google.com; img-src 'self' data: https://*.google.com https://*.googleusercontent.com https://*.cdninstagram.com https://*.fbcdn.net; font-src 'self'; style-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self'; upgrade-insecure-requests",
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Content-Type-Options": "nosniff",
