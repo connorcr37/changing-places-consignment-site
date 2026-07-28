@@ -1029,7 +1029,7 @@ nav a.active {
   line-height: 1.25;
 }
 
-.resource-section p {
+.resource-section p:not(.eyebrow) {
   color: var(--color-muted);
 }
 
