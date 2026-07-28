@@ -1149,8 +1149,8 @@
       superKidsPendingVariant = variant;
       superKidsPending = 0.12;
       boostStatusNode.textContent = variant === 2
-        ? "Cosmic Overdrive is chargingâ€¦"
-        : "Laser League is approachingâ€¦";
+        ? "Cosmic Overdrive is charging…"
+        : "Laser League is approaching…";
       return false;
     }
     brenda = null;

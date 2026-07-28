@@ -90,6 +90,7 @@ h1,
 h2,
 h3 {
   font-family: "Lora", serif;
+  text-wrap: balance;
 }
 
 img,
@@ -313,10 +314,14 @@ nav a.active {
 }
 
 .hero h1 {
-  max-width: 11ch;
+  max-width: 19ch;
   font-size: clamp(3rem, 5.6vw, 5.25rem);
   font-weight: 600;
   line-height: 1.05;
+}
+
+.hero h1 span {
+  display: block;
 }
 
 .hero p:not(.eyebrow) {
@@ -653,19 +658,24 @@ nav a.active {
 }
 
 .faq-question::after {
-  content: "+";
+  width: 1rem;
+  height: 1rem;
+  background:
+    linear-gradient(currentColor 0 0) center / 100% 0.125rem no-repeat,
+    linear-gradient(currentColor 0 0) center / 0.125rem 100% no-repeat;
+  content: "";
   position: absolute;
   top: 50%;
   right: 1.15rem;
   color: var(--color-forest);
-  font-size: 1.35rem;
-  font-weight: 600;
-  line-height: 1;
   transform: translateY(-50%);
+  transition: transform 180ms ease;
 }
 
-.faq-question.active::after {
-  content: "-";
+.faq-question[aria-expanded="true"]::after {
+  background:
+    linear-gradient(currentColor 0 0) center / 100% 0.125rem no-repeat;
+  transform: translateY(-50%) rotate(180deg);
 }
 
 .faq-answer {
@@ -800,6 +810,10 @@ nav a.active {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.5rem;
   align-items: stretch;
+}
+
+.contact .visit-actions {
+  margin: 0 0 1.75rem;
 }
 
 .storefront,
@@ -950,8 +964,8 @@ nav a.active {
 
 .resource-hero .container {
   max-width: 72rem;
-  padding-top: clamp(5rem, 10vw, 8.5rem);
-  padding-bottom: clamp(4rem, 8vw, 7rem);
+  padding-top: clamp(4rem, 7vw, 6.5rem);
+  padding-bottom: clamp(3.5rem, 6vw, 5rem);
 }
 
 .resource-hero-copy {
@@ -961,7 +975,7 @@ nav a.active {
 .resource-hero h1 {
   max-width: 15ch;
   color: var(--color-charcoal);
-  font-size: clamp(2.75rem, 6vw, 5rem);
+  font-size: clamp(2.75rem, 5vw, 4.35rem);
   font-weight: 600;
   letter-spacing: -0.025em;
   line-height: 1.04;
@@ -1972,14 +1986,18 @@ footer a:focus-visible,
   }
 
   .footer-heading::after {
+    width: 0.9rem;
+    height: 0.9rem;
+    background:
+      linear-gradient(currentColor 0 0) center / 100% 0.125rem no-repeat,
+      linear-gradient(currentColor 0 0) center / 0.125rem 100% no-repeat;
     color: rgba(255, 255, 255, 0.72);
-    content: "+";
-    font-size: 1.2rem;
-    font-weight: 600;
+    content: "";
   }
 
   .footer-column[open] > .footer-heading::after {
-    content: "\2212";
+    background:
+      linear-gradient(currentColor 0 0) center / 100% 0.125rem no-repeat;
   }
 
   .footer-link-list {
