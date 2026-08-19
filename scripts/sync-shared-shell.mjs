@@ -7,6 +7,7 @@ const projectRoot = path.resolve(scriptDirectory, "..");
 const partialsDirectory = path.join(projectRoot, "partials");
 const checkOnly = process.argv.includes("--check");
 const unknownArguments = process.argv.slice(2).filter((argument) => argument !== "--check");
+const standalonePages = new Set(["couch-dash.html", "dvd.html"]);
 
 if (unknownArguments.length) {
   throw new Error(`Unknown argument${unknownArguments.length === 1 ? "" : "s"}: ${unknownArguments.join(", ")}`);
@@ -19,7 +20,12 @@ const [headerTemplate, footerTemplate, rootEntries] = await Promise.all([
 ]);
 
 const pageNames = rootEntries
-  .filter((entry) => entry.isFile() && entry.name.endsWith(".html") && entry.name !== "couch-dash.html")
+  .filter(
+    (entry) =>
+      entry.isFile() &&
+      entry.name.endsWith(".html") &&
+      !standalonePages.has(entry.name),
+  )
   .map((entry) => entry.name)
   .sort();
 

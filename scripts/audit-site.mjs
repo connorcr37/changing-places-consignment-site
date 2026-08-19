@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, "..");
 const productionOrigin = "https://changing-places-dsm.com";
-const excludedFromSearch = new Set(["couch-dash.html"]);
+const excludedFromSearch = new Set(["couch-dash.html", "dvd.html"]);
 const issues = [];
 
 const rootEntries = await readdir(projectRoot, { withFileTypes: true });
