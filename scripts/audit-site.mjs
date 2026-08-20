@@ -5,7 +5,11 @@ import { fileURLToPath } from "node:url";
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, "..");
 const productionOrigin = "https://changing-places-dsm.com";
-const excludedFromSearch = new Set(["couch-dash.html", "dvd.html"]);
+const excludedFromSearch = new Set([
+  "couch-dash.html",
+  "dvd-video.html",
+  "dvd.html",
+]);
 const issues = [];
 
 const rootEntries = await readdir(projectRoot, { withFileTypes: true });
@@ -302,7 +306,7 @@ if (wrangler) {
 }
 
 const assetIgnore = await readFile(path.join(projectRoot, ".assetsignore"), "utf8");
-for (const requiredRule of ["!/*.html", "!/*.css", "!/*.js", "!/*.txt", "!/*.xml", "!/_headers", "!/fonts/**", "!/images/**"]) {
+for (const requiredRule of ["!/*.html", "!/*.css", "!/*.js", "!/*.txt", "!/*.xml", "!/_headers", "!/fonts/**", "!/images/**", "!/videos/**"]) {
   if (!assetIgnore.includes(requiredRule)) {
     issues.push(`.assetsignore: missing required allow rule "${requiredRule}"`);
   }

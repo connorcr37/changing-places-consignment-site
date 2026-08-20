@@ -7,7 +7,11 @@ const projectRoot = path.resolve(scriptDirectory, "..");
 const partialsDirectory = path.join(projectRoot, "partials");
 const checkOnly = process.argv.includes("--check");
 const unknownArguments = process.argv.slice(2).filter((argument) => argument !== "--check");
-const standalonePages = new Set(["couch-dash.html", "dvd.html"]);
+const standalonePages = new Set([
+  "couch-dash.html",
+  "dvd-video.html",
+  "dvd.html",
+]);
 
 if (unknownArguments.length) {
   throw new Error(`Unknown argument${unknownArguments.length === 1 ? "" : "s"}: ${unknownArguments.join(", ")}`);

@@ -36,10 +36,10 @@ body {
   width: clamp(9rem, 22vmin, 17rem);
   height: auto;
   max-width: none;
+  color: #00d7ff;
   user-select: none;
   pointer-events: none;
   transform: translate3d(-50%, -50%, 0);
-  filter: grayscale(1) contrast(1.62) brightness(1.03);
   will-change: transform;
 }
 

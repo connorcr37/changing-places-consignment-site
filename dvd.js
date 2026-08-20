@@ -3,6 +3,15 @@ const dvdLogo = document.querySelector("#dvd-logo");
 
 if (dvdScreen && dvdLogo) {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  // Exact palettes varied by player; these cover the familiar RGB/CMY hues.
+  const logoColors = [
+    "#ff3b30",
+    "#ff2bd6",
+    "#3b6cff",
+    "#00d7ff",
+    "#32e875",
+    "#ffe033",
+  ];
   const state = {
     x: 0,
     y: 0,
@@ -16,6 +25,7 @@ if (dvdScreen && dvdLogo) {
     frameId: 0,
     previousTime: 0,
     initialized: false,
+    colorIndex: Math.floor(Math.random() * logoColors.length),
   };
 
   const randomDirection = () => {
@@ -28,12 +38,22 @@ if (dvdScreen && dvdLogo) {
     dvdLogo.style.transform = `translate3d(${state.x}px, ${state.y}px, 0)`;
   };
 
+  const applyLogoColor = () => {
+    dvdLogo.style.color = logoColors[state.colorIndex];
+  };
+
+  const changeLogoColor = () => {
+    const offset = 1 + Math.floor(Math.random() * (logoColors.length - 1));
+    state.colorIndex = (state.colorIndex + offset) % logoColors.length;
+    applyLogoColor();
+  };
+
   const measure = () => {
     const screenWidth = dvdScreen.clientWidth;
     const screenHeight = dvdScreen.clientHeight;
     const edge = Math.max(4, Math.min(screenWidth, screenHeight) * 0.006);
-    const logoWidth = dvdLogo.offsetWidth;
-    const logoHeight = dvdLogo.offsetHeight;
+    const logoWidth = dvdLogo.clientWidth;
+    const logoHeight = dvdLogo.clientHeight;
 
     state.minX = Math.min(edge, Math.max(0, (screenWidth - logoWidth) / 2));
     state.minY = Math.min(edge, Math.max(0, (screenHeight - logoHeight) / 2));
@@ -45,6 +65,7 @@ if (dvdScreen && dvdLogo) {
       state.x = state.minX + Math.random() * (state.maxX - state.minX);
       state.y = state.minY + Math.random() * (state.maxY - state.minY);
       randomDirection();
+      applyLogoColor();
       state.initialized = true;
       dvdLogo.classList.add("is-moving");
     } else {
@@ -90,7 +111,10 @@ if (dvdScreen && dvdLogo) {
       bounced = true;
     }
 
-    if (bounced) varyDirection();
+    if (bounced) {
+      changeLogoColor();
+      varyDirection();
+    }
 
     positionLogo();
     state.frameId = window.requestAnimationFrame(animate);
@@ -123,9 +147,5 @@ if (dvdScreen && dvdLogo) {
   document.addEventListener("visibilitychange", handleVisibilityChange);
   reducedMotion.addEventListener("change", startAnimation);
 
-  if (dvdLogo.complete) {
-    startAnimation();
-  } else {
-    dvdLogo.addEventListener("load", startAnimation, { once: true });
-  }
+  startAnimation();
 }

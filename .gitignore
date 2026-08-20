@@ -29,6 +29,10 @@ tmp/
 *.tar.gz
 *.tgz
 
+# Local video-render workspace and intermediates
+dvd-video-source/
+videos/*-raw.mp4
+
 # Editor, agent, and operating-system files
 .agents/
 .openai/

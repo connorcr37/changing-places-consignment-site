@@ -3,6 +3,8 @@
 User-agent: *
 Content-Signal: search=yes, ai-input=yes, ai-train=no
 Allow: /
+Disallow: /dvd-video
+Disallow: /videos/dvd-screensaver-4k-hevc-v1.mp4
 
 # Model-training and general-purpose AI crawlers
 User-agent: GPTBot
