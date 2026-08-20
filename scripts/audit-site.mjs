@@ -7,16 +7,24 @@ const projectRoot = path.resolve(scriptDirectory, "..");
 const productionOrigin = "https://changing-places-dsm.com";
 const excludedFromSearch = new Set([
   "couch-dash.html",
-  "dvd-video.html",
-  "dvd.html",
+  "tv/index.html",
+  "tv/video.html",
 ]);
 const issues = [];
 
-const rootEntries = await readdir(projectRoot, { withFileTypes: true });
-const pageNames = rootEntries
-  .filter((entry) => entry.isFile() && entry.name.endsWith(".html"))
-  .map((entry) => entry.name)
-  .sort();
+const htmlLocations = [
+  { directory: projectRoot, prefix: "" },
+  { directory: path.join(projectRoot, "tv"), prefix: "tv/" },
+];
+const pageNames = (
+  await Promise.all(
+    htmlLocations.map(async ({ directory, prefix }) =>
+      (await readdir(directory, { withFileTypes: true }))
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".html"))
+        .map((entry) => `${prefix}${entry.name}`),
+    ),
+  )
+).flat().sort();
 
 const pages = new Map(
   await Promise.all(
@@ -29,10 +37,21 @@ const pages = new Map(
 
 const routeToPage = new Map([["/", "index.html"]]);
 
-for (const pageName of pageNames) {
+const routeForPage = (pageName) => {
   const baseName = pageName.replace(/\.html$/, "");
+
+  if (baseName === "index") return "/";
+  if (baseName.endsWith("/index")) return `/${baseName.slice(0, -"/index".length)}`;
+  return `/${baseName}`;
+};
+
+for (const pageName of pageNames) {
   routeToPage.set(`/${pageName}`, pageName);
-  routeToPage.set(`/${baseName}`, pageName);
+  routeToPage.set(routeForPage(pageName), pageName);
+
+  if (pageName.endsWith("/index.html")) {
+    routeToPage.set(`${routeForPage(pageName)}/`, pageName);
+  }
 }
 
 const getAttribute = (tag, attributeName) => {
@@ -165,7 +184,8 @@ for (const [pageName, source] of pages) {
   for (const reference of references) {
     if (!reference || isExternalOrAction(reference)) continue;
     const localPath = reference.split(/[?#]/, 1)[0];
-    if (!(await canAccess(path.join(projectRoot, localPath)))) {
+    const pageDirectory = path.dirname(path.join(projectRoot, pageName));
+    if (!(await canAccess(path.resolve(pageDirectory, localPath)))) {
       issues.push(`${pageName}: missing local asset "${localPath}"`);
     }
   }
@@ -177,7 +197,7 @@ for (const [pageName, source] of pages) {
   for (const href of hrefs) {
     if (!href.startsWith("/") && !href.startsWith("#")) continue;
 
-    const route = href.startsWith("#") ? `/${pageName === "index.html" ? "" : pageName}` : routeFromHref(href);
+    const route = href.startsWith("#") ? routeForPage(pageName) : routeFromHref(href);
     const normalizedRoute = route === "/index.html" ? "/" : route;
     const targetPageName = routeToPage.get(normalizedRoute);
 
@@ -306,7 +326,7 @@ if (wrangler) {
 }
 
 const assetIgnore = await readFile(path.join(projectRoot, ".assetsignore"), "utf8");
-for (const requiredRule of ["!/*.html", "!/*.css", "!/*.js", "!/*.txt", "!/*.xml", "!/_headers", "!/fonts/**", "!/images/**", "!/videos/**"]) {
+for (const requiredRule of ["!/*.html", "!/*.css", "!/*.js", "!/*.txt", "!/*.xml", "!/_headers", "!/fonts/**", "!/images/**", "!/tv/**"]) {
   if (!assetIgnore.includes(requiredRule)) {
     issues.push(`.assetsignore: missing required allow rule "${requiredRule}"`);
   }

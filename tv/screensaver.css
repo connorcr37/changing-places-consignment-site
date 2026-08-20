@@ -22,14 +22,14 @@ body {
   touch-action: none;
 }
 
-.dvd-screen {
+.screensaver-screen {
   position: fixed;
   inset: 0;
   overflow: hidden;
   background: #000;
 }
 
-.dvd-logo {
+.screensaver-logo {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -43,7 +43,7 @@ body {
   will-change: transform;
 }
 
-.dvd-logo.is-moving {
+.screensaver-logo.is-moving {
   top: 0;
   left: 0;
 }

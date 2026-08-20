@@ -1,7 +1,7 @@
-const dvdScreen = document.querySelector("#dvd-screen");
-const dvdLogo = document.querySelector("#dvd-logo");
+const screensaverScreen = document.querySelector("#screensaver-screen");
+const screensaverLogo = document.querySelector("#screensaver-logo");
 
-if (dvdScreen && dvdLogo) {
+if (screensaverScreen && screensaverLogo) {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   // Exact palettes varied by player; these cover the familiar RGB/CMY hues.
   const logoColors = [
@@ -35,11 +35,11 @@ if (dvdScreen && dvdLogo) {
   };
 
   const positionLogo = () => {
-    dvdLogo.style.transform = `translate3d(${state.x}px, ${state.y}px, 0)`;
+    screensaverLogo.style.transform = `translate3d(${state.x}px, ${state.y}px, 0)`;
   };
 
   const applyLogoColor = () => {
-    dvdLogo.style.color = logoColors[state.colorIndex];
+    screensaverLogo.style.color = logoColors[state.colorIndex];
   };
 
   const changeLogoColor = () => {
@@ -49,11 +49,11 @@ if (dvdScreen && dvdLogo) {
   };
 
   const measure = () => {
-    const screenWidth = dvdScreen.clientWidth;
-    const screenHeight = dvdScreen.clientHeight;
+    const screenWidth = screensaverScreen.clientWidth;
+    const screenHeight = screensaverScreen.clientHeight;
     const edge = Math.max(4, Math.min(screenWidth, screenHeight) * 0.006);
-    const logoWidth = dvdLogo.clientWidth;
-    const logoHeight = dvdLogo.clientHeight;
+    const logoWidth = screensaverLogo.clientWidth;
+    const logoHeight = screensaverLogo.clientHeight;
 
     state.minX = Math.min(edge, Math.max(0, (screenWidth - logoWidth) / 2));
     state.minY = Math.min(edge, Math.max(0, (screenHeight - logoHeight) / 2));
@@ -67,7 +67,7 @@ if (dvdScreen && dvdLogo) {
       randomDirection();
       applyLogoColor();
       state.initialized = true;
-      dvdLogo.classList.add("is-moving");
+      screensaverLogo.classList.add("is-moving");
     } else {
       state.x = Math.min(state.maxX, Math.max(state.minX, state.x));
       state.y = Math.min(state.maxY, Math.max(state.minY, state.y));

@@ -11,6 +11,11 @@ The primary header and footer live in `partials/` and are expanded into each pub
 - Run `node scripts/sync-shared-shell.mjs` after editing either partial.
 - Run `node scripts/sync-shared-shell.mjs --check` to verify every page is synchronized.
 - `couch-dash.html` is intentionally excluded because the After Hours game has its own layout.
+- `tv/` contains the noindex, employee-facing in-store screensavers and has its own layout.
+
+The Remotion source for the prerendered screensaver is tracked in `tools/tv-video/`.
+Run its `pnpm lint` and `pnpm run render` commands from that directory. Rendered
+AVC and HEVC files are written directly to `tv/media/`.
 
 ## Pre-production checks
 
