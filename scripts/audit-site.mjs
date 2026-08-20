@@ -91,8 +91,8 @@ const fragmentFromHref = (href) => {
   return hashIndex === -1 ? "" : href.slice(hashIndex + 1);
 };
 
-const isExternalOrAction = (value) =>
-  /^(?:[a-z][a-z\d+.-]*:|\/\/|#|\/)/i.test(value);
+const isExternalOrFragment = (value) =>
+  /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(value);
 
 const canAccess = async (targetPath) => {
   try {
@@ -182,17 +182,23 @@ for (const [pageName, source] of pages) {
   ].map((match) => match[1]);
 
   for (const reference of references) {
-    if (!reference || isExternalOrAction(reference)) continue;
+    if (!reference || isExternalOrFragment(reference)) continue;
     const localPath = reference.split(/[?#]/, 1)[0];
+    const normalizedRoute = localPath === "/index.html" ? "/" : localPath;
+
+    if (localPath.startsWith("/") && routeToPage.has(normalizedRoute)) continue;
+
     const pageDirectory = path.dirname(path.join(projectRoot, pageName));
-    if (!(await canAccess(path.resolve(pageDirectory, localPath)))) {
+    const targetPath = localPath.startsWith("/")
+      ? path.join(projectRoot, localPath.replace(/^\/+/, ""))
+      : path.resolve(pageDirectory, localPath);
+
+    if (!(await canAccess(targetPath))) {
       issues.push(`${pageName}: missing local asset "${localPath}"`);
     }
   }
 
-  const hrefs = [...source.matchAll(/\bhref="([^"]+)"/gi)].map(
-    (match) => match[1],
-  );
+  const hrefs = getTags(source, "a").map((tag) => getAttribute(tag, "href"));
 
   for (const href of hrefs) {
     if (!href.startsWith("/") && !href.startsWith("#")) continue;
