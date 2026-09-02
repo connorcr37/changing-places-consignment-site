@@ -1716,6 +1716,13 @@ footer {
   letter-spacing: 0.01em;
 }
 
+.footer-credit-link {
+  display: inline;
+  min-height: 0;
+  color: inherit;
+  font-weight: 600;
+}
+
 footer a {
   display: inline-flex;
   align-items: center;
