@@ -66,6 +66,8 @@ Without a token, `/api/facebook-live` returns a controlled unavailable response 
 
 The production domain is `https://changing-places-dsm.com/`.
 
-- Site files are stored in GitHub and served through a Cloudflare Worker.
+- GitHub `main` is the production source of truth. Cloudflare Workers Builds is connected to this repository and automatically deploys each push to `main`.
+- The normal release workflow is to run the checks above, commit the complete local change, and push `main`. Reserve direct `wrangler deploy` commands for recovery, and follow any recovery deployment with the equivalent Git commit immediately.
+- Site files are served through the Cloudflare Worker configured in `wrangler.jsonc`.
 - `_headers` is the source of production security headers.
 - `robots.txt`, `sitemap.xml`, canonical URLs, Open Graph tags, and the web manifest use the production domain.
