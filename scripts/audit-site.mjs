@@ -323,11 +323,23 @@ try {
 }
 
 if (wrangler) {
+  if (wrangler.main !== "worker/index.mjs") {
+    issues.push('wrangler.jsonc: expected Worker entry point "worker/index.mjs"');
+  }
   if (wrangler.assets?.directory !== ".") {
     issues.push('wrangler.jsonc: assets.directory must remain "."');
   }
+  if (wrangler.assets?.binding !== "ASSETS") {
+    issues.push('wrangler.jsonc: expected assets binding "ASSETS"');
+  }
+  if (!wrangler.assets?.run_worker_first?.includes("/api/*")) {
+    issues.push('wrangler.jsonc: API routes must run the Worker first');
+  }
   if (wrangler.assets?.html_handling !== "drop-trailing-slash") {
     issues.push('wrangler.jsonc: expected html_handling "drop-trailing-slash"');
+  }
+  if (!wrangler.secrets?.required?.includes("FACEBOOK_PAGE_ACCESS_TOKEN")) {
+    issues.push('wrangler.jsonc: Facebook Page access token must be a required secret');
   }
 }
 
@@ -336,6 +348,11 @@ for (const requiredRule of ["!/*.html", "!/*.css", "!/*.js", "!/*.txt", "!/*.xml
   if (!assetIgnore.includes(requiredRule)) {
     issues.push(`.assetsignore: missing required allow rule "${requiredRule}"`);
   }
+}
+
+const gitIgnore = await readFile(path.join(projectRoot, ".gitignore"), "utf8");
+if (!gitIgnore.includes(".dev.vars*")) {
+  issues.push('.gitignore: local Wrangler secrets must remain ignored');
 }
 
 const productionHeaders = await readFile(path.join(projectRoot, "_headers"), "utf8");
