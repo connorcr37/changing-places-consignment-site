@@ -639,6 +639,7 @@ nav a.active {
   opacity: 0;
   pointer-events: none;
   transform: translateY(-0.2rem);
+  transform-origin: left center;
   transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease;
   visibility: hidden;
   white-space: nowrap;
@@ -655,7 +656,7 @@ nav a.active {
 
 .facebook-showcase__follow-icon:is(:hover, :focus-visible)::before {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) rotate(-2.5deg);
   visibility: visible;
 }
 
