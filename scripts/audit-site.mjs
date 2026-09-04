@@ -178,8 +178,16 @@ for (const [pageName, source] of pages) {
   }
 
   const references = [
-    ...source.matchAll(/\b(?:href|src)="([^"]+)"/gi),
-  ].map((match) => match[1]);
+    ...[...source.matchAll(/\b(?:href|src)="([^"]+)"/gi)].map(
+      (match) => match[1],
+    ),
+    ...[...source.matchAll(/\bsrcset="([^"]+)"/gi)].flatMap((match) =>
+      match[1]
+        .split(",")
+        .map((candidate) => candidate.trim().split(/\s+/, 1)[0])
+        .filter(Boolean),
+    ),
+  ];
 
   for (const reference of references) {
     if (!reference || isExternalOrFragment(reference)) continue;

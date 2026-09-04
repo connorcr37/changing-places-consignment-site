@@ -53,6 +53,7 @@ const setupCarousel = (carousel) => {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let cards = [];
   let carouselUpdateQueued = false;
+  let carouselLayoutUpdateQueued = false;
   let hasInteracted = false;
 
   const nearestCardIndex = () => {
@@ -106,9 +107,24 @@ const setupCarousel = (carousel) => {
   };
 
   const queueCarouselUpdate = () => {
-    if (carouselUpdateQueued) return;
+    if (carouselUpdateQueued || carouselLayoutUpdateQueued) return;
     carouselUpdateQueued = true;
     window.requestAnimationFrame(updateCarousel);
+  };
+
+  const queueCarouselUpdateAfterLayout = () => {
+    if (carouselLayoutUpdateQueued) return;
+    carouselLayoutUpdateQueued = true;
+
+    // The deferred script runs before the first paint. Waiting through one
+    // rendering opportunity keeps the geometry reads in updateCarousel from
+    // forcing the browser to synchronously lay out the entire page.
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        carouselLayoutUpdateQueued = false;
+        updateCarousel();
+      });
+    });
   };
 
   const scrollToNeighbor = (direction) => {
@@ -164,7 +180,7 @@ const setupCarousel = (carousel) => {
         track.scrollTo({ left: 0, behavior: "auto" });
       }
 
-      updateCarousel();
+      queueCarouselUpdateAfterLayout();
     },
   };
 
@@ -331,8 +347,6 @@ const createFacebookCard = (video, index, total) => {
   article.className = "facebook-card";
   article.dataset.carouselCard = "";
   article.dataset.facebookVideoId = video.id;
-  article.setAttribute("role", "group");
-  article.setAttribute("aria-roledescription", "slide");
   article.setAttribute("aria-label", `${index + 1} of ${total}`);
 
   const link = document.createElement("a");

@@ -36,6 +36,13 @@ The site audit verifies public-page metadata, canonical and social URLs, JSON-LD
 
 The home-page carousel is static-first. Five checked-in cards render immediately and remain as the last-known-good fallback. Near the carousel, `site.js` requests the same-origin `/api/facebook-live` endpoint and replaces those cards only when it receives a complete, valid feed.
 
+The checked-in replay JPEGs have 320px and 540px AVIF/WebP variants for responsive delivery. After replacing a `images/facebook-live-*.jpg` fallback, regenerate those variants with the development image dependency:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python scripts/optimize-facebook-images.py
+```
+
 The Worker keeps the Page access token server-side and caches successful Meta responses. Put a local token in `.dev.vars` (never commit that file):
 
 ```dotenv
