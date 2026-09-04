@@ -568,12 +568,13 @@ nav a.active {
 }
 
 .facebook-showcase {
-  margin-top: clamp(2.75rem, 5vw, 4.5rem);
+  margin-top: 0;
   padding: clamp(1.25rem, 3vw, 2.25rem);
+  border: 1px solid var(--color-border);
   border-radius: 1.75rem;
-  background: var(--color-forest-dark);
-  box-shadow: 0 1.25rem 3rem rgba(36, 75, 66, 0.16);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-sand), var(--color-cream));
+  box-shadow: 0 1rem 2.6rem rgba(36, 75, 66, 0.09);
+  color: var(--color-charcoal);
   overflow: hidden;
 }
 
@@ -587,9 +588,9 @@ nav a.active {
 
 .facebook-showcase__heading {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
-  max-width: 48rem;
+  max-width: 52rem;
 }
 
 .facebook-showcase__icon {
@@ -599,7 +600,7 @@ nav a.active {
   height: 3rem;
   border-radius: 0.9rem;
   background: #1877f2;
-  box-shadow: 0 0.45rem 1.1rem rgba(0, 0, 0, 0.18);
+  box-shadow: 0 0.4rem 1rem rgba(36, 75, 66, 0.12);
   place-items: center;
 }
 
@@ -609,20 +610,53 @@ nav a.active {
   fill: #fff;
 }
 
-.facebook-showcase__eyebrow {
-  margin: 0 0 0.2rem;
-  color: var(--color-peach);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.facebook-showcase__follow-icon {
+  position: relative;
+  z-index: 5;
+  color: #fff;
+  text-decoration: none;
+  transition: box-shadow 180ms ease, transform 180ms ease;
 }
 
-.facebook-showcase h3 {
+.facebook-showcase__follow-icon svg {
+  transition: transform 180ms ease;
+}
+
+.facebook-showcase__follow-icon::before {
+  position: absolute;
+  z-index: 4;
+  top: calc(100% + 0.55rem);
+  left: 0;
+  padding: 0.48rem 0.65rem;
+  border-radius: 0.55rem;
+  background: var(--color-forest-dark);
+  box-shadow: 0 0.5rem 1.2rem rgba(36, 75, 66, 0.2);
   color: #fff;
-  font-size: clamp(1.9rem, 3.3vw, 2.55rem);
-  font-weight: 600;
-  line-height: 1.08;
+  content: attr(data-tooltip);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-0.2rem);
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease;
+  visibility: hidden;
+  white-space: nowrap;
+}
+
+.facebook-showcase__follow-icon:is(:hover, :focus-visible) {
+  box-shadow: 0 0.65rem 1.45rem rgba(24, 119, 242, 0.28);
+  transform: translateY(-0.14rem) scale(1.035);
+}
+
+.facebook-showcase__follow-icon:is(:hover, :focus-visible) svg {
+  transform: rotate(-5deg) scale(1.06);
+}
+
+.facebook-showcase__follow-icon:is(:hover, :focus-visible)::before {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
 }
 
 .facebook-showcase__intro {
@@ -630,12 +664,11 @@ nav a.active {
   align-items: baseline;
   flex-wrap: wrap;
   gap: 0.35rem 0.75rem;
-  margin-top: 0.55rem;
 }
 
 .facebook-showcase__intro p {
   margin: 0;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--color-muted);
   font-size: 0.96rem;
 }
 
@@ -650,24 +683,25 @@ nav a.active {
   display: grid;
   width: 2.85rem;
   height: 2.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(46, 92, 80, 0.28);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--color-forest);
   cursor: pointer;
-  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease;
   place-items: center;
 }
 
 .facebook-carousel__button:is(:hover, :focus-visible):not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.68);
-  background: rgba(255, 255, 255, 0.2);
+  border-color: var(--color-forest);
+  background: var(--color-forest);
+  color: #fff;
   transform: translateY(-0.1rem);
 }
 
 .facebook-carousel__button:focus-visible,
 .facebook-showcase a:focus-visible {
-  outline-color: var(--color-peach);
+  outline-color: var(--color-forest-dark);
 }
 
 .facebook-carousel__button:disabled {
@@ -687,7 +721,7 @@ nav a.active {
 
 .facebook-carousel__status {
   min-width: 4.15rem;
-  color: rgba(255, 255, 255, 0.76);
+  color: var(--color-muted);
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -712,7 +746,7 @@ nav a.active {
 
 .facebook-carousel__track:focus-visible {
   border-radius: 0.75rem;
-  outline: 0.125rem solid var(--color-peach);
+  outline: 0.125rem solid var(--color-forest);
   outline-offset: 0.15rem;
 }
 
@@ -722,9 +756,10 @@ nav a.active {
 
 .facebook-card {
   min-width: 0;
+  border: 1px solid rgba(222, 216, 207, 0.82);
   border-radius: 1.15rem;
-  background: var(--color-cream);
-  box-shadow: 0 0.65rem 1.6rem rgba(0, 0, 0, 0.18);
+  background: #fff;
+  box-shadow: 0 0.5rem 1.3rem rgba(36, 75, 66, 0.1);
   overflow: hidden;
   scroll-snap-align: start;
 }
@@ -817,25 +852,6 @@ nav a.active {
   font-size: 1.15rem;
   font-weight: 600;
   line-height: 1.25;
-}
-
-.facebook-showcase__follow {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  margin: 0;
-  color: #fff;
-  font-size: 0.875rem;
-  font-weight: 700;
-  text-decoration-color: rgba(245, 199, 170, 0.62);
-  text-underline-offset: 0.2rem;
-  white-space: nowrap;
-  transition: color 180ms ease, text-decoration-color 180ms ease;
-}
-
-.facebook-showcase__follow:hover {
-  color: var(--color-peach);
-  text-decoration-color: var(--color-peach);
 }
 
 /* ========== Consignment Flow ========== */
@@ -2196,10 +2212,6 @@ footer a:focus-visible,
   .facebook-showcase__icon svg {
     width: 1.55rem;
     height: 1.55rem;
-  }
-
-  .facebook-showcase h3 {
-    line-height: 1.15;
   }
 
   .facebook-carousel__controls {
