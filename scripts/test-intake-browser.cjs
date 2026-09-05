@@ -1,0 +1,87 @@
+// Run with Playwright installed or its package directory supplied through NODE_PATH.
+// Uses a loopback server and mocked API only; never sends submissions or email.
+const { chromium } = require('playwright');
+const { createServer } = require('node:http');
+const { readFile } = require('node:fs/promises');
+const { resolve, extname } = require('node:path');
+const assert = require('node:assert/strict');
+const root = resolve(__dirname, '..');
+const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
+const server = createServer(async (req, res) => {
+  const path = new URL(req.url, 'http://localhost').pathname;
+  if (!/^\/(submit-items\.html|intake-form\.js|intake-shared\.js|intake\.css|styles\.css|images\/[\w/.-]+|fonts\/[\w/.-]+)$/.test(path) || path.includes('..')) { res.writeHead(404).end(); return; }
+  try { res.setHeader('Content-Type', types[extname(path)] || 'application/octet-stream'); res.end(await readFile(resolve(root, '.' + path))); }
+  catch { res.writeHead(404).end(); }
+});
+(async () => {
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const origin = `http://127.0.0.1:${server.address().port}`;
+    const bytes = await readFile(resolve(root, 'images/banner.jpg'));
+    const uploadFile = name => ({ name, mimeType: 'image/jpeg', buffer: bytes });
+    const setup = async (width, failure) => {
+      const page = await browser.newPage({ viewport: { width, height: 850 } });
+      const calls = { starts: [], uploads: 0, completes: 0 };
+      await page.route('**/api/intake/**', async route => {
+        const path = new URL(route.request().url()).pathname;
+        const json = data => route.fulfill({ json: data });
+        if (path.endsWith('/config')) return json({ enabled: true, maxPhotos: 30 });
+        if (path.endsWith('/submissions')) { calls.starts.push(route.request().postDataJSON()); return json({ uploadId: calls.starts.at(-1).uploadId }); }
+        if (path.includes('/photos/')) {
+          calls.uploads++;
+          if (failure === 'oversize') return route.fulfill({ status: 413, json: { error: 'Photo too large.' } });
+          return json({ ok: true });
+        }
+        calls.completes++;
+        if (failure === 'connection' && calls.completes === 1) return route.abort();
+        return json({ received: true });
+      });
+      await page.goto(origin + '/submit-items.html');
+      await page.waitForFunction(() => !document.getElementById('submit-button').disabled);
+      await page.locator('#customer-name').fill('Mary Smith');
+      await page.locator('#customer-phone').fill('5155550118');
+      await page.locator('#consent').check();
+      return { page, calls };
+    };
+    const { page, calls } = await setup(390, 'connection');
+    await page.locator('#photo-input').setInputFiles([uploadFile('sofa.jpg'), uploadFile('detail.jpg')]);
+    await page.waitForFunction(() => document.getElementById('photo-count').textContent === '2 of 30 photos');
+    assert.equal(await page.locator('.photo-preview img').evaluateAll(images => images.filter(i => i.complete && i.naturalWidth).length), 2);
+    const size = await page.locator('.photo-preview img').first().boundingBox();
+    assert.ok(Math.abs(size.width - size.height) < 2, 'Mobile photo thumbnails should be square');
+    await page.locator('#customer-phone').fill('123');
+    await page.locator('#submit-button').click();
+    assert.match(await page.locator('#form-error').textContent(), /phone number/);
+    assert.equal(calls.starts.length, 0);
+    await page.locator('#customer-phone').fill('5155550118');
+    await page.locator('#submit-button').click();
+    await page.waitForFunction(() => document.getElementById('submit-button').textContent.includes('Retry'));
+    assert.equal(calls.uploads, 2);
+    assert.equal(await page.locator('#customer-name').isDisabled(), true);
+    await page.locator('#submit-button').click();
+    await page.locator('#intake-success').waitFor({ state: 'visible' });
+    assert.equal(calls.uploads, 2, 'Retry must not resend uploaded photos');
+    assert.equal(calls.starts[0].uploadId, calls.starts[1].uploadId, 'Retry must preserve the submission');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await page.close();
+    const oversize = await setup(1280, 'oversize');
+    await oversize.page.locator('#photo-input').setInputFiles(uploadFile('sofa.jpg'));
+    await oversize.page.waitForFunction(() => document.getElementById('photo-count').textContent === '1 of 30 photos');
+    await oversize.page.locator('#submit-button').click();
+    await oversize.page.locator('#form-error').waitFor({ state: 'visible' });
+    assert.equal(await oversize.page.locator('#customer-name').isDisabled(), false);
+    await oversize.page.getByRole('button', { name: 'Remove photo 1: sofa.jpg', exact: true }).click();
+    assert.equal(await oversize.page.locator('.photo-preview').count(), 0);
+    await oversize.page.close();
+    const batch = await setup(390);
+    await batch.page.locator('#photo-input').setInputFiles(Array.from({ length: 31 }, (_, i) => uploadFile(`photo-${i}.jpg`)));
+    await batch.page.waitForFunction(() => !document.getElementById('photo-fields').disabled, null, { timeout: 30000 });
+    assert.equal(await batch.page.locator('.photo-preview').count(), 30);
+    assert.match(await batch.page.locator('#photo-error').textContent(), /Extra photos were not added/);
+    await batch.page.locator('#clear-photos').click();
+    assert.equal(await batch.page.locator('.photo-preview').count(), 0);
+    await batch.page.close();
+    console.log('Browser checks passed: mobile previews, contact validation, interrupted retry, rejected-photo recovery, 30-photo cap, and clear/remove.');
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => server.close());

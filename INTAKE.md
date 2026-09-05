@@ -2,7 +2,7 @@
 
 `/submit-items` is a standalone, noindex page. It is intentionally absent from the navigation, footer, and sitemap. Consignors provide a name, phone and/or email, optional notes, consent, and 1–30 photos. JPG, PNG, and WebP are supported; HEIC must be exported as JPEG first.
 
-The consignor sees a thank-you once the complete batch has been durably saved. The store receives **one private email** titled `Web Submission #… - Name - … Photos`. Its compact phone layout puts numbered photos beside item names, green/yellow/red dots, and brief AI screening notes. Items sharing a primary photo appear together; additional views and unassigned photos are retained. Known brands and meaningful flaws appear when relevant. The fuller structured assessment stays in private storage. There is no staff login or dashboard. The AI never sends a consignor reply.
+The consignor sees a thank-you once the complete batch has been durably saved. The store receives **one private email** titled `Web Submission #… - Name - … Photos`. Its compact phone layout puts numbered photos beside item names, green/yellow/red dots, and brief AI screening notes. Items sharing photos appear together; additional views and unassigned photos are retained. Known brands and meaningful flaws appear when relevant. The fuller structured assessment stays in private storage. There is no staff login or dashboard. The AI never sends a consignor reply.
 
 The email starts with the consignor name, phone, email and notes, including in realistic synthetic tests. Each item has one brief sentence about visible cleanliness/condition and meaningful flaws. The analysis and email omit pricing, follow-up questions, and reply drafts.
 
@@ -22,7 +22,7 @@ The report sets `Reply-To` to the consignor's validated email address, so the st
 
 ## Processing and privacy
 
-The browser prepares a detailed JPEG for the AI (up to 1600 pixels / 600 KB) and an email copy (up to 1200 pixels / 100 KB). Sequential uploads avoid one large request. Thirty email copies fit within the email service's size limit. Resizing strips original EXIF metadata. No public photo URLs exist.
+The browser prepares a detailed JPEG for the AI (up to 1600 pixels / 600 KB) and an email copy (up to 1200 pixels / 100 KB). Sequential uploads avoid one large request. Thirty email copies fit within the email service's size limit. Resizing strips original EXIF metadata. Public validation rules and photo limits live in `intake-shared.js`, shared by the browser and Worker. Storage keys and bounded body reading live in `worker/intake-utils.mjs`. No public photo URLs exist.
 
 Only photos and optional notes go to OpenAI; name, phone, and email fields do not. Requests use Structured Outputs and `store:false`. The prompt groups duplicate views, counts physical pieces, links items to numbered photos, distinguishes observations from guesses, and reserves final decisions for staff. The store criteria live in `worker/intake-ai.mjs`.
 
@@ -30,7 +30,7 @@ Upload capabilities expire in two hours and only authorize writing that batch. S
 
 D1 is the durable outbox: cron recovery every five minutes requeues work missed by the queue. AI errors retry up to three times; persistent errors send the photos and a manual-review notice. Email errors retry up to five times without rerunning a saved AI assessment. Failed attempts log only event names and submission numbers. Email delivery is at least once; an ambiguous provider timeout can produce a duplicate email, so identify submissions by their number.
 
-Incomplete uploads are deleted after one day. Every submitted web record—including private R2 image copies, contact details, notes, and the saved assessment—is deleted after 30 days. Emails remain in the recipient mailbox. The retention job runs every five minutes in bounded batches.
+Incomplete uploads are deleted after one day. Every submitted web record—including private R2 image copies, contact details, notes, and the saved assessment—is deleted after 30 days. Emails remain in the recipient mailbox. The retention job runs every five minutes in bounded batches, before queue recovery; queue outages and individual deletion failures do not block other cleanup. Expired submissions are never analyzed or emailed.
 
 ## Verification
 
@@ -46,7 +46,9 @@ node --check intake-form.js
 
 Use Wrangler v4, run `wrangler d1 migrations apply INTAKE_DB --local` for local development, and `--remote` before release. Keep local persistent state outside the asset root, as described in README.md. Wrangler's `secrets.required` includes both Facebook and OpenAI secrets.
 
-For release checks, submit a test batch and verify the email includes the full assessment and all numbered photos. No consignor decision/reply is sent automatically. Use the existing GitHub/Cloudflare release process and preserve unrelated site edits.
+For browser checks, run `node scripts/test-intake-browser.cjs` with Playwright installed (or available through `NODE_PATH`). This uses mocked API responses and sends no real emails. It covers mobile previews, validation, interrupted retries, rejected-photo recovery, the 30-photo cap, and clear/remove actions.
+
+For release checks, submit a test batch and verify the email includes the compact screening assessment and all numbered photos. No consignor decision/reply is sent automatically. Use the existing GitHub/Cloudflare release process and preserve unrelated site edits.
 
 ## Delivery recovery
 

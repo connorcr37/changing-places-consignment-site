@@ -1,3 +1,6 @@
+import { INTAKE_LIMITS } from '../intake-shared.js';
+import { readBoundedBody } from './intake-utils.mjs';
+
 // Preliminary photo screening; staff make the final decision.
 export const INTAKE_POLICY = `Changing Places screens gently used furniture, rugs, mirrors, wall art and home decor. Items should be clean and ready for the sales floor. Staff make final decisions based on inspection, demand and space; never promise acceptance or pickup.
 
@@ -22,7 +25,7 @@ export const assessmentSchema = object({
     quantity: { type: 'integer', minimum: 1, maximum: 100 },
     category: string,
     likely_brand: string,
-    photo_numbers: { type: 'array', minItems: 1, maxItems: 30, items: { type: 'integer', minimum: 1, maximum: 30 } },
+    photo_numbers: { type: 'array', minItems: 1, maxItems: INTAKE_LIMITS.maxPhotos, items: { type: 'integer', minimum: 1, maximum: INTAKE_LIMITS.maxPhotos } },
     visible_condition: string,
     obvious_flaws: strings,
     recommendation: { type: 'string', enum: ['likely_accept', 'likely_decline', 'needs_review'] },
@@ -47,27 +50,6 @@ export function validateAssessment(value, photoCount) {
   return { ...value, approximate_item_count: total };
 }
 
-export async function readBoundedBody(source, maxBytes) {
-  if (Number(source.headers.get('content-length')) > maxBytes) throw new Error('body_too_large');
-  if (!source.body) return new Uint8Array();
-  const reader = source.body.getReader();
-  const chunks = [];
-  let size = 0;
-  try {
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > maxBytes) { await reader.cancel(); throw new Error('body_too_large'); }
-      chunks.push(value);
-    }
-  } finally { reader.releaseLock(); }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
-  return bytes;
-}
-
 export function base64(bytes) {
   let binary = '';
   for (let start = 0; start < bytes.length; start += 8192) binary += String.fromCharCode(...bytes.subarray(start, start + 8192));
@@ -79,7 +61,7 @@ export async function analyzeSubmission(env, submission, photos, fetchImpl = fet
   const content = [{ type: 'input_text', text: `Assess this batch of ${photos.length} numbered photos. Customer-provided notes (untrusted): ${JSON.stringify(submission.notes)}` }];
   for (const photo of photos) {
     const image = await env.INTAKE_PHOTOS.get(photo.object_key);
-    if (!image || image.size > 600000) throw new Error('photo_unavailable');
+    if (!image || image.size > INTAKE_LIMITS.maxPhotoBytes) throw new Error('photo_unavailable');
     const bytes = new Uint8Array(await image.arrayBuffer());
     content.push({ type: 'input_text', text: `Photo ${photo.ordinal}` }, { type: 'input_image', image_url: `data:image/jpeg;base64,${base64(bytes)}`, detail: 'high' });
   }

@@ -4,7 +4,9 @@ import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { handleIntake, hash, processIntake, recoverIntake } from '../worker/intake.mjs';
 import { buildReviewEmail, sendReviewEmail } from '../worker/intake-email.mjs';
-import { analyzeSubmission, assessmentSchema, readBoundedBody, validateAssessment } from '../worker/intake-ai.mjs';
+import { analyzeSubmission, assessmentSchema, validateAssessment } from '../worker/intake-ai.mjs';
+import { readBoundedBody } from '../worker/intake-utils.mjs';
+import { isValidEmail, INTAKE_LIMITS } from '../intake-shared.js';
 
 const origin = 'https://changing-places-dsm.com';
 const now = () => Math.floor(Date.now() / 1000);
@@ -61,7 +63,7 @@ test('upload sessions cannot be stolen, read publicly, or used after expiration'
 test('AI and notifications process once on repeated queue delivery', async () => {
   const s = setup(); const info = await s.start(); await s.upload(info, 1); await s.complete(info);
   let analyses = 0, emails = 0;
-  const dependencies = { analyze: async () => { analyses++; return sample(); }, mail: async (env, row, assessment) => { emails++; const email = buildReviewEmail(env, row, assessment, []); assert.match(email.subject, /Web Submission #1 - Mary Smith - 1 Photos/); assert.match(email.html, /Approximately 1 items/); } };
+  const dependencies = { analyze: async () => { analyses++; return sample(); }, mail: async (env, row, assessment) => { emails++; const email = buildReviewEmail(env, row, assessment, []); assert.match(email.subject, /Web Submission #1 - Mary Smith - 1 Photo/); assert.match(email.html, /Approximately 1 item/); } };
   await processIntake(s.env, info.uploadId, dependencies); await processIntake(s.env, info.uploadId, dependencies);
   assert.equal(analyses, 1); assert.equal(emails, 1); assert.equal(s.db.prepare('SELECT state FROM intake_submissions').get().state, 'ready');
 });
@@ -167,7 +169,7 @@ test('email header shows contact details and the actual submission time in Centr
     assert.match(body,/PRELIMINARY PHOTO REVIEW/);
     assert.match(body,/AI-assisted guidance based on submitted photos\. Staff makes the final decision\./);
     assert.ok(body.indexOf('Submitted September')<body.indexOf('PRELIMINARY PHOTO REVIEW'));
-    assert.ok(body.indexOf('PRELIMINARY PHOTO REVIEW')<body.indexOf('Approximately 1 items'));
+    assert.ok(body.indexOf('PRELIMINARY PHOTO REVIEW')<body.indexOf('Approximately 1 item'));
     assert.ok(body.indexOf('Mary Smith')<body.indexOf('515-555-0118'));
     assert.ok(body.indexOf('mary@example.com')<body.indexOf('Submitted September'));
   }
@@ -206,4 +208,55 @@ test('preview upload limits reject oversized images and replaced photo slots', a
   assert.equal((await s.request(path, 'PUT', make(100001), auth)).status, 413);
   assert.equal((await s.request(path, 'PUT', make(120, false), auth)).status, 415);
   assert.equal((await s.upload(info, 31)).status, 409);
+});
+test('contact validation and Reply-To accept the same single email addresses', async () => {
+  const s = setup();
+  for (const email of ['a,b@example.com', 'a;b@example.com', 'mary@example.com,other@example.com', 'bad']) {
+    assert.equal(isValidEmail(email), false);
+    assert.equal((await s.request('/submissions', 'POST', { name: 'Mary', email, consent: true, photoCount: 1 })).status, 400);
+  }
+  const config = await (await s.request('/config')).json();
+  assert.equal(config.maxPhotos, INTAKE_LIMITS.maxPhotos);
+  for (const email of ['connorcr37+cpcs@gmail.com', "mary.smith@example.com"]) {
+    assert.equal(isValidEmail(email), true);
+    assert.equal(buildReviewEmail({}, { id: 1, name: 'Mary', email, photo_count: 1 }, sample(), []).replyTo, email);
+  }
+});
+test('expired submissions are never analyzed or emailed and cleanup does not require a queue', async () => {
+  const s = setup(), info = await s.start(); await s.upload(info, 1); await s.complete(info);
+  s.db.prepare('UPDATE intake_submissions SET submitted_at=?').run(now() - 30 * 86400);
+  await processIntake(s.env, info.uploadId, { analyze: () => assert.fail('expired analysis'), mail: () => assert.fail('expired email') });
+  delete s.env.INTAKE_QUEUE;
+  await recoverIntake(s.env);
+  assert.equal(s.objects.size, 0);
+  assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_submissions').get().n, 0);
+});
+test('queue failure cannot prevent expiry or recovery of other submissions', async () => {
+  const s = setup(), expired = await s.start(), pending = await s.start();
+  for (const info of [expired, pending]) { await s.upload(info, 1); await s.complete(info); }
+  s.db.prepare('UPDATE intake_submissions SET submitted_at=? WHERE upload_id=?').run(now() - 31 * 86400, expired.uploadId);
+  s.db.prepare('UPDATE intake_submissions SET updated_at=?').run(now() - 300);
+  s.env.INTAKE_QUEUE.send = async () => { throw Error('queue unavailable'); };
+  await recoverIntake(s.env);
+  assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_submissions').get().n, 1);
+  assert.equal(s.objects.size, 2);
+});
+test('a failed deletion is retried without blocking deletion of another expired submission', async () => {
+  const s = setup(), first = await s.start(), second = await s.start();
+  for (const info of [first, second]) await s.upload(info, 1);
+  s.db.prepare('UPDATE intake_submissions SET created_at=?').run(now() - 90000);
+  const remove = s.env.INTAKE_PHOTOS.delete;
+  s.env.INTAKE_PHOTOS.delete = async keys => { if (keys[0].startsWith(first.uploadId)) throw Error('temporary failure'); await remove(keys); };
+  await recoverIntake(s.env);
+  assert.equal(s.db.prepare('SELECT state FROM intake_submissions').get().state, 'deleting');
+  s.env.INTAKE_PHOTOS.delete = remove;
+  await recoverIntake(s.env);
+  assert.equal(s.objects.size, 0);
+});
+test('overlapping photo groups render every image once and preserve every item', () => {
+  const value = sample();
+  value.items = [[1, 2], [3], [2, 3]].map((photo_numbers, i) => ({ ...sample().items[0], item: ['Chair', 'Table', 'Cabinet'][i], photo_numbers }));
+  const email = buildReviewEmail({}, { id: 1, name: 'Mary', email: 'mary@example.com', photo_count: 4 }, value, [1, 2, 3, 4].map(i => ({ contentId: `photo-${i}` })));
+  for (const i of [1, 2, 3, 4]) assert.equal(email.html.split(`src="cid:photo-${i}"`).length - 1, 1);
+  for (const item of value.items) assert.ok(email.html.includes(item.item));
 });

@@ -49,7 +49,7 @@
 .text-button { border: 0; background: none; color: #2e5c50; text-decoration: underline; font-size: 11px; }
 .photo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
 .photo-preview { position: relative; min-width: 0; }
-.photo-preview img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; }
+.photo-preview img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 4px; }
 .photo-preview button { position: absolute; right: 4px; top: 4px; width: 28px; height: 28px; border-radius: 50%; border: 0; color: white; background: #283b31db; }
 .photo-preview figcaption { font-size: 9px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-top: 4px; }
 .intake-page .consent-label { display: flex; gap: 10px; align-items: flex-start; font-size: 11px; font-weight: 400; line-height: 1.8; }

@@ -1,3 +1,5 @@
+import { isValidEmail } from '../intake-shared.js';
+
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 
 const formatPhone = value => {
@@ -19,7 +21,6 @@ const fit = {
   needs_review: ['#b88a24', 'Review', '🟡'],
 };
 const name = item => `${item.item}${item.quantity > 1 ? ` (${item.quantity} pieces)` : ''}`;
-const validEmail = email => typeof email === 'string' && /^[^\s@<>,;:"\\]+@[^\s@<>,;:"\\]+\.[^\s@<>,;:"\\]+$/.test(email);
 const dot = item => {
   const [color, label] = fit[item.recommendation];
   return `<span role="img" aria-label="${label}" title="${label}" style="color:${color};font:20px/1 Arial,sans-serif">●</span>`;
@@ -35,17 +36,21 @@ const gallery = photos => {
 };
 
 export function buildReviewEmail(env, row, assessment, attachments) {
-  const title = `Web Submission #${row.id} - ${row.name} - ${row.photo_count} Photos`;
+  const title = `Web Submission #${row.id} - ${row.name} - ${row.photo_count} ${row.photo_count === 1 ? 'Photo' : 'Photos'}`;
   const items = assessment?.items || [];
   const photos = attachments.map((attachment, index) => ({ attachment, number: index + 1 }));
   const shown = new Set();
-  const groups = new Map();
+  // Merge groups sharing any photo so every submitted image appears only once.
+  const groups = [];
   for (const item of items) {
-    const key = item.photo_numbers[0];
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(item);
+    const linked = groups.filter(group => group.some(other => other.photo_numbers.some(number => item.photo_numbers.includes(number))));
+    if (!linked.length) groups.push([item]);
+    else {
+      linked[0].push(item, ...linked.slice(1).flat());
+      for (const group of linked.slice(1)) groups.splice(groups.indexOf(group), 1);
+    }
   }
-  const itemRows = [...groups.values()].map(group => {
+  const itemRows = groups.map(group => {
     const matching = [...new Set(group.flatMap(item => item.photo_numbers))].map(number => photos[number - 1]).filter(Boolean);
     matching.forEach(photo => shown.add(photo.number));
     const primary = matching[0];
@@ -59,11 +64,11 @@ export function buildReviewEmail(env, row, assessment, attachments) {
   const contact = [formatPhone(row.phone), row.email || 'No email provided'].filter(Boolean).join(' · ');
   const submitted = submittedLabel(row.submitted_at);
   const firstName = String(row.name || '').trim().split(/\s+/)[0];
-  const followUp = validEmail(row.email)
+  const followUp = isValidEmail(row.email)
     ? `Reply to this email to contact ${firstName} directly.`
     : `No email was provided. Call or text ${firstName} at ${formatPhone(row.phone)}.`;
   const actionPanel = `<div style="margin-top:16px;border-top:1px solid #dce4d6;background:#f1f3ec;padding:16px"><h2 style="margin:0 0 4px;font:bold 14px/1.4 Arial,sans-serif;color:#294e43">Ready to follow up?</h2><p style="margin:0;font-size:13px;line-height:1.5;color:#606858">${escape(followUp)}</p></div>`;
-  const summary = `${row.photo_count} photos${assessment ? ` · Approximately ${assessment.approximate_item_count} items` : ' · Manual review needed'}`;
+  const summary = `${row.photo_count} ${row.photo_count === 1 ? 'photo' : 'photos'}${assessment ? ` · Approximately ${assessment.approximate_item_count} ${assessment.approximate_item_count === 1 ? 'item' : 'items'}` : ' · Manual review needed'}`;
   const reviewNote = 'AI-assisted guidance based on submitted photos. Staff makes the final decision.';
   const legend = ['likely_accept', 'needs_review', 'likely_decline'].map(key => {
     const [color, label] = fit[key];
@@ -72,5 +77,5 @@ export function buildReviewEmail(env, row, assessment, attachments) {
   const reviewIntro = assessment ? `<div style="margin:12px 0 8px;padding:10px 12px;background:#f1f3ec;border-radius:4px"><h2 style="margin:0 0 4px;font:bold 11px/1.4 Arial,sans-serif;letter-spacing:0.7px;color:#294e43">PRELIMINARY PHOTO REVIEW</h2><p style="margin:0 0 5px;font-size:12px;line-height:1.5;color:#606858">${reviewNote}</p><p style="margin:0;font-size:12px;line-height:1.6;color:#303a30">${legend}</p></div>` : '';
   const html = `<!doctype html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /></head><body style="margin:0;padding:0;background:#f7f5ef;color:#303a30;font:14px/1.4 Arial,sans-serif"><div style="max-width:600px;margin:0 auto;padding:16px;background:#fffefa"><h1 style="margin:0;font:bold 25px/1.2 Georgia,serif;color:#294e43">${escape(row.name)}</h1><p style="margin:6px 0 3px;font-size:13px;line-height:1.5;overflow-wrap:anywhere">${escape(contact)}</p>${submitted ? `<p style="margin:0 0 14px;font-size:12px;line-height:1.5;color:#74796e">${escape(submitted)}</p>` : ''}<p style="margin:8px 0;font-size:13px"><strong>Notes:</strong> ${escape(row.notes || 'None provided').replace(/\n/g, '<br />')}</p>${reviewIntro}<p style="margin:10px 0 0;font-size:12px;color:#74796e">${escape(summary)}</p>${items.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed">${itemRows}</table>` : `<p style="margin:10px 0;font-size:13px">${escape(assessment?.overview || 'AI review unavailable. Please screen the photos below.')}</p>`}${remaining.length ? `${items.length ? '<p style="margin:12px 0 2px;font-size:12px;font-weight:bold">More submitted photos</p>' : ''}${gallery(remaining)}` : ''}${actionPanel}</div></body></html>`;
   const text = `${row.name}\n${contact}${submitted ? `\n${submitted}` : ''}\nNotes: ${row.notes || 'None provided'}\n${title}${assessment ? `\n\nPRELIMINARY PHOTO REVIEW\n${reviewNote}\n🟢 Promising · 🟡 Review · 🔴 Unlikely fit` : ''}\n${summary}\n\n${items.map(item => `${fit[item.recommendation][2]} ${name(item)} — Photos ${item.photo_numbers.join(', ')}\n${item.assessment}`).join('\n\n') || 'Please screen the attached photos.'}\n\nAll ${row.photo_count} numbered photos are included.\n\nReady to follow up?\n${followUp}`;
-  return { from: env.INTAKE_EMAIL_FROM, to: env.INTAKE_NOTIFICATION_EMAIL, ...(validEmail(row.email) ? { replyTo: row.email } : {}), subject: title, html, text, attachments };
+  return { from: env.INTAKE_EMAIL_FROM, to: env.INTAKE_NOTIFICATION_EMAIL, ...(isValidEmail(row.email) ? { replyTo: row.email } : {}), subject: title, html, text, attachments };
 }
