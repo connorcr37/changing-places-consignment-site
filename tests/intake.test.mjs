@@ -175,6 +175,9 @@ test('email header shows contact details and the actual submission time in Centr
   const winter=buildReviewEmail({}, {...row,submitted_at:Date.parse('2026-12-05T16:14:00Z')/1000,phone:''},sample(),[]);
   assert.match(winter.text,/Submitted December 5 at 10:14 AM CT/);
   assert.ok(winter.text.startsWith('Mary Smith\nmary@example.com\nSubmitted'));
+  const phoneOnly=buildReviewEmail({}, {...row,email:''},sample(),[]);
+  for (const body of [phoneOnly.html,phoneOnly.text]) assert.match(body,/515-555-0118 · No email provided/);
+  assert.ok(!Object.hasOwn(phoneOnly,'replyTo'));
 });
 test('email payload for 30 maximum-size previews remains below the sending limit', () => {
   const content = Buffer.alloc(100000).toString('base64');

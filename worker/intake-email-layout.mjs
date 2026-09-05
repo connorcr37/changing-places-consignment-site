@@ -57,7 +57,7 @@ export function buildReviewEmail(env, row, assessment, attachments) {
     return `<tr><td style="padding:10px 0;border-bottom:1px solid #e6e7df"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed"><tr>${primary ? `<td width="46%" valign="top" style="width:46%;padding-right:12px">${image(primary, 270)}${caption(primary)}</td>` : ''}<td valign="top" style="overflow-wrap:anywhere">${notes}</td></tr></table>${matching.length > 1 ? gallery(matching.slice(1)) : ''}</td></tr>`;
   }).join('');
   const remaining = photos.filter(photo => !shown.has(photo.number));
-  const contact = [formatPhone(row.phone), row.email].filter(Boolean).join(' · ');
+  const contact = [formatPhone(row.phone), row.email || 'No email provided'].filter(Boolean).join(' · ');
   const submitted = submittedLabel(row.submitted_at);
   const requests = (assessment?.information_needed || []).slice(0, 3);
   const candidate = assessment?.suggested_response?.trim() || '';
