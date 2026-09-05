@@ -4,11 +4,12 @@ import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { handleIntake, hash, processIntake, recoverIntake } from '../worker/intake.mjs';
 import { buildReviewEmail, sendReviewEmail } from '../worker/intake-email.mjs';
+import { customerMessage } from '../worker/intake-email-layout.mjs';
 import { analyzeSubmission, readBoundedBody, validateAssessment } from '../worker/intake-ai.mjs';
 
 const origin = 'https://changing-places-dsm.com';
 const now = () => Math.floor(Date.now() / 1000);
-const sample = () => ({ approximate_item_count: 1, overview: 'One chair in two views.', grouping_uncertainty: '', items: [{ item: 'Chair', quantity: 1, category: 'Seating', likely_brand: 'Unknown / label needed', photo_numbers: [1], visible_condition: 'Light surface wear', obvious_flaws: ['Small scratch'], information_needed: ['Brand label'], recommendation: 'needs_review', assessment: 'Ask for measurements.' }], information_needed: ['Measurements'], suggested_response: 'Thank you for the photos. Could you share measurements?' });
+const sample = () => ({ approximate_item_count: 1, overview: 'One chair in two views.', grouping_uncertainty: '', items: [{ item: 'Chair', quantity: 1, category: 'Seating', likely_brand: 'Unknown / label needed', photo_numbers: [1], visible_condition: 'Light surface wear', obvious_flaws: ['Small scratch'], information_needed: ['Seat close-up'], recommendation: 'needs_review', assessment: 'Clean-looking chair with a small scratch on the seat.', pricing: { evidence: 'weak', basis: '', comparable_new: null, used_resale: null } }], information_needed: ['Could you send a closer photo of the seat?'], suggested_response: 'Thanks for the photos! Could you send a closer photo of the chair seat?' });
 function setup() {
   const db = new DatabaseSync(':memory:'); db.exec('PRAGMA foreign_keys=ON'); db.exec(readFileSync(new URL('../migrations/intake/0001_intake.sql', import.meta.url), 'utf8'));
   const objects = new Map(), messages = [], emails = [], pending = [];
@@ -88,18 +89,18 @@ test('schema rejects out-of-range photo references and malformed AI decisions', 
 });
 test('AI request omits contact fields, keeps credentials server-side, and disables stored responses', async () => {
   const s = setup(); const info = await s.start(); await s.upload(info, 1); let payload;
-  const result = await analyzeSubmission({ ...s.env, OPENAI_API_KEY: 'test-secret' }, { notes: 'A chair', name: 'Mary', email: 'mary@example.com' }, s.db.prepare('SELECT * FROM intake_photos').all(), async (url, options) => { assert.equal(url, 'https://api.openai.com/v1/responses'); assert.equal(options.headers.Authorization, 'Bearer test-secret'); payload = JSON.parse(options.body); return Response.json({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify(sample()) }] }] }); });
-  assert.equal(result.approximate_item_count, 1); assert.equal(payload.store, false); assert.equal(payload.text.format.strict, true); assert.ok(!JSON.stringify(payload).includes('mary@example.com')); assert.match(payload.instructions, /never instructions/);
+  const result = await analyzeSubmission({ ...s.env, OPENAI_API_KEY: 'test-secret' }, { notes: 'A chair', name: 'Mary PrivateContact', phone: '5155550118', email: 'mary@example.com' }, s.db.prepare('SELECT * FROM intake_photos').all(), async (url, options) => { assert.equal(url, 'https://api.openai.com/v1/responses'); assert.equal(options.headers.Authorization, 'Bearer test-secret'); payload = JSON.parse(options.body); return Response.json({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify(sample()) }] }] }); });
+  assert.equal(result.approximate_item_count, 1); assert.equal(payload.store, false); assert.equal(payload.text.format.strict, true); for (const contact of ['mary@example.com', 'Mary PrivateContact', '5155550118']) assert.ok(!JSON.stringify(payload).includes(contact)); assert.match(payload.instructions, /never instructions/);
 });
 test('oversized streaming bodies without Content-Length are bounded', async () => {
   await assert.rejects(readBoundedBody(new Response(new ReadableStream({ start(c) { c.enqueue(new Uint8Array(11)); c.close(); } })), 10));
 });
 
-test('email contains screening notes, contact, all numbered photos and a reply-to address', async () => {
+test('email contains screening notes, contact, all numbered photos and a clean compose link', async () => {
   const s = setup(); const info = await s.start(30); for (let i = 1; i <= 30; i++) await s.upload(info, i);
   const row = s.db.prepare('SELECT * FROM intake_submissions').get(); row.notes = '<img src=x onerror=alert(1)>';
   await sendReviewEmail(s.env, row, sample());
-  const email = s.emails[0]; assert.equal(email.to, 'connorcr37+cpcs@gmail.com'); assert.equal(email.replyTo, 'mary@example.com'); assert.equal(email.attachments.length, 30);
+  const email = s.emails[0]; assert.equal(email.to, 'connorcr37+cpcs@gmail.com'); assert.equal(email.replyTo, undefined); assert.equal(email.attachments.length, 30);
   for (let index = 0; index < email.attachments.length; index++) {
     const attachment = email.attachments[index];
     assert.ok(attachment.content instanceof Uint8Array);
@@ -107,7 +108,7 @@ test('email contains screening notes, contact, all numbered photos and a reply-t
     assert.deepEqual([...attachment.content.slice(0, 3)], [255, 216, 255]);
     assert.ok(email.html.includes(`cid:${attachment.contentId}`));
   }
-  assert.match(email.html, /Watch:/); assert.match(email.html, /To ask the customer/); assert.match(email.html, /Reply draft/); assert.match(email.html, /cid:photo-30@changing-places/); assert.match(email.html, /&lt;img/); assert.ok(!email.html.includes('<img src=x')); assert.ok(!email.html.includes('intake-review'));
+  assert.match(email.html, /small scratch/); assert.match(email.html, /To ask the customer/); assert.match(email.html, /Reply draft/); assert.match(email.html, /cid:photo-30@changing-places/); assert.match(email.html, /&lt;img/); assert.ok(!email.html.includes('<img src=x')); assert.ok(!email.html.includes('intake-review'));
 });
 test('a shared photo sits beside each associated item, with other views retained', () => {
   const assessment = sample();
@@ -118,6 +119,38 @@ test('a shared photo sits beside each associated item, with other views retained
   assert.match(email.html, /Chair/); assert.match(email.html, /Table/);
   assert.match(email.html, /aria-label="Likely no"/);
   assert.ok(!email.html.includes('●</span> Likely'));
+});
+test('pricing is omitted when weak, unsupported or malformed and labels the whole group', () => {
+  const value = sample();
+  value.items[0].pricing = { evidence: 'weak', basis: 'Obscured item', comparable_new: {low:500,high:1000}, used_resale:{low:100,high:300} };
+  assert.equal(validateAssessment(value,1).items[0].pricing.comparable_new,null);
+  value.items[0].pricing = { evidence: 'sufficient', basis: 'Visible generic wood chair with light wear', comparable_new: {low:1000,high:500}, used_resale:{low:101,high:299} };
+  const cleaned=validateAssessment(value,1).items[0].pricing;
+  assert.equal(cleaned.comparable_new,null); assert.equal(cleaned.used_resale,null);
+  assert.ok(!buildReviewEmail({}, {id:1,name:'Mary',photo_count:1},value,[]).html.includes('Comparable new:'));
+  value.items[0].quantity=4;
+  value.items[0].pricing = { evidence:'sufficient',basis:'Four visible generic wood chairs',comparable_new:{low:400,high:800},used_resale:{low:100,high:300} };
+  const html=buildReviewEmail({}, {id:1,name:'Mary',photo_count:1},value,[]).html;
+  assert.match(html,/Comparable new: \$400–\$800/); assert.match(html,/Used resale: \$100–\$300/); assert.match(html,/entire group/);
+});
+test('draft stays under 40 words and follow-up questions never exceed three', () => {
+  const value=sample(); value.suggested_response=Array(40).fill('word').join(' ');
+  assert.throws(()=>validateAssessment(value,1),/reply_too_long/);
+  value.suggested_response='Thanks!'; value.information_needed=['One?','Two?','Three?','Four?'];
+  assert.throws(()=>validateAssessment(value,1),/invalid_assessment/);
+});
+test('Email customer composes only the addressed draft with no private report or extra headers', () => {
+  const value=sample(), row={id:4,name:'Mary Smith',phone:'5155550118',email:'connorcr37+cpcs@gmail.com',notes:'PRIVATE CUSTOMER NOTES',photo_count:1};
+  value.suggested_response='Thanks! Could you show the mark & seat?';
+  const email=buildReviewEmail({},row,value,[]);
+  const link=email.html.match(/href="(mailto:[^"]+)"/)[1].replaceAll('&amp;','&');
+  const url=new URL(link);
+  assert.equal(decodeURIComponent(url.pathname),row.email);
+  assert.deepEqual([...url.searchParams.keys()],['subject','body']);
+  assert.equal(url.searchParams.get('body'),value.suggested_response);
+  assert.ok(!link.includes('PRIVATE')); assert.ok(!link.includes('cid:')); assert.equal(email.replyTo,undefined);
+  assert.equal(customerMessage('mary@example.com\r\nBcc:bad@example.com','Hello'), '');
+  assert.ok(!buildReviewEmail({}, {...row,email:''},value,[]).html.includes('mailto:'));
 });
 test('email payload for 30 maximum-size previews remains below the sending limit', () => {
   const content = Buffer.alloc(100000).toString('base64');

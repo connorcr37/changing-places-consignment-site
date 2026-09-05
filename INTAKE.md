@@ -4,6 +4,10 @@
 
 The customer sees a thank-you once the complete batch has been durably saved. The store receives **one private email** titled `Web Submission #… - Name - … Photos`. Its compact phone layout puts numbered photos beside item names, green/yellow/red dots, and brief AI screening notes. Items sharing a primary photo appear together; additional views and unassigned photos are retained. Known brands and meaningful flaws appear when relevant. Up to three consolidated follow-up requests and a short reply draft sit below the photos. The fuller structured assessment stays in private storage. There is no staff login or dashboard. The AI never sends a customer reply.
 
+The email starts with the customer name, phone, email and notes, including in realistic synthetic tests. Each item has one brief sentence about visible cleanliness/condition and meaningful flaws. Optional comparable-new and used-resale USD ranges are broad model estimates for the entire named item/group, not researched listings or appraisals. Weak evidence, missing rationale or invalid ranges suppress pricing. Routine measurements/materials questions are discouraged unless a concrete acceptance concern requires them. Validation caps follow-ups at three questions of 14 words each and the customer draft at 39 words.
+
+The **Email customer** button uses an encoded `mailto:` URL with only the customer address, a neutral subject and the short draft. It opens a fresh compose window in the staff member's configured mail app; it includes no private report, photos, pricing or quoted thread. The report has no customer `Reply-To` header. Phone-only submissions show the phone number without an email button. No message is sent automatically.
+
 ## Infrastructure
 
 - OpenAI project: **Changing Places Site Intake**. Local key is in ignored `.dev.vars`; production uses the encrypted `OPENAI_API_KEY` Worker secret.
