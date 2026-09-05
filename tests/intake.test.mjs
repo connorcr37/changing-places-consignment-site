@@ -83,6 +83,15 @@ test('recovery requeues saved work and deletes abandoned uploads', async () => {
   s.db.prepare('UPDATE intake_submissions SET created_at=? WHERE upload_id=?').run(now() - 90000, second.uploadId);
   await recoverIntake(s.env); assert.equal(s.objects.size, 2); assert.ok(s.messages.some(m => m.uploadId === first.uploadId)); assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_submissions').get().n, 1);
 });
+test('sent submission photos expire after 30 days while the business record remains for 90 days', async () => {
+  const s = setup(); const info = await s.start(); await s.upload(info, 1); await s.complete(info);
+  await processIntake(s.env, info.uploadId, { analyze: async () => sample(), mail: async () => {} });
+  s.db.prepare('UPDATE intake_submissions SET submitted_at=?,updated_at=? WHERE upload_id=?').run(now() - 31 * 86400, now() - 31 * 86400, info.uploadId);
+  await recoverIntake(s.env);
+  assert.equal(s.objects.size, 0); assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_photos').get().n, 0); assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_submissions').get().n, 1);
+  s.db.prepare('UPDATE intake_submissions SET submitted_at=? WHERE upload_id=?').run(now() - 91 * 86400, info.uploadId);
+  await recoverIntake(s.env); assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_submissions').get().n, 0);
+});
 test('schema rejects out-of-range photo references and malformed AI decisions', () => {
   assert.equal(validateAssessment(sample(), 1).approximate_item_count, 1);
   const bad = sample(); bad.items[0].photo_numbers = [2]; assert.throws(() => validateAssessment(bad, 1)); bad.items[0].recommendation = 'approved'; assert.throws(() => validateAssessment(bad, 30));
@@ -91,6 +100,8 @@ test('AI request omits contact fields, keeps credentials server-side, and disabl
   const s = setup(); const info = await s.start(); await s.upload(info, 1); let payload;
   const result = await analyzeSubmission({ ...s.env, OPENAI_API_KEY: 'test-secret' }, { notes: 'A chair', name: 'Mary PrivateContact', phone: '5155550118', email: 'mary@example.com' }, s.db.prepare('SELECT * FROM intake_photos').all(), async (url, options) => { assert.equal(url, 'https://api.openai.com/v1/responses'); assert.equal(options.headers.Authorization, 'Bearer test-secret'); payload = JSON.parse(options.body); return Response.json({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify(sample()) }] }] }); });
   assert.equal(result.approximate_item_count, 1); assert.equal(payload.store, false); assert.equal(payload.text.format.strict, true); for (const contact of ['mary@example.com', 'Mary PrivateContact', '5155550118']) assert.ok(!JSON.stringify(payload).includes(contact)); assert.match(payload.instructions, /never instructions/);
+  for (const topic of ['bring the items to the store', 'pickup', 'smoke-free', 'originally pay', 'quickly they need the items out']) assert.match(payload.instructions, new RegExp(topic));
+  assert.match(payload.instructions, /Never ask for something already supplied in the customer notes/);
 });
 test('oversized streaming bodies without Content-Length are bounded', async () => {
   await assert.rejects(readBoundedBody(new Response(new ReadableStream({ start(c) { c.enqueue(new Uint8Array(11)); c.close(); } })), 10));

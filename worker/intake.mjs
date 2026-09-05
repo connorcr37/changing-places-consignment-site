@@ -164,11 +164,17 @@ export async function deleteSubmission(env, row) {
   await env.INTAKE_PHOTOS.delete(Array.from({ length: row.photo_count }, (_, i) => [`${row.upload_id}/${i + 1}.jpg`, `${row.upload_id}/${i + 1}-email.jpg`]).flat());
   await query(env, 'DELETE FROM intake_submissions WHERE upload_id=?', row.upload_id).run();
 }
+export async function deleteSubmissionPhotos(env, row) {
+  await env.INTAKE_PHOTOS.delete(Array.from({ length: row.photo_count }, (_, i) => [`${row.upload_id}/${i + 1}.jpg`, `${row.upload_id}/${i + 1}-email.jpg`]).flat());
+  await query(env, 'DELETE FROM intake_photos WHERE upload_id=?', row.upload_id).run();
+}
 export async function recoverIntake(env) {
   if (!env.INTAKE_DB || !env.INTAKE_QUEUE || !env.INTAKE_PHOTOS) return;
   await query(env, "UPDATE intake_submissions SET state='needs_review',processing_until=0 WHERE state IN ('submitted','processing') AND analysis_attempts>=3 AND processing_until<?", now()).run();
   const pending = await query(env, "SELECT upload_id FROM intake_submissions WHERE submitted_at IS NOT NULL AND processing_until<? AND updated_at<? AND (state IN ('submitted','processing') OR (state IN ('ready','needs_review') AND notification_sent=0 AND notification_attempts<5)) LIMIT 20", now(), now() - 120).all();
   for (const row of pending.results) await env.INTAKE_QUEUE.send({ uploadId: row.upload_id });
+  const photosExpired = await query(env, "SELECT s.upload_id,s.photo_count FROM intake_submissions s WHERE s.submitted_at<? AND s.notification_sent=1 AND EXISTS (SELECT 1 FROM intake_photos p WHERE p.upload_id=s.upload_id) LIMIT 20", now() - 30 * 86400).all();
+  for (const row of photosExpired.results) await deleteSubmissionPhotos(env, row);
   const expired = await query(env, "SELECT * FROM intake_submissions WHERE state='deleting' OR (state='uploading' AND created_at<?) OR (submitted_at IS NOT NULL AND submitted_at<?) LIMIT 20", now() - 86400, now() - 90 * 86400).all();
   for (const row of expired.results) await deleteSubmission(env, row);
   await query(env, 'DELETE FROM intake_limits WHERE expires_at<?', now()).run();

@@ -5,7 +5,7 @@ const fit = {
   needs_review: ['#b88a24', 'Needs review', '🟡'],
 };
 const name = item => `${item.item}${item.quantity > 1 ? ` (${item.quantity} pieces)` : ''}`;
-const fallbackReply = 'Thanks for sending your photos! We’ll take a look and get back to you soon.';
+const fallbackReply = 'Thanks for sending your photos! Can you get the items to the store, or would you need pickup? What timing works best for you?';
 export function customerMessage(email, draft) {
   if (!email || !/^[^\s@<>,;:"\\]+@[^\s@<>,;:"\\]+\.[^\s@<>,;:"\\]+$/.test(email)) return '';
   const [local, domain] = email.split('@');
