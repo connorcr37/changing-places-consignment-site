@@ -1,4 +1,5 @@
 import { buildReviewEmail } from './intake-email-layout.mjs';
+import { buildAssessmentPdf } from './intake-report.mjs';
 export { buildReviewEmail };
 
 export async function sendReviewEmail(env, row, assessment) {
@@ -9,5 +10,6 @@ export async function sendReviewEmail(env, row, assessment) {
     // Give the Worker binding actual JPEG bytes so it controls transfer encoding.
     attachments.push({ content: new Uint8Array(await photo.arrayBuffer()), filename: `submission-${row.id}-photo-${String(ordinal).padStart(2, '0')}.jpg`, type: 'image/jpeg', disposition: 'inline', contentId: `photo-${ordinal}@changing-places` });
   }
-  await env.INTAKE_EMAIL.send(buildReviewEmail(env, row, assessment, attachments));
+  const report = { content: await buildAssessmentPdf(row, assessment), filename: `AI-Assessment-${row.id}.pdf`, type: 'application/pdf', disposition: 'attachment' };
+  await env.INTAKE_EMAIL.send(buildReviewEmail(env, row, attachments, report));
 }

@@ -2,11 +2,11 @@
 
 `/submit-items` is a standalone, noindex page. It is intentionally absent from the navigation, footer, and sitemap. Consignors provide a name, phone and/or email, optional notes, consent, and 1–30 photos. JPG, PNG, and WebP are supported; HEIC must be exported as JPEG first.
 
-The consignor sees a thank-you once the complete batch has been durably saved. The store receives **one private email** titled `Web Submission #… - Name - … Photos`. Its compact phone layout puts numbered photos beside item names, green/yellow/red dots, and brief AI screening notes. Items sharing a primary photo appear together; additional views and unassigned photos are retained. Known brands and meaningful flaws appear when relevant. Up to three consolidated follow-up requests and a short reply draft sit below the photos. The fuller structured assessment stays in private storage. There is no staff login or dashboard. The AI never sends a consignor reply.
+The consignor sees a thank-you once the complete batch has been durably saved. The store receives **one email** titled `Your Changing Places Submission #…`. Its compact phone layout contains only the consignor's name, phone, email, notes, and all numbered photos in submission order. The submission number keeps separate submissions distinguishable. No AI-generated content appears in the subject, HTML body, or plain-text body.
 
-The email starts with the consignor name, phone, email and notes, including in realistic synthetic tests. Each item has one brief sentence about visible cleanliness/condition and meaningful flaws. Optional comparable-new and used-resale USD ranges are broad model estimates for the entire named item/group, not researched listings or appraisals. Weak evidence, missing rationale or invalid ranges suppress pricing. Routine measurements/materials questions are discouraged unless a concrete acceptance concern requires them. Follow-ups prioritize visible condition, then unanswered delivery/pickup, timing, smoke-free-home, move-out timing, or original-price questions. Validation caps follow-ups at three questions of 14 words each and the consignor draft at 39 words.
+The private **AI Assessment** PDF attachment contains the approximate item count, item names and photo references, green/yellow/red fit dots, useful category/brand information, and one brief sentence about visible cleanliness, condition, and meaningful flaws per item. Optional comparable-new and used-resale ranges are broad model estimates for the entire named item/group, not researched listings or appraisals. Weak or malformed evidence suppresses pricing. Up to three concise follow-up questions and a reply draft under 40 words appear at the end. Questions prioritize visible condition, then unanswered delivery/pickup, timing, smoke-free-home, move-out timing, or original-price questions. Measurements/materials are requested only when they could change acceptance. The PDF is titled **AI Assessment**, named `AI-Assessment-<number>.pdf`, and marked **Private - do not forward** inside.
 
-The **Email with suggested reply** button opens a new message with the consignor address, the subject **Your Changing Places Submission**, and the short draft. **Write my own email** opens a new message with the same address and subject but no body. Both use encoded `mailto:` URLs. They open the staff member's configured mail app with no private report, photos, pricing or quoted thread. Standard email links cannot attach the submitted photos; automatic photo inclusion in consignor replies is deferred. The report has no consignor `Reply-To` header. Phone-only submissions show the phone number without an email button. No message is sent automatically.
+The message's **Reply-To** is the consignor's validated email address. The store uses the normal **Reply** button; there are no compose buttons. Replying ordinarily omits the PDF attachment, but behavior depends on the mail client and forwarding can carry it along. Review outgoing attachments before sending. The From address remains the store's authenticated intake sender. Phone-only submissions omit Reply-To and show the provided phone number. The AI never sends a consignor reply. There is no staff login or dashboard.
 
 ## Infrastructure
 
@@ -20,7 +20,7 @@ The **Email with suggested reply** button opens a new message with the consignor
 
 ## Processing and privacy
 
-The browser prepares a detailed JPEG for the AI (up to 1600 pixels / 600 KB) and an email copy (up to 1200 pixels / 100 KB). Sequential uploads avoid one large request. Thirty email copies fit within the email service's size limit. Resizing strips original EXIF metadata. No public photo URLs exist.
+The browser prepares a detailed JPEG for the AI (up to 1600 pixels / 600 KB) and an email copy (up to 1200 pixels / 100 KB). Sequential uploads avoid one large request. Thirty email copies plus the text-only PDF fit within the email service's 5 MiB limit and 32-attachment limit. The PDF references the numbered email photos instead of duplicating their image bytes. It is generated in memory with pdf-lib inside the Worker, never uploaded or sent to another conversion service. Standard PDF fonts cover Latin characters; unsupported characters in the private report are represented as Unicode code points so unusual text cannot block email delivery. The original name and notes remain intact in the email. Resizing strips original EXIF metadata. No public photo URLs exist.
 
 Only photos and optional notes go to OpenAI; name, phone, and email fields do not. Requests use Structured Outputs and `store:false`. The prompt groups duplicate views, asks for missing labels and measurements, distinguishes observations from guesses, and reserves final decisions for staff. The store criteria live in `worker/intake-ai.mjs`.
 
@@ -33,18 +33,20 @@ Incomplete uploads are deleted after one day. Every submitted web record—inclu
 ## Verification
 
 ```powershell
+npm ci
 node --test tests/intake.test.mjs tests/facebook-feed.test.mjs
 node scripts/sync-shared-shell.mjs --check
 node scripts/audit-site.mjs
 node --check worker/intake.mjs
 node --check worker/intake-ai.mjs
 node --check worker/intake-email.mjs
+node --check worker/intake-report.mjs
 node --check intake-form.js
 ```
 
 Use Wrangler v4, run `wrangler d1 migrations apply INTAKE_DB --local` for local development, and `--remote` before release. Keep local persistent state outside the asset root, as described in README.md. Wrangler's `secrets.required` includes both Facebook and OpenAI secrets.
 
-For release checks, submit a test batch and verify the email includes the full assessment and all numbered photos. No consignor decision/reply is sent automatically. Use the existing GitHub/Cloudflare release process and preserve unrelated site edits.
+For release checks, verify a synthetic email has the correct Reply-To, only consignor-safe content in both bodies, all numbered photos, and a separate AI Assessment PDF. Render a representative PDF and check page breaks, legibility, and the privacy footer. No consignor decision/reply is sent automatically. Use the existing GitHub/Cloudflare release process and preserve unrelated site edits.
 
 ## Delivery recovery
 
