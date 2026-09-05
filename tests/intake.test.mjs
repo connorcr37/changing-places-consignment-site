@@ -131,7 +131,8 @@ test('pricing is omitted when weak, unsupported or malformed and labels the whol
   value.items[0].quantity=4;
   value.items[0].pricing = { evidence:'sufficient',basis:'Four visible generic wood chairs',comparable_new:{low:400,high:800},used_resale:{low:100,high:300} };
   const html=buildReviewEmail({}, {id:1,name:'Mary',photo_count:1},value,[]).html;
-  assert.match(html,/Comparable new: \$400–\$800/); assert.match(html,/Used resale: \$100–\$300/); assert.match(html,/entire group/);
+  assert.match(html,/Comparable new: \$400–\$800/); assert.match(html,/Used resale: \$100–\$300/);
+  for (const omitted of ['Ballpark USD', 'entire group']) assert.ok(!html.includes(omitted));
 });
 test('draft stays under 40 words and follow-up questions never exceed three', () => {
   const value=sample(); value.suggested_response=Array(40).fill('word').join(' ');
@@ -151,6 +152,7 @@ test('Email customer composes only the addressed draft with no private report or
   assert.ok(!link.includes('PRIVATE')); assert.ok(!link.includes('cid:')); assert.equal(email.replyTo,undefined);
   assert.equal(customerMessage('mary@example.com\r\nBcc:bad@example.com','Hello'), '');
   assert.ok(!buildReviewEmail({}, {...row,email:''},value,[]).html.includes('mailto:'));
+  for (const output of [email.html, email.text]) for (const omitted of ['Dots are AI suggestions', 'Staff decide', 'Nothing has been sent', 'ballpark USD']) assert.ok(!output.includes(omitted));
 });
 test('email payload for 30 maximum-size previews remains below the sending limit', () => {
   const content = Buffer.alloc(100000).toString('base64');
