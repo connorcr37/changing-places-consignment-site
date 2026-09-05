@@ -16,7 +16,7 @@
     "INTAKE_NOTIFICATION_EMAIL": "connorcr37+cpcs@gmail.com",
     "INTAKE_EMAIL_FROM": "intake@changing-places-dsm.com",
     "INTAKE_DAILY_LIMIT": "20",
-    "OPENAI_INTAKE_MODEL": "gpt-4.1-mini"
+    "OPENAI_INTAKE_MODEL": "gpt-5.6-luna"
   },
   "d1_databases": [{
     "binding": "INTAKE_DB",

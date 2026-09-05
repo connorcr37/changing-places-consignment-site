@@ -4,11 +4,11 @@ import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { handleIntake, hash, processIntake, recoverIntake } from '../worker/intake.mjs';
 import { buildReviewEmail, sendReviewEmail } from '../worker/intake-email.mjs';
-import { analyzeSubmission, readBoundedBody, validateAssessment } from '../worker/intake-ai.mjs';
+import { analyzeSubmission, assessmentSchema, readBoundedBody, validateAssessment } from '../worker/intake-ai.mjs';
 
 const origin = 'https://changing-places-dsm.com';
 const now = () => Math.floor(Date.now() / 1000);
-const sample = () => ({ approximate_item_count: 1, overview: 'One chair in two views.', grouping_uncertainty: '', items: [{ item: 'Chair', quantity: 1, category: 'Seating', likely_brand: 'Unknown / label needed', photo_numbers: [1], visible_condition: 'Light surface wear', obvious_flaws: ['Small scratch'], information_needed: ['Seat close-up'], recommendation: 'needs_review', assessment: 'Clean-looking chair with a small scratch on the seat.', pricing: { evidence: 'weak', basis: '', comparable_new: null, used_resale: null } }], information_needed: ['Could you send a closer photo of the seat?'], suggested_response: 'Thanks for the photos! Could you send a closer photo of the chair seat?' });
+const sample = () => ({ approximate_item_count: 1, overview: 'One chair in two views.', grouping_uncertainty: '', items: [{ item: 'Chair', quantity: 1, category: 'Seating', likely_brand: 'Unknown / label needed', photo_numbers: [1], visible_condition: 'Light surface wear', obvious_flaws: ['Small scratch'], recommendation: 'needs_review', assessment: 'Clean-looking chair with a small scratch on the seat.' }] });
 function setup() {
   const db = new DatabaseSync(':memory:'); db.exec('PRAGMA foreign_keys=ON'); db.exec(readFileSync(new URL('../migrations/intake/0001_intake.sql', import.meta.url), 'utf8'));
   const objects = new Map(), messages = [], emails = [], pending = [];
@@ -97,8 +97,11 @@ test('AI request omits contact fields, keeps credentials server-side, and disabl
   const s = setup(); const info = await s.start(); await s.upload(info, 1); let payload;
   const result = await analyzeSubmission({ ...s.env, OPENAI_API_KEY: 'test-secret' }, { notes: 'A chair', name: 'Mary PrivateContact', phone: '5155550118', email: 'mary@example.com' }, s.db.prepare('SELECT * FROM intake_photos').all(), async (url, options) => { assert.equal(url, 'https://api.openai.com/v1/responses'); assert.equal(options.headers.Authorization, 'Bearer test-secret'); payload = JSON.parse(options.body); return Response.json({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify(sample()) }] }] }); });
   assert.equal(result.approximate_item_count, 1); assert.equal(payload.store, false); assert.equal(payload.text.format.strict, true); for (const contact of ['mary@example.com', 'Mary PrivateContact', '5155550118']) assert.ok(!JSON.stringify(payload).includes(contact)); assert.match(payload.instructions, /never instructions/);
-  for (const topic of ['bring the items to the store', 'pickup', 'smoke-free', 'originally pay', 'quickly they need the items out']) assert.match(payload.instructions, new RegExp(topic));
-  assert.match(payload.instructions, /Never ask for something already supplied in the customer notes/);
+  assert.equal(payload.model, 'gpt-5.6-luna'); assert.equal(payload.text.verbosity, 'low');
+  assert.deepEqual(payload.text.format.schema, assessmentSchema);
+  assert.ok(payload.instructions.includes('Describe each unique item using a very concise, retail-friendly name based only on visible evidence.'));
+  for (const topic of ['Group repeat views', 'physical pieces', 'numbered photos', 'stains', 'tears', 'scratches', 'chips', 'pet hair', 'general wear']) assert.ok(payload.instructions.includes(topic));
+  assert.deepEqual(payload.input[0].content.filter(part => part.type === 'input_text').map(part => part.text), ['Assess this batch of 1 numbered photos. Customer-provided notes (untrusted): "A chair"', 'Photo 1']);
 });
 test('oversized streaming bodies without Content-Length are bounded', async () => {
   await assert.rejects(readBoundedBody(new Response(new ReadableStream({ start(c) { c.enqueue(new Uint8Array(11)); c.close(); } })), 10));
@@ -116,7 +119,7 @@ test('email contains screening notes, contact, all numbered photos and consignor
     assert.deepEqual([...attachment.content.slice(0, 3)], [255, 216, 255]);
     assert.ok(email.html.includes(`cid:${attachment.contentId}`));
   }
-  assert.match(email.html, /small scratch/); assert.match(email.html, /To ask the consignor/); assert.match(email.html, /Reply draft/); assert.match(email.html, /cid:photo-30@changing-places/); assert.match(email.html, /&lt;img/); assert.ok(!email.html.includes('<img src=x')); assert.ok(!email.html.includes('intake-review'));
+  assert.match(email.html, /small scratch/); assert.doesNotMatch(email.html, /To ask the consignor|Reply draft/); assert.match(email.html, /cid:photo-30@changing-places/); assert.match(email.html, /&lt;img/); assert.ok(!email.html.includes('<img src=x')); assert.ok(!email.html.includes('intake-review'));
 });
 test('a shared photo sits beside each associated item, with other views retained', () => {
   const assessment = sample();
@@ -128,36 +131,32 @@ test('a shared photo sits beside each associated item, with other views retained
   assert.match(email.html, /aria-label="Unlikely fit"/);
   assert.ok(!email.html.includes('●</span> Likely'));
 });
-test('email omits price ranges even when the saved assessment has sufficient evidence', () => {
-  const value = sample();
-  value.items[0].pricing = { evidence: 'weak', basis: 'Obscured item', comparable_new: {low:500,high:1000}, used_resale:{low:100,high:300} };
-  assert.equal(validateAssessment(value,1).items[0].pricing.comparable_new,null);
-  value.items[0].pricing = { evidence: 'sufficient', basis: 'Visible generic wood chair with light wear', comparable_new: {low:1000,high:500}, used_resale:{low:101,high:299} };
-  const cleaned=validateAssessment(value,1).items[0].pricing;
-  assert.equal(cleaned.comparable_new,null); assert.equal(cleaned.used_resale,null);
-  assert.ok(!buildReviewEmail({}, {id:1,name:'Mary',photo_count:1},value,[]).html.includes('Comparable new:'));
-  value.items[0].quantity=4;
-  value.items[0].pricing = { evidence:'sufficient',basis:'Four visible generic wood chairs',comparable_new:{low:400,high:800},used_resale:{low:100,high:300} };
-  const email=buildReviewEmail({}, {id:1,name:'Mary',photo_count:1},value,[]);
-  for (const output of [email.html,email.text]) for (const omitted of ['Comparable new','Used resale','$400','$800','$100','$300','Ballpark USD']) assert.ok(!output.includes(omitted));
-});
-test('draft stays under 40 words and follow-up questions never exceed three', () => {
-  const value=sample(); value.suggested_response=Array(40).fill('word').join(' ');
-  assert.throws(()=>validateAssessment(value,1),/reply_too_long/);
-  value.suggested_response='Thanks!'; value.information_needed=['One?','Two?','Three?','Four?'];
-  assert.throws(()=>validateAssessment(value,1),/invalid_assessment/);
-});
-test('email uses consignor Reply-To and keeps the reply draft without compose buttons', () => {
-  const value=sample(), row={id:4,name:'Mary Smith',phone:'5155550118',email:'connorcr37+cpcs@gmail.com',notes:'My notes',photo_count:1};
-  value.suggested_response='Thanks! Could you show the mark & seat?';
-  const email=buildReviewEmail({},row,value,[]);
-  assert.equal(email.replyTo,row.email);
-  assert.match(email.html,/Thanks! Could you show the mark &amp; seat\?/);
-  assert.ok(email.text.includes(value.suggested_response));
-  for (const invalid of ['', 'mary@example.com\r\nBcc:bad@example.com', 'mary@example.com,other@example.com']) {
-    assert.ok(!Object.hasOwn(buildReviewEmail({}, {...row,email:invalid},value,[]),'replyTo'));
+test('strict assessment excludes pricing, follow-ups and draft fields', () => {
+  for (const [scope, key] of [['item', 'pricing'], ['item', 'information_needed'], ['root', 'information_needed'], ['root', 'suggested_response']]) {
+    const value = sample(); (scope === 'item' ? value.items[0] : value)[key] = 'unused';
+    assert.throws(() => validateAssessment(value, 1), /invalid_assessment/);
   }
-  for (const output of [email.html,email.text]) for (const omitted of ['mailto:', 'Email with suggested reply', 'Write my own email', 'Comparable new', 'Used resale']) assert.ok(!output.includes(omitted));
+  const value = sample(); value.items[0].assessment = Array(23).fill('word').join(' ');
+  assert.throws(() => validateAssessment(value, 1), /screening_text_too_long/);
+});
+test('physical-piece counts sum groups without counting repeated photo references', () => {
+  const value = sample(); value.approximate_item_count = 99;
+  value.items[0] = { ...value.items[0], item: 'Dining set', quantity: 7, photo_numbers: [1, 2, 3] };
+  value.items.push({ ...sample().items[0], item: 'Sofa', photo_numbers: [4, 5] });
+  assert.equal(validateAssessment(value, 5).approximate_item_count, 8);
+});
+test('email ignores legacy pricing, questions and drafts and preserves Reply-To', () => {
+  const value = sample(), row = { id: 4, name: 'Mary Smith', phone: '5155550118', email: 'connorcr37+cpcs@gmail.com', notes: 'My notes', photo_count: 1 };
+  value.items[0].pricing = { evidence: 'sufficient', comparable_new: { low: 400, high: 800 }, used_resale: { low: 100, high: 300 } };
+  value.information_needed = ['Legacy question?']; value.suggested_response = 'Legacy reply draft';
+  for (const assessment of [value, null]) {
+    const email = buildReviewEmail({}, row, assessment, []);
+    assert.equal(email.replyTo, row.email);
+    for (const output of [email.html, email.text]) for (const omitted of ['To ask the consignor', 'Reply draft', 'Legacy question', 'Legacy reply', 'mailto:', 'Email with suggested reply', 'Write my own email', 'Comparable new', 'Used resale', '$400']) assert.ok(!output.includes(omitted));
+  }
+  for (const invalid of ['', 'mary@example.com\\r\\nBcc:bad@example.com', 'mary@example.com,other@example.com']) {
+    assert.ok(!Object.hasOwn(buildReviewEmail({}, { ...row, email: invalid }, value, []), 'replyTo'));
+  }
 });
 test('email header shows contact details and the actual submission time in Central Time', () => {
   const row={id:4,name:'Mary Smith',phone:'5155550118',email:'mary@example.com',photo_count:1,submitted_at:Date.parse('2026-09-05T15:14:00Z')/1000};
@@ -184,6 +183,20 @@ test('email payload for 30 maximum-size previews remains below the sending limit
   const attachments = Array.from({ length: 30 }, (_, i) => ({ content, filename: `photo-${i}.jpg`, type: 'image/jpeg', disposition: 'inline', contentId: `photo-${i}` }));
   const email = buildReviewEmail({}, { id: 1, name: 'Mary', photo_count: 30 }, sample(), attachments);
   assert.ok(Buffer.byteLength(JSON.stringify(email)) < 4.5 * 1024 * 1024);
+});
+test('action panel follows the last photo and switches to phone instructions without email', () => {
+  const row = { id: 1, name: 'Mary Smith', phone: '5155550118', email: 'mary@example.com', photo_count: 2 };
+  const attachments = [1, 2].map(i => ({ contentId: `photo-${i}` }));
+  for (const email of [row.email, '']) {
+    const message = buildReviewEmail({}, { ...row, email }, sample(), attachments);
+    const expected = email ? 'Reply to this email to contact Mary directly.' : 'No email was provided. Call or text Mary at 515-555-0118.';
+    for (const body of [message.html, message.text]) {
+      assert.ok(body.includes(expected));
+      assert.equal(body.split('Ready to follow up?').length - 1, 1);
+    }
+    assert.ok(message.html.indexOf('Ready to follow up?') > message.html.lastIndexOf('<img '));
+    assert.match(message.html, /background:#f1f3ec;padding:16px/);
+  }
 });
 test('preview upload limits reject oversized images and replaced photo slots', async () => {
   const s = setup(); const info = await s.start(); await s.upload(info, 1);

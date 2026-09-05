@@ -2,11 +2,13 @@
 
 `/submit-items` is a standalone, noindex page. It is intentionally absent from the navigation, footer, and sitemap. Consignors provide a name, phone and/or email, optional notes, consent, and 1–30 photos. JPG, PNG, and WebP are supported; HEIC must be exported as JPEG first.
 
-The consignor sees a thank-you once the complete batch has been durably saved. The store receives **one private email** titled `Web Submission #… - Name - … Photos`. Its compact phone layout puts numbered photos beside item names, green/yellow/red dots, and brief AI screening notes. Items sharing a primary photo appear together; additional views and unassigned photos are retained. Known brands and meaningful flaws appear when relevant. Up to three consolidated follow-up requests and a short reply draft sit below the photos. The fuller structured assessment stays in private storage. There is no staff login or dashboard. The AI never sends a consignor reply.
+The consignor sees a thank-you once the complete batch has been durably saved. The store receives **one private email** titled `Web Submission #… - Name - … Photos`. Its compact phone layout puts numbered photos beside item names, green/yellow/red dots, and brief AI screening notes. Items sharing a primary photo appear together; additional views and unassigned photos are retained. Known brands and meaningful flaws appear when relevant. The fuller structured assessment stays in private storage. There is no staff login or dashboard. The AI never sends a consignor reply.
 
-The email starts with the consignor name, phone, email and notes, including in realistic synthetic tests. Each item has one brief sentence about visible cleanliness/condition and meaningful flaws. Emails omit comparable-new and used-resale price guidance, even when the saved assessment contains ranges. Routine measurements/materials questions are discouraged unless a concrete acceptance concern requires them. Follow-ups prioritize visible condition, then unanswered delivery/pickup, timing, smoke-free-home, move-out timing, or original-price questions. Validation caps follow-ups at three questions of 14 words each and the consignor draft at 39 words.
+The email starts with the consignor name, phone, email and notes, including in realistic synthetic tests. Each item has one brief sentence about visible cleanliness/condition and meaningful flaws. The analysis and email omit pricing, follow-up questions, and reply drafts.
 
-The report sets `Reply-To` to the consignor's validated email address, so the store uses its mail app's normal **Reply** button. There are no compose buttons. The short suggested reply remains as text in the review email for reference or copying. Normal replies may quote the review body. Phone-only submissions omit Reply-To and show the provided phone number. No message is sent automatically. After each intake-email update, send one fresh test submission to `connorcr37+cpcs@gmail.com` and confirm processing and notification delivery.
+A pale-green action panel follows the final photo, with a thin divider and 16px padding. It says “Ready to follow up?” and reminds the recipient to reply to contact the consignor by first name. Without an email, it instead gives the consignor's formatted phone number for calling or texting.
+
+The report sets `Reply-To` to the consignor's validated email address, so the store uses its mail app's normal **Reply** button. There are no compose buttons. Normal replies may quote the review body. Phone-only submissions omit Reply-To and show the provided phone number with “No email provided”. No message is sent automatically. After each intake-email update, send one fresh test submission to `connorcr37+cpcs@gmail.com` and confirm processing and notification delivery.
 
 ## Infrastructure
 
@@ -16,13 +18,13 @@ The report sets `Reply-To` to the consignor's validated email address, so the st
 - Queue: `changing-places-intake`, binding `INTAKE_QUEUE`. Consumer concurrency and batch size are 1 to bound memory use.
 - Email binding `INTAKE_EMAIL` restricts delivery to `connorcr37+cpcs@gmail.com`. This destination is verified, and Email Routing is active on `changing-places-dsm.com`. The recipient confirmed that both photos display in the corrected test email on September 5, 2026. Send JPEG bytes to the Worker binding; pre-encoded base64 strings caused unreadable images.
 - `INTAKE_ENABLED=true` opens the unlinked pilot form. Set it to `false` to pause new submissions.
-- Model defaults to `gpt-4.1-mini` and is configurable through `OPENAI_INTAKE_MODEL`.
+- Model defaults to `gpt-5.6-luna` with low text verbosity and is configurable through `OPENAI_INTAKE_MODEL`.
 
 ## Processing and privacy
 
 The browser prepares a detailed JPEG for the AI (up to 1600 pixels / 600 KB) and an email copy (up to 1200 pixels / 100 KB). Sequential uploads avoid one large request. Thirty email copies fit within the email service's size limit. Resizing strips original EXIF metadata. No public photo URLs exist.
 
-Only photos and optional notes go to OpenAI; name, phone, and email fields do not. Requests use Structured Outputs and `store:false`. The prompt groups duplicate views, asks for missing labels and measurements, distinguishes observations from guesses, and reserves final decisions for staff. The store criteria live in `worker/intake-ai.mjs`.
+Only photos and optional notes go to OpenAI; name, phone, and email fields do not. Requests use Structured Outputs and `store:false`. The prompt groups duplicate views, counts physical pieces, links items to numbered photos, distinguishes observations from guesses, and reserves final decisions for staff. The store criteria live in `worker/intake-ai.mjs`.
 
 Upload capabilities expire in two hours and only authorize writing that batch. Same-origin checks, bounded streaming reads, server-side validation, a honeypot, and a pilot limit of 3 starts per IP per hour / 20 starts globally per day bound abuse. Interrupted uploads can resume using Retry while the page stays open. Reloading requires reselecting photos.
 
