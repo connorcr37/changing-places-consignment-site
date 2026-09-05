@@ -126,7 +126,7 @@ test('a shared photo sits beside each associated item, with other views retained
   const email = buildReviewEmail({}, { id: 1, name: 'Mary', photo_count: 3 }, assessment, attachments);
   for (let i = 1; i <= 3; i++) assert.equal(email.html.split(`src="cid:photo-${i}"`).length - 1, 1);
   assert.match(email.html, /Chair/); assert.match(email.html, /Table/);
-  assert.match(email.html, /aria-label="Likely no"/);
+  assert.match(email.html, /aria-label="Unlikely fit"/);
   assert.ok(!email.html.includes('●</span> Likely'));
 });
 test('email omits price ranges even when the saved assessment has sufficient evidence', () => {
@@ -182,6 +182,10 @@ test('email header shows contact details and the actual submission time in Centr
   for (const body of [email.html,email.text]) {
     assert.match(body,/515-555-0118 · mary@example.com/);
     assert.match(body,/Submitted September 5 at 10:14 AM CT/);
+    assert.match(body,/PRELIMINARY PHOTO REVIEW/);
+    assert.match(body,/AI-assisted guidance based on submitted photos\. Staff makes the final decision\./);
+    assert.ok(body.indexOf('Submitted September')<body.indexOf('PRELIMINARY PHOTO REVIEW'));
+    assert.ok(body.indexOf('PRELIMINARY PHOTO REVIEW')<body.indexOf('Approximately 1 items'));
     assert.ok(body.indexOf('Mary Smith')<body.indexOf('515-555-0118'));
     assert.ok(body.indexOf('mary@example.com')<body.indexOf('Submitted September'));
   }
