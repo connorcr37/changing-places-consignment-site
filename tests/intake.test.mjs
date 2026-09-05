@@ -260,3 +260,18 @@ test('overlapping photo groups render every image once and preserve every item',
   for (const i of [1, 2, 3, 4]) assert.equal(email.html.split(`src="cid:photo-${i}"`).length - 1, 1);
   for (const item of value.items) assert.ok(email.html.includes(item.item));
 });
+test('a secondary photo reference cannot move dining descriptions beside the sofa', () => {
+  const value = sample();
+  value.items = [
+    { ...sample().items[0], item: 'Green Sofa', photo_numbers: [1, 2, 3] },
+    { ...sample().items[0], item: 'Dining Table', photo_numbers: [2] },
+    { ...sample().items[0], item: 'Spindle Chairs', quantity: 3, photo_numbers: [2] },
+  ];
+  const email = buildReviewEmail({}, { id: 9, name: 'Mary', email: 'mary@example.com', photo_count: 3 }, value, [1, 2, 3].map(i => ({ contentId: `photo-${i}` })));
+  const photo1 = email.html.indexOf('src="cid:photo-1"'), photo2 = email.html.indexOf('src="cid:photo-2"');
+  assert.ok(photo1 < email.html.indexOf('Green Sofa'));
+  assert.ok(email.html.indexOf('Green Sofa') < photo2);
+  assert.ok(photo2 < email.html.indexOf('Dining Table'));
+  assert.ok(photo2 < email.html.indexOf('Spindle Chairs'));
+  for (const i of [1, 2, 3]) assert.equal(email.html.split(`src="cid:photo-${i}"`).length - 1, 1);
+});

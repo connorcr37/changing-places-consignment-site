@@ -2,7 +2,7 @@
 
 `/submit-items` is a standalone, noindex page. It is intentionally absent from the navigation, footer, and sitemap. Consignors provide a name, phone and/or email, optional notes, consent, and 1–30 photos. JPG, PNG, and WebP are supported; HEIC must be exported as JPEG first.
 
-The consignor sees a thank-you once the complete batch has been durably saved. The store receives **one private email** titled `Web Submission #… - Name - … Photos`. Its compact phone layout puts numbered photos beside item names, green/yellow/red dots, and brief AI screening notes. Items sharing photos appear together; additional views and unassigned photos are retained. Known brands and meaningful flaws appear when relevant. The fuller structured assessment stays in private storage. There is no staff login or dashboard. The AI never sends a consignor reply.
+The consignor sees a thank-you once the complete batch has been durably saved. The store receives **one private email** titled `Web Submission #… - Name - … Photos`. Its compact phone layout puts numbered photos beside item names, green/yellow/red dots, and brief AI screening notes. Items sharing a primary photo appear together; each primary photo stays beside its own descriptions. Additional views and unassigned photos are retained without repeating images. Known brands and meaningful flaws appear when relevant. The fuller structured assessment stays in private storage. There is no staff login or dashboard. The AI never sends a consignor reply.
 
 The email starts with the consignor name, phone, email and notes, including in realistic synthetic tests. Each item has one brief sentence about visible cleanliness/condition and meaningful flaws. The analysis and email omit pricing, follow-up questions, and reply drafts.
 

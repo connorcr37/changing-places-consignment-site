@@ -40,18 +40,20 @@ export function buildReviewEmail(env, row, assessment, attachments) {
   const items = assessment?.items || [];
   const photos = attachments.map((attachment, index) => ({ attachment, number: index + 1 }));
   const shown = new Set();
-  // Merge groups sharing any photo so every submitted image appears only once.
-  const groups = [];
+  // Anchor descriptions to each item's primary photo. Shared secondary views must
+  // not merge unrelated primary photos or steal a photo from another item's row.
+  const groups = new Map();
   for (const item of items) {
-    const linked = groups.filter(group => group.some(other => other.photo_numbers.some(number => item.photo_numbers.includes(number))));
-    if (!linked.length) groups.push([item]);
-    else {
-      linked[0].push(item, ...linked.slice(1).flat());
-      for (const group of linked.slice(1)) groups.splice(groups.indexOf(group), 1);
-    }
+    const primaryNumber = item.photo_numbers[0];
+    if (!groups.has(primaryNumber)) groups.set(primaryNumber, []);
+    groups.get(primaryNumber).push(item);
   }
-  const itemRows = groups.map(group => {
-    const matching = [...new Set(group.flatMap(item => item.photo_numbers))].map(number => photos[number - 1]).filter(Boolean);
+  const primaryNumbers = new Set(groups.keys());
+  const itemRows = [...groups.entries()].map(([primaryNumber, group]) => {
+    const numbers = [...new Set(group.flatMap(item => item.photo_numbers))];
+    const matching = numbers
+      .filter(number => number === primaryNumber || (!primaryNumbers.has(number) && !shown.has(number)))
+      .map(number => photos[number - 1]).filter(Boolean);
     matching.forEach(photo => shown.add(photo.number));
     const primary = matching[0];
     const notes = group.map(item => {
