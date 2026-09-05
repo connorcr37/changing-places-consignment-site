@@ -176,6 +176,19 @@ test('consignor email buttons compose the suggested reply or a blank message wit
   assert.ok(!buildReviewEmail({}, {...row,email:''},value,[]).html.includes('mailto:'));
   for (const output of [email.html, email.text]) for (const omitted of ['Dots are AI suggestions', 'Staff decide', 'Nothing has been sent', 'ballpark USD']) assert.ok(!output.includes(omitted));
 });
+test('email header shows contact details and the actual submission time in Central Time', () => {
+  const row={id:4,name:'Mary Smith',phone:'5155550118',email:'mary@example.com',photo_count:1,submitted_at:Date.parse('2026-09-05T15:14:00Z')/1000};
+  const email=buildReviewEmail({},row,sample(),[]);
+  for (const body of [email.html,email.text]) {
+    assert.match(body,/515-555-0118 · mary@example.com/);
+    assert.match(body,/Submitted September 5 at 10:14 AM CT/);
+    assert.ok(body.indexOf('Mary Smith')<body.indexOf('515-555-0118'));
+    assert.ok(body.indexOf('mary@example.com')<body.indexOf('Submitted September'));
+  }
+  const winter=buildReviewEmail({}, {...row,submitted_at:Date.parse('2026-12-05T16:14:00Z')/1000,phone:''},sample(),[]);
+  assert.match(winter.text,/Submitted December 5 at 10:14 AM CT/);
+  assert.ok(winter.text.startsWith('Mary Smith\nmary@example.com\nSubmitted'));
+});
 test('email payload for 30 maximum-size previews remains below the sending limit', () => {
   const content = Buffer.alloc(100000).toString('base64');
   const attachments = Array.from({ length: 30 }, (_, i) => ({ content, filename: `photo-${i}.jpg`, type: 'image/jpeg', disposition: 'inline', contentId: `photo-${i}` }));
