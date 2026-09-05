@@ -109,7 +109,7 @@ test('email contains screening notes, contact, all numbered photos and a clean c
   const s = setup(); const info = await s.start(30); for (let i = 1; i <= 30; i++) await s.upload(info, i);
   const row = s.db.prepare('SELECT * FROM intake_submissions').get(); row.notes = '<img src=x onerror=alert(1)>';
   await sendReviewEmail(s.env, row, sample());
-  const email = s.emails[0]; assert.equal(email.to, 'connorcr37+cpcs@gmail.com'); assert.equal(email.replyTo, undefined); assert.equal(email.attachments.length, 30);
+  const email = s.emails[0]; assert.equal(email.to, 'connorcr37+cpcs@gmail.com'); assert.equal(email.replyTo, row.email); assert.equal(email.attachments.length, 30);
   for (let index = 0; index < email.attachments.length; index++) {
     const attachment = email.attachments[index];
     assert.ok(attachment.content instanceof Uint8Array);
@@ -170,7 +170,10 @@ test('consignor email buttons compose the suggested reply or a blank message wit
     assert.match(output,/Write my own email/);
     assert.ok(!output.includes('Email customer'));
   }
-  assert.ok(!link.includes('PRIVATE')); assert.ok(!link.includes('cid:')); assert.equal(email.replyTo,undefined);
+  assert.ok(!link.includes('PRIVATE')); assert.ok(!link.includes('cid:')); assert.equal(email.replyTo,row.email);
+  for (const invalid of ['', 'mary@example.com\r\nBcc:bad@example.com', 'mary@example.com,other@example.com']) {
+    assert.ok(!Object.hasOwn(buildReviewEmail({}, {...row,email:invalid},value,[]),'replyTo'));
+  }
   assert.equal(consignorMessage('mary@example.com\r\nBcc:bad@example.com','Hello'), '');
   assert.equal(consignorMessage('mary@example.com\r\nBcc:bad@example.com'), '');
   assert.ok(!buildReviewEmail({}, {...row,email:''},value,[]).html.includes('mailto:'));
