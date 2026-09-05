@@ -28,7 +28,7 @@ Upload capabilities expire in two hours and only authorize writing that batch. S
 
 D1 is the durable outbox: cron recovery every five minutes requeues work missed by the queue. AI errors retry up to three times; persistent errors send the photos and a manual-review notice. Email errors retry up to five times without rerunning a saved AI assessment. Failed attempts log only event names and submission numbers. Email delivery is at least once; an ambiguous provider timeout can produce a duplicate email, so identify submissions by their number.
 
-Incomplete uploads are deleted after one day. After a report is sent, both private R2 image copies and their photo records are deleted after 30 days. Contact details, notes, and the saved assessment are deleted after 90 days. Emails remain in the recipient mailbox. The retention job runs every five minutes in bounded batches.
+Incomplete uploads are deleted after one day. Every submitted web record—including private R2 image copies, contact details, notes, and the saved assessment—is deleted after 30 days. Emails remain in the recipient mailbox. The retention job runs every five minutes in bounded batches.
 
 ## Verification
 

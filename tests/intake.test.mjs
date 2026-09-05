@@ -83,14 +83,12 @@ test('recovery requeues saved work and deletes abandoned uploads', async () => {
   s.db.prepare('UPDATE intake_submissions SET created_at=? WHERE upload_id=?').run(now() - 90000, second.uploadId);
   await recoverIntake(s.env); assert.equal(s.objects.size, 2); assert.ok(s.messages.some(m => m.uploadId === first.uploadId)); assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_submissions').get().n, 1);
 });
-test('sent submission photos expire after 30 days while the business record remains for 90 days', async () => {
+test('the complete web submission expires after 30 days', async () => {
   const s = setup(); const info = await s.start(); await s.upload(info, 1); await s.complete(info);
   await processIntake(s.env, info.uploadId, { analyze: async () => sample(), mail: async () => {} });
   s.db.prepare('UPDATE intake_submissions SET submitted_at=?,updated_at=? WHERE upload_id=?').run(now() - 31 * 86400, now() - 31 * 86400, info.uploadId);
   await recoverIntake(s.env);
-  assert.equal(s.objects.size, 0); assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_photos').get().n, 0); assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_submissions').get().n, 1);
-  s.db.prepare('UPDATE intake_submissions SET submitted_at=? WHERE upload_id=?').run(now() - 91 * 86400, info.uploadId);
-  await recoverIntake(s.env); assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_submissions').get().n, 0);
+  assert.equal(s.objects.size, 0); assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_photos').get().n, 0); assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_submissions').get().n, 0);
 });
 test('schema rejects out-of-range photo references and malformed AI decisions', () => {
   assert.equal(validateAssessment(sample(), 1).approximate_item_count, 1);
