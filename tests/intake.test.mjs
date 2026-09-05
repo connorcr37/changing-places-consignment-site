@@ -4,11 +4,8 @@ import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { handleIntake, hash, processIntake, recoverIntake } from '../worker/intake.mjs';
 import { buildReviewEmail, sendReviewEmail } from '../worker/intake-email.mjs';
-import { consignorReplyTo } from '../worker/intake-email-layout.mjs';
+import { consignorMessage } from '../worker/intake-email-layout.mjs';
 import { analyzeSubmission, readBoundedBody, validateAssessment } from '../worker/intake-ai.mjs';
-
-import { buildAssessmentPdf, itemPrices, reportContent } from '../worker/intake-report.mjs';
-import { PDFDocument } from 'pdf-lib';
 
 const origin = 'https://changing-places-dsm.com';
 const now = () => Math.floor(Date.now() / 1000);
@@ -65,7 +62,7 @@ test('upload sessions cannot be stolen, read publicly, or used after expiration'
 test('AI and notifications process once on repeated queue delivery', async () => {
   const s = setup(); const info = await s.start(); await s.upload(info, 1); await s.complete(info);
   let analyses = 0, emails = 0;
-  const dependencies = { analyze: async () => { analyses++; return sample(); }, mail: async (env, row, assessment) => { emails++; const email = buildReviewEmail(env, row, []); assert.equal(email.subject, 'Your Changing Places Submission #1'); assert.match(email.html, /Mary Smith/); } };
+  const dependencies = { analyze: async () => { analyses++; return sample(); }, mail: async (env, row, assessment) => { emails++; const email = buildReviewEmail(env, row, assessment, []); assert.match(email.subject, /Web Submission #1 - Mary Smith - 1 Photos/); assert.match(email.html, /Approximately 1 items/); } };
   await processIntake(s.env, info.uploadId, dependencies); await processIntake(s.env, info.uploadId, dependencies);
   assert.equal(analyses, 1); assert.equal(emails, 1); assert.equal(s.db.prepare('SELECT state FROM intake_submissions').get().state, 'ready');
 });
@@ -108,76 +105,82 @@ test('oversized streaming bodies without Content-Length are bounded', async () =
   await assert.rejects(readBoundedBody(new Response(new ReadableStream({ start(c) { c.enqueue(new Uint8Array(11)); c.close(); } })), 10));
 });
 
-test('email keeps all 30 numbered photos and puts the private assessment only in a PDF attachment', async () => {
+test('email contains screening notes, contact, all numbered photos and a clean compose link', async () => {
   const s = setup(); const info = await s.start(30); for (let i = 1; i <= 30; i++) await s.upload(info, i);
   const row = s.db.prepare('SELECT * FROM intake_submissions').get(); row.notes = '<img src=x onerror=alert(1)>';
-  const assessment = sample(); assessment.items[0].assessment = 'PRIVATE_CONDITION'; assessment.suggested_response = 'PRIVATE_REPLY';
-  assessment.information_needed = ['PRIVATE_QUESTION']; assessment.items[0].pricing = { evidence:'sufficient', basis:'PRIVATE_BASIS', comparable_new:{low:400,high:800}, used_resale:{low:100,high:300} };
-  await sendReviewEmail(s.env, row, assessment);
-  const email = s.emails[0]; assert.equal(email.to, 'connorcr37+cpcs@gmail.com'); assert.equal(email.replyTo, row.email); assert.equal(email.attachments.length, 31);
-  for (let index = 0; index < 30; index++) {
+  await sendReviewEmail(s.env, row, sample());
+  const email = s.emails[0]; assert.equal(email.to, 'connorcr37+cpcs@gmail.com'); assert.equal(email.replyTo, undefined); assert.equal(email.attachments.length, 30);
+  for (let index = 0; index < email.attachments.length; index++) {
     const attachment = email.attachments[index];
     assert.ok(attachment.content instanceof Uint8Array);
     assert.deepEqual(attachment.content, s.objects.get(`${info.uploadId}/${index + 1}-email.jpg`));
-    assert.equal(attachment.disposition, 'inline');
-    assert.equal(email.html.split(`src="cid:${attachment.contentId}"`).length - 1, 1);
+    assert.deepEqual([...attachment.content.slice(0, 3)], [255, 216, 255]);
+    assert.ok(email.html.includes(`cid:${attachment.contentId}`));
   }
-  const report = email.attachments[30];
-  assert.equal(report.filename, 'AI-Assessment-1.pdf'); assert.equal(report.type, 'application/pdf'); assert.equal(report.disposition, 'attachment'); assert.equal(report.contentId, undefined);
-  const pdf = await PDFDocument.load(report.content); assert.equal(pdf.getTitle(), 'AI Assessment - Changing Places submission 1'); assert.ok(pdf.getPageCount() > 0);
-  for (const output of [email.html, email.text, email.subject]) for (const forbidden of ['PRIVATE_', 'Comparable new', 'Used resale', 'Suggested reply', 'needs_review', 'mailto:', 'Email with suggested reply', 'Write my own email']) assert.ok(!output.includes(forbidden), forbidden);
-  assert.match(email.html, /&lt;img/); assert.ok(!email.html.includes('<img src=x'));
+  assert.match(email.html, /small scratch/); assert.match(email.html, /To ask the consignor/); assert.match(email.html, /Reply draft/); assert.match(email.html, /cid:photo-30@changing-places/); assert.match(email.html, /&lt;img/); assert.ok(!email.html.includes('<img src=x')); assert.ok(!email.html.includes('intake-review'));
 });
-
-test('Reply-To rejects header injection and is omitted for phone-only submissions', () => {
-  const row={id:4,name:'Mary Smith',phone:'5155550118',email:'connorcr37+cpcs@gmail.com',notes:'My notes',photo_count:1};
-  const email=buildReviewEmail({},row,[]);
-  assert.equal(email.replyTo,row.email); assert.equal(email.subject,'Your Changing Places Submission #4');
-  for (const bad of ['', 'mary@example.com\r\nBcc:bad@example.com', 'mary@example.com,other@example.com', 'bad']) {
-    assert.equal(consignorReplyTo(bad),undefined);
-    assert.ok(!Object.hasOwn(buildReviewEmail({}, {...row,email:bad},[]), 'replyTo'));
-  }
-  assert.match(buildReviewEmail({}, {...row,email:''},[]).text,/5155550118/);
+test('a shared photo sits beside each associated item, with other views retained', () => {
+  const assessment = sample();
+  assessment.items.push({ ...sample().items[0], item: 'Table', photo_numbers: [1, 2], recommendation: 'likely_decline' });
+  const attachments = [1, 2, 3].map(i => ({ contentId: `photo-${i}`, content: new Uint8Array() }));
+  const email = buildReviewEmail({}, { id: 1, name: 'Mary', photo_count: 3 }, assessment, attachments);
+  for (let i = 1; i <= 3; i++) assert.equal(email.html.split(`src="cid:photo-${i}"`).length - 1, 1);
+  assert.match(email.html, /Chair/); assert.match(email.html, /Table/);
+  assert.match(email.html, /aria-label="Likely no"/);
+  assert.ok(!email.html.includes('●</span> Likely'));
 });
-
-test('PDF pricing is omitted for weak or malformed evidence and covers the named group', () => {
-  const value=sample();
-  value.items[0].pricing={evidence:'weak',basis:'Obscured',comparable_new:{low:500,high:1000},used_resale:{low:100,high:300}};
-  assert.deepEqual(itemPrices(value.items[0]),[]);
-  value.items[0].pricing={evidence:'sufficient',basis:'Visible wood chairs',comparable_new:{low:1000,high:500},used_resale:{low:101,high:299}};
-  assert.deepEqual(itemPrices(value.items[0]),[]);
+test('email omits price ranges even when the saved assessment has sufficient evidence', () => {
+  const value = sample();
+  value.items[0].pricing = { evidence: 'weak', basis: 'Obscured item', comparable_new: {low:500,high:1000}, used_resale:{low:100,high:300} };
+  assert.equal(validateAssessment(value,1).items[0].pricing.comparable_new,null);
+  value.items[0].pricing = { evidence: 'sufficient', basis: 'Visible generic wood chair with light wear', comparable_new: {low:1000,high:500}, used_resale:{low:101,high:299} };
+  const cleaned=validateAssessment(value,1).items[0].pricing;
+  assert.equal(cleaned.comparable_new,null); assert.equal(cleaned.used_resale,null);
+  assert.ok(!buildReviewEmail({}, {id:1,name:'Mary',photo_count:1},value,[]).html.includes('Comparable new:'));
   value.items[0].quantity=4;
-  value.items[0].pricing={evidence:'sufficient',basis:'Four visible wood chairs',comparable_new:{low:400,high:800},used_resale:{low:100,high:300}};
-  assert.deepEqual(itemPrices(value.items[0]),['Comparable new: $400 - $800','Used resale: $100 - $300']);
+  value.items[0].pricing = { evidence:'sufficient',basis:'Four visible generic wood chairs',comparable_new:{low:400,high:800},used_resale:{low:100,high:300} };
+  const email=buildReviewEmail({}, {id:1,name:'Mary',photo_count:1},value,[]);
+  for (const output of [email.html,email.text]) for (const omitted of ['Comparable new','Used resale','$400','$800','$100','$300','Ballpark USD']) assert.ok(!output.includes(omitted));
 });
-
 test('draft stays under 40 words and follow-up questions never exceed three', () => {
   const value=sample(); value.suggested_response=Array(40).fill('word').join(' ');
   assert.throws(()=>validateAssessment(value,1),/reply_too_long/);
-  assert.ok(reportContent(value).reply.split(/\s+/).length < 40);
   value.suggested_response='Thanks!'; value.information_needed=['One?','Two?','Three?','Four?'];
   assert.throws(()=>validateAssessment(value,1),/invalid_assessment/);
-  assert.equal(reportContent(value).questions.length,3);
 });
-
-test('AI failure still delivers a safe email with photos and a manual-review PDF', async () => {
-  const s=setup(); const info=await s.start(); await s.upload(info,1);
-  await sendReviewEmail(s.env,s.db.prepare('SELECT * FROM intake_submissions').get(),null);
-  assert.equal(s.emails.length,1); assert.equal(s.emails[0].attachments.length,2);
-  assert.ok(!s.emails[0].html.includes('unavailable'));
-  const pdf=await PDFDocument.load(s.emails[0].attachments[1].content); assert.equal(pdf.getPageCount(),1);
+test('consignor email buttons compose the suggested reply or a blank message without the private report', () => {
+  const value=sample(), row={id:4,name:'Mary Smith',phone:'5155550118',email:'connorcr37+cpcs@gmail.com',notes:'PRIVATE CUSTOMER NOTES',photo_count:1};
+  value.suggested_response='Thanks! Could you show the mark & seat?';
+  const email=buildReviewEmail({},row,value,[]);
+  const links=[...email.html.matchAll(/href="(mailto:[^"]+)"/g)].map(match => match[1].replaceAll('&amp;','&'));
+  assert.equal(links.length, 2);
+  const [link, blankLink] = links;
+  const url=new URL(link);
+  assert.equal(decodeURIComponent(url.pathname),row.email);
+  assert.deepEqual([...url.searchParams.keys()],['subject','body']);
+  assert.equal(url.searchParams.get('subject'),'Your Changing Places Submission');
+  assert.equal(url.searchParams.get('body'),value.suggested_response);
+  const blankUrl = new URL(blankLink);
+  assert.equal(decodeURIComponent(blankUrl.pathname),row.email);
+  assert.deepEqual([...blankUrl.searchParams.keys()],['subject']);
+  assert.equal(blankUrl.searchParams.get('subject'),'Your Changing Places Submission');
+  assert.equal(blankUrl.searchParams.get('body'),null);
+  for (const output of [email.html, email.text]) {
+    assert.match(output,/Email with suggested reply/);
+    assert.match(output,/Write my own email/);
+    assert.ok(!output.includes('Email customer'));
+  }
+  assert.ok(!link.includes('PRIVATE')); assert.ok(!link.includes('cid:')); assert.equal(email.replyTo,undefined);
+  assert.equal(consignorMessage('mary@example.com\r\nBcc:bad@example.com','Hello'), '');
+  assert.equal(consignorMessage('mary@example.com\r\nBcc:bad@example.com'), '');
+  assert.ok(!buildReviewEmail({}, {...row,email:''},value,[]).html.includes('mailto:'));
+  for (const output of [email.html, email.text]) for (const omitted of ['Dots are AI suggestions', 'Staff decide', 'Nothing has been sent', 'ballpark USD']) assert.ok(!output.includes(omitted));
 });
-
-test('long assessments paginate, unusual text does not break delivery, and 30 photos plus PDF fit the sending limit', async () => {
-  const assessment=sample(); assessment.items=Array.from({length:60},(_,i)=>({...sample().items[0],item:`Item ${i + 1} ${'long'.repeat(100)}`}));
-  const bytes=await buildAssessmentPdf({id:7,name:'Zoë 李 🌿',photo_count:30},assessment);
-  const pdf=await PDFDocument.load(bytes); assert.ok(pdf.getPageCount()>1);
-  const content=Buffer.alloc(100000).toString('base64');
-  const attachments=Array.from({length:30},(_,i)=>({content,filename:`photo-${i}.jpg`,type:'image/jpeg',disposition:'inline',contentId:`photo-${i}`}));
-  const email=buildReviewEmail({}, {id:7,name:'Mary',photo_count:30},attachments,{content:Buffer.from(bytes).toString('base64'),filename:'AI-Assessment-7.pdf',type:'application/pdf',disposition:'attachment'});
-  // Base64 payload plus MIME line wrapping and generous header/boundary allowance.
-  const payloadBytes=Buffer.byteLength(JSON.stringify(email));
-  assert.equal(email.attachments.length,31); assert.ok(payloadBytes * 1.04 + 50000 < 5 * 1024 * 1024);
+test('email payload for 30 maximum-size previews remains below the sending limit', () => {
+  const content = Buffer.alloc(100000).toString('base64');
+  const attachments = Array.from({ length: 30 }, (_, i) => ({ content, filename: `photo-${i}.jpg`, type: 'image/jpeg', disposition: 'inline', contentId: `photo-${i}` }));
+  const email = buildReviewEmail({}, { id: 1, name: 'Mary', photo_count: 30 }, sample(), attachments);
+  assert.ok(Buffer.byteLength(JSON.stringify(email)) < 4.5 * 1024 * 1024);
 });
 test('preview upload limits reject oversized images and replaced photo slots', async () => {
   const s = setup(); const info = await s.start(); await s.upload(info, 1);
