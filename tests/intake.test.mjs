@@ -100,6 +100,12 @@ test('email contains the entire assessment, contact, numbered photos and a reply
   const row = s.db.prepare('SELECT * FROM intake_submissions').get(); row.notes = '<img src=x onerror=alert(1)>';
   await sendReviewEmail(s.env, row, sample());
   const email = s.emails[0]; assert.equal(email.to, 'connorcr37+cpcs@gmail.com'); assert.equal(email.replyTo, 'mary@example.com'); assert.equal(email.attachments.length, 30);
+  for (let index = 0; index < email.attachments.length; index++) {
+    const attachment = email.attachments[index];
+    assert.ok(attachment.content instanceof Uint8Array);
+    assert.deepEqual(attachment.content, s.objects.get(`${info.uploadId}/${index + 1}-email.jpg`));
+    assert.deepEqual([...attachment.content.slice(0, 3)], [255, 216, 255]);
+  }
   assert.match(email.html, /Visible condition/); assert.match(email.html, /Visible flaws/); assert.match(email.html, /Still needed/); assert.match(email.html, /Suggested response/); assert.match(email.html, /cid:photo-30@changing-places/); assert.match(email.html, /&lt;img/); assert.ok(!email.html.includes('<img src=x')); assert.ok(!email.html.includes('intake-review'));
 });
 test('email payload for 30 maximum-size previews remains below the sending limit', () => {

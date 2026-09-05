@@ -10,7 +10,7 @@ The customer sees a thank-you once the complete batch has been durably saved. Th
 - Cloudflare D1: `changing-places-intake`, binding `INTAKE_DB`.
 - Private R2 bucket: `changing-places-intake-photos`, binding `INTAKE_PHOTOS`. Do not enable public access.
 - Queue: `changing-places-intake`, binding `INTAKE_QUEUE`. Consumer concurrency and batch size are 1 to bound memory use.
-- Email binding `INTAKE_EMAIL` restricts delivery to `connorcr37+cpcs@gmail.com`. This destination is verified, and Email Routing is active on `changing-places-dsm.com`. A real report with two sample photos was accepted by Cloudflare on September 5, 2026.
+- Email binding `INTAKE_EMAIL` restricts delivery to `connorcr37+cpcs@gmail.com`. This destination is verified, and Email Routing is active on `changing-places-dsm.com`. The recipient confirmed that both photos display in the corrected test email on September 5, 2026. Send JPEG bytes to the Worker binding; pre-encoded base64 strings caused unreadable images.
 - `INTAKE_ENABLED=true` opens the unlinked pilot form. Set it to `false` to pause new submissions.
 - Model defaults to `gpt-4.1-mini` and is configurable through `OPENAI_INTAKE_MODEL`.
 

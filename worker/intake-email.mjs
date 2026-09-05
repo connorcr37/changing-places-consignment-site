@@ -1,5 +1,3 @@
-import { base64 } from './intake-ai.mjs';
-
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const listHtml = values => values.length ? `<ul>${values.map(value => `<li>${escape(value)}</li>`).join('')}</ul>` : '<p>None clearly visible.</p>';
 export function buildReviewEmail(env, row, assessment, attachments) {
@@ -23,7 +21,8 @@ export async function sendReviewEmail(env, row, assessment) {
   for (let ordinal = 1; ordinal <= row.photo_count; ordinal++) {
     const photo = await env.INTAKE_PHOTOS.get(`${row.upload_id}/${ordinal}-email.jpg`);
     if (!photo || photo.size > 100000) throw new Error('email_photo_unavailable');
-    attachments.push({ content: base64(new Uint8Array(await photo.arrayBuffer())), filename: `submission-${row.id}-photo-${String(ordinal).padStart(2, '0')}.jpg`, type: 'image/jpeg', disposition: 'inline', contentId: `photo-${ordinal}@changing-places` });
+    // Give the Worker binding actual JPEG bytes so it controls transfer encoding.
+    attachments.push({ content: new Uint8Array(await photo.arrayBuffer()), filename: `submission-${row.id}-photo-${String(ordinal).padStart(2, '0')}.jpg`, type: 'image/jpeg', disposition: 'inline', contentId: `photo-${ordinal}@changing-places` });
   }
   await env.INTAKE_EMAIL.send(buildReviewEmail(env, row, assessment, attachments));
 }

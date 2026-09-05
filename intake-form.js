@@ -27,7 +27,7 @@
       const img = document.createElement('img'); img.src = photo.preview; img.alt = `Selected photo ${index + 1}: ${photo.name}`; img.width = 200; img.height = 200;
       const caption = document.createElement('figcaption'); caption.textContent = `${index + 1}. ${photo.name}`;
       const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', `Remove photo ${index + 1}: ${photo.name}`);
-      remove.addEventListener('click', () => { if (busy || session) return; URL.revokeObjectURL(files[index].preview); files.splice(index, 1); renderPhotos(); });
+      remove.addEventListener('click', () => { if (busy || session) return; files.splice(index, 1); renderPhotos(); });
       figure.append(img, remove, caption); $('photo-previews').append(figure);
     });
     $('photo-count').textContent = `${files.length} of 30 photos`;
@@ -56,7 +56,14 @@
         if (emailBlob && emailBlob.size <= 100000) break;
       }
       if (!emailBlob || emailBlob.size > 100000) throw new Error(`${file.name}: please choose a smaller photo.`);
-      return { name: file.name, blob, emailBlob, preview: URL.createObjectURL(blob), identity: `${file.name}:${file.size}:${file.lastModified}` };
+      // Data previews work with both the shared and intake page image policies.
+      const preview = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error(`${file.name}: could not prepare the preview.`));
+        reader.readAsDataURL(emailBlob);
+      });
+      return { name: file.name, blob, emailBlob, preview, identity: `${file.name}:${file.size}:${file.lastModified}` };
     } finally { bitmap.close(); }
   }
   async function addPhotos(selected) {
@@ -74,7 +81,7 @@
     renderPhotos(); showError('photo-error', errors.join(' ')); $('photo-input').value = ''; lock(false);
   }
   $('photo-input').addEventListener('change', event => { void addPhotos(event.target.files); });
-  $('clear-photos').addEventListener('click', () => { if (busy || session) return; files.forEach(p => URL.revokeObjectURL(p.preview)); files.length = 0; renderPhotos(); });
+  $('clear-photos').addEventListener('click', () => { if (busy || session) return; files.length = 0; renderPhotos(); });
   for (const event of ['dragenter', 'dragover']) $('drop-zone').addEventListener(event, e => { e.preventDefault(); if (!busy && !session) $('drop-zone').classList.add('dragover'); });
   for (const event of ['dragleave', 'drop']) $('drop-zone').addEventListener(event, e => { e.preventDefault(); $('drop-zone').classList.remove('dragover'); });
   $('drop-zone').addEventListener('drop', event => { void addPhotos(event.dataTransfer.files); });
@@ -102,7 +109,7 @@
       }
       progress(98, 'Saving your submission…');
       await api(`/api/intake/submissions/${session.uploadId}/complete`, { method: 'POST', headers: { Authorization: `Bearer ${session.uploadToken}` } });
-      session = null; busy = false; files.forEach(photo => URL.revokeObjectURL(photo.preview)); files.length = 0;
+      session = null; busy = false; files.length = 0;
       $('intake-content').hidden = true; $('intake-success').hidden = false; $('intake-success').focus(); window.scrollTo({ top: 0, behavior: 'instant' });
     } catch (error) {
       if ([400, 401, 409, 415].includes(error.status)) { session = null; files.forEach(photo => { photo.uploaded = false; }); }
