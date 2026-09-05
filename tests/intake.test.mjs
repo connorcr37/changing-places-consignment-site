@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { handleIntake, hash, processIntake, recoverIntake } from '../worker/intake.mjs';
 import { buildReviewEmail, sendReviewEmail } from '../worker/intake-email.mjs';
-import { customerMessage } from '../worker/intake-email-layout.mjs';
+import { consignorMessage } from '../worker/intake-email-layout.mjs';
 import { analyzeSubmission, readBoundedBody, validateAssessment } from '../worker/intake-ai.mjs';
 
 const origin = 'https://changing-places-dsm.com';
@@ -117,7 +117,7 @@ test('email contains screening notes, contact, all numbered photos and a clean c
     assert.deepEqual([...attachment.content.slice(0, 3)], [255, 216, 255]);
     assert.ok(email.html.includes(`cid:${attachment.contentId}`));
   }
-  assert.match(email.html, /small scratch/); assert.match(email.html, /To ask the customer/); assert.match(email.html, /Reply draft/); assert.match(email.html, /cid:photo-30@changing-places/); assert.match(email.html, /&lt;img/); assert.ok(!email.html.includes('<img src=x')); assert.ok(!email.html.includes('intake-review'));
+  assert.match(email.html, /small scratch/); assert.match(email.html, /To ask the consignor/); assert.match(email.html, /Reply draft/); assert.match(email.html, /cid:photo-30@changing-places/); assert.match(email.html, /&lt;img/); assert.ok(!email.html.includes('<img src=x')); assert.ok(!email.html.includes('intake-review'));
 });
 test('a shared photo sits beside each associated item, with other views retained', () => {
   const assessment = sample();
@@ -149,17 +149,31 @@ test('draft stays under 40 words and follow-up questions never exceed three', ()
   value.suggested_response='Thanks!'; value.information_needed=['One?','Two?','Three?','Four?'];
   assert.throws(()=>validateAssessment(value,1),/invalid_assessment/);
 });
-test('Email customer composes only the addressed draft with no private report or extra headers', () => {
+test('consignor email buttons compose the suggested reply or a blank message without the private report', () => {
   const value=sample(), row={id:4,name:'Mary Smith',phone:'5155550118',email:'connorcr37+cpcs@gmail.com',notes:'PRIVATE CUSTOMER NOTES',photo_count:1};
   value.suggested_response='Thanks! Could you show the mark & seat?';
   const email=buildReviewEmail({},row,value,[]);
-  const link=email.html.match(/href="(mailto:[^"]+)"/)[1].replaceAll('&amp;','&');
+  const links=[...email.html.matchAll(/href="(mailto:[^"]+)"/g)].map(match => match[1].replaceAll('&amp;','&'));
+  assert.equal(links.length, 2);
+  const [link, blankLink] = links;
   const url=new URL(link);
   assert.equal(decodeURIComponent(url.pathname),row.email);
   assert.deepEqual([...url.searchParams.keys()],['subject','body']);
+  assert.equal(url.searchParams.get('subject'),'Your Changing Places Submission');
   assert.equal(url.searchParams.get('body'),value.suggested_response);
+  const blankUrl = new URL(blankLink);
+  assert.equal(decodeURIComponent(blankUrl.pathname),row.email);
+  assert.deepEqual([...blankUrl.searchParams.keys()],['subject']);
+  assert.equal(blankUrl.searchParams.get('subject'),'Your Changing Places Submission');
+  assert.equal(blankUrl.searchParams.get('body'),null);
+  for (const output of [email.html, email.text]) {
+    assert.match(output,/Email with suggested reply/);
+    assert.match(output,/Write my own email/);
+    assert.ok(!output.includes('Email customer'));
+  }
   assert.ok(!link.includes('PRIVATE')); assert.ok(!link.includes('cid:')); assert.equal(email.replyTo,undefined);
-  assert.equal(customerMessage('mary@example.com\r\nBcc:bad@example.com','Hello'), '');
+  assert.equal(consignorMessage('mary@example.com\r\nBcc:bad@example.com','Hello'), '');
+  assert.equal(consignorMessage('mary@example.com\r\nBcc:bad@example.com'), '');
   assert.ok(!buildReviewEmail({}, {...row,email:''},value,[]).html.includes('mailto:'));
   for (const output of [email.html, email.text]) for (const omitted of ['Dots are AI suggestions', 'Staff decide', 'Nothing has been sent', 'ballpark USD']) assert.ok(!output.includes(omitted));
 });
