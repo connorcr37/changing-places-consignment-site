@@ -2,7 +2,7 @@
 
 `/submit-items` is a standalone, noindex page. It is intentionally absent from the navigation, footer, and sitemap. Customers provide a name, phone and/or email, optional notes, consent, and 1–30 photos. JPG, PNG, and WebP are supported; HEIC must be exported as JPEG first.
 
-The customer sees a thank-you once the complete batch has been durably saved. The store receives **one private email** titled `Web Submission #… - Name - … Photos`, with an approximate item count, labeled green/yellow/red recommendations, numbered photo references, category/brand evidence, visible condition and flaws, missing details, and a suggested reply. All photos are embedded and attached in the email. There is no staff login or dashboard. The AI never sends a customer reply.
+The customer sees a thank-you once the complete batch has been durably saved. The store receives **one private email** titled `Web Submission #… - Name - … Photos`. Its compact phone layout puts numbered photos beside item names, green/yellow/red dots, and brief AI screening notes. Items sharing a primary photo appear together; additional views and unassigned photos are retained. Known brands and meaningful flaws appear when relevant. Up to three consolidated follow-up requests and a short reply draft sit below the photos. The fuller structured assessment stays in private storage. There is no staff login or dashboard. The AI never sends a customer reply.
 
 ## Infrastructure
 

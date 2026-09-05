@@ -3,7 +3,11 @@ export const INTAKE_POLICY = `Changing Places is a furniture and home decor cons
 Consider clean, gently used furniture, rugs, mirrors, wall art and decorative pieces.
 Items should be free of dirt, dust, stains, odors and pet hair and ready for the sales floor.
 Armoires are currently not accepted. Store space and current demand require staff confirmation.
-Prices are set in person; do not estimate prices or promise acceptance or pickup.`;
+Prices are set in person; do not estimate prices or promise acceptance or pickup.
+Staff screen these photos on a phone. Keep item names short (2–5 words, no quantity in the name).
+Each assessment is one useful sentence of at most 18 words: visible condition and the main reason to accept, decline or review. Omit generic inspection disclaimers.
+Keep visible flaws brief and specific. Put the most useful follow-up requests in information_needed at the top level, consolidating across items into at most 3 short bullets; prioritize decision-changing gaps and uncertain inclusion.
+Keep overview and grouping_uncertainty to one short sentence each. The suggested response should be friendly and at most 60 words. Do not repeat the item inventory or recite internal store policy.`;
 
 const string = { type: 'string', maxLength: 1600 };
 const strings = { type: 'array', items: string, maxItems: 12 };

@@ -61,7 +61,7 @@ test('upload sessions cannot be stolen, read publicly, or used after expiration'
 test('AI and notifications process once on repeated queue delivery', async () => {
   const s = setup(); const info = await s.start(); await s.upload(info, 1); await s.complete(info);
   let analyses = 0, emails = 0;
-  const dependencies = { analyze: async () => { analyses++; return sample(); }, mail: async (env, row, assessment) => { emails++; const email = buildReviewEmail(env, row, assessment, []); assert.match(email.subject, /Web Submission #1 - Mary Smith - 1 Photos/); assert.match(email.html, /AI found approximately 1 items/); } };
+  const dependencies = { analyze: async () => { analyses++; return sample(); }, mail: async (env, row, assessment) => { emails++; const email = buildReviewEmail(env, row, assessment, []); assert.match(email.subject, /Web Submission #1 - Mary Smith - 1 Photos/); assert.match(email.html, /Approximately 1 items/); } };
   await processIntake(s.env, info.uploadId, dependencies); await processIntake(s.env, info.uploadId, dependencies);
   assert.equal(analyses, 1); assert.equal(emails, 1); assert.equal(s.db.prepare('SELECT state FROM intake_submissions').get().state, 'ready');
 });
@@ -95,7 +95,7 @@ test('oversized streaming bodies without Content-Length are bounded', async () =
   await assert.rejects(readBoundedBody(new Response(new ReadableStream({ start(c) { c.enqueue(new Uint8Array(11)); c.close(); } })), 10));
 });
 
-test('email contains the entire assessment, contact, numbered photos and a reply-to address', async () => {
+test('email contains screening notes, contact, all numbered photos and a reply-to address', async () => {
   const s = setup(); const info = await s.start(30); for (let i = 1; i <= 30; i++) await s.upload(info, i);
   const row = s.db.prepare('SELECT * FROM intake_submissions').get(); row.notes = '<img src=x onerror=alert(1)>';
   await sendReviewEmail(s.env, row, sample());
@@ -105,8 +105,19 @@ test('email contains the entire assessment, contact, numbered photos and a reply
     assert.ok(attachment.content instanceof Uint8Array);
     assert.deepEqual(attachment.content, s.objects.get(`${info.uploadId}/${index + 1}-email.jpg`));
     assert.deepEqual([...attachment.content.slice(0, 3)], [255, 216, 255]);
+    assert.ok(email.html.includes(`cid:${attachment.contentId}`));
   }
-  assert.match(email.html, /Visible condition/); assert.match(email.html, /Visible flaws/); assert.match(email.html, /Still needed/); assert.match(email.html, /Suggested response/); assert.match(email.html, /cid:photo-30@changing-places/); assert.match(email.html, /&lt;img/); assert.ok(!email.html.includes('<img src=x')); assert.ok(!email.html.includes('intake-review'));
+  assert.match(email.html, /Watch:/); assert.match(email.html, /To ask the customer/); assert.match(email.html, /Reply draft/); assert.match(email.html, /cid:photo-30@changing-places/); assert.match(email.html, /&lt;img/); assert.ok(!email.html.includes('<img src=x')); assert.ok(!email.html.includes('intake-review'));
+});
+test('a shared photo sits beside each associated item, with other views retained', () => {
+  const assessment = sample();
+  assessment.items.push({ ...sample().items[0], item: 'Table', photo_numbers: [1, 2], recommendation: 'likely_decline' });
+  const attachments = [1, 2, 3].map(i => ({ contentId: `photo-${i}`, content: new Uint8Array() }));
+  const email = buildReviewEmail({}, { id: 1, name: 'Mary', photo_count: 3 }, assessment, attachments);
+  for (let i = 1; i <= 3; i++) assert.equal(email.html.split(`src="cid:photo-${i}"`).length - 1, 1);
+  assert.match(email.html, /Chair/); assert.match(email.html, /Table/);
+  assert.match(email.html, /aria-label="Likely no"/);
+  assert.ok(!email.html.includes('●</span> Likely'));
 });
 test('email payload for 30 maximum-size previews remains below the sending limit', () => {
   const content = Buffer.alloc(100000).toString('base64');
