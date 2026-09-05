@@ -1,3 +1,5 @@
+import { handleIntake, handleIntakeQueue, recoverIntake } from './intake.mjs';
+
 const GRAPH_RESPONSE_LIMIT_BYTES = 500_000;
 const FEED_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
 const FEED_FRESHNESS_MS = 15 * 60 * 1000;
@@ -804,6 +806,10 @@ export const handleFacebookFeed = async (
 export const handleWorkerRequest = async (request, env, ctx, dependencies) => {
   const url = new URL(request.url);
 
+  if (url.pathname.startsWith('/api/intake/')) {
+    return handleIntake(request, env, ctx);
+  }
+
   if (url.pathname === "/api/facebook-live") {
     return handleFacebookFeed(request, env, ctx, dependencies);
   }
@@ -819,4 +825,6 @@ export default {
   async fetch(request, env, ctx) {
     return handleWorkerRequest(request, env, ctx);
   },
+  async queue(batch, env) { await handleIntakeQueue(batch, env); },
+  async scheduled(_event, env, ctx) { ctx.waitUntil(recoverIntake(env)); },
 };

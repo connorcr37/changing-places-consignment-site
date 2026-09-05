@@ -11,10 +11,28 @@
   },
   "vars": {
     "FACEBOOK_GRAPH_VERSION": "v26.0",
-    "FACEBOOK_PAGE_ID": "2057064944306840"
+    "FACEBOOK_PAGE_ID": "2057064944306840",
+    "INTAKE_ENABLED": "true",
+    "INTAKE_NOTIFICATION_EMAIL": "connorcr37+cpcs@gmail.com",
+    "INTAKE_EMAIL_FROM": "intake@changing-places-dsm.com",
+    "INTAKE_DAILY_LIMIT": "20",
+    "OPENAI_INTAKE_MODEL": "gpt-4.1-mini"
   },
+  "d1_databases": [{
+    "binding": "INTAKE_DB",
+    "database_name": "changing-places-intake",
+    "database_id": "a1a9655c-142e-4224-bfee-9886502588c8",
+    "migrations_dir": "migrations/intake"
+  }],
+  "r2_buckets": [{ "binding": "INTAKE_PHOTOS", "bucket_name": "changing-places-intake-photos" }],
+  "queues": {
+    "producers": [{ "binding": "INTAKE_QUEUE", "queue": "changing-places-intake" }],
+    "consumers": [{ "queue": "changing-places-intake", "max_batch_size": 1, "max_batch_timeout": 5, "max_retries": 4, "max_concurrency": 1 }]
+  },
+  "send_email": [{ "name": "INTAKE_EMAIL", "destination_address": "connorcr37+cpcs@gmail.com" }],
+  "triggers": { "crons": ["*/5 * * * *"] },
   "secrets": {
-    "required": ["FACEBOOK_PAGE_ACCESS_TOKEN"]
+    "required": ["FACEBOOK_PAGE_ACCESS_TOKEN", "OPENAI_API_KEY"]
   },
   "observability": {
     "enabled": true,

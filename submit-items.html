@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Share Your Pieces | Changing Places</title>
+  <meta name="description" content="Send photos of your furniture and home decor for a personal review by Changing Places." />
+  <link rel="icon" href="/images/favicon/favicon.ico" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/intake.css" />
+  <script src="/intake-form.js" defer></script>
+</head>
+<body class="intake-page">
+  <a class="skip-link" href="#main-content">Skip to form</a>
+  <header class="intake-header">
+    <a class="intake-brand" href="/" aria-label="Changing Places home"><img src="/images/logo.jpg" width="200" height="200" alt="Changing Places Consignment Shop" /></a>
+    <a class="quiet-link" href="/">Back to the shop <span aria-hidden="true">↗</span></a>
+  </header>
+  <main id="main-content" class="intake-main">
+    <div id="intake-content" class="intake-layout">
+      <aside class="intake-intro">
+        <p class="eyebrow">A new chapter for your furniture</p>
+        <h1>Good pieces.<br />New possibilities.</h1>
+        <p class="intake-lead">Thinking of consigning? Show us what you have. We’ll take a look and get in touch about the next step.</p>
+        <div class="photo-tips">
+          <span class="tips-icon" aria-hidden="true">✧</span>
+          <h2>A few photos go a long way.</h2>
+          <p>For each piece, include:</p>
+          <ul>
+            <li>A clear photo of the whole item</li>
+            <li>A different angle and any brand labels</li>
+            <li>A close-up of wear, marks, or damage</li>
+          </ul>
+          <p class="small-text">Natural light is best. Measurements and a little history are helpful, too.</p>
+        </div>
+        <p class="intake-reassurance">Every submission gets a personal review.<br />Please wait for approval before bringing items in.</p>
+      </aside>
+      <form id="intake-form" class="intake-card" action="/api/intake/submissions" method="post">
+        <div id="availability" class="notice" role="status" hidden></div>
+        <fieldset id="contact-fields">
+          <legend><span class="step-number">01</span> A little about you</legend>
+          <label for="customer-name">Your name <span class="required-label">Required</span></label>
+          <input id="customer-name" name="name" autocomplete="name" maxlength="120" required placeholder="First and last name" />
+          <p id="contact-help" class="field-help">Add a phone number or email so we can follow up. Both are welcome.</p>
+          <div class="field-pair">
+            <div><label for="customer-phone">Phone number</label><input id="customer-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" aria-describedby="contact-help" placeholder="(515) 555-0123" /></div>
+            <div><label for="customer-email">Email address</label><input id="customer-email" name="email" type="email" autocomplete="email" maxlength="254" aria-describedby="contact-help" placeholder="you@example.com" /></div>
+          </div>
+          <label for="customer-notes">Anything we should know? <span class="optional-label">Optional</span></label>
+          <textarea id="customer-notes" name="notes" rows="4" maxlength="4000" placeholder="Brands, measurements, age, condition, or your timing…"></textarea>
+          <div class="intake-honeypot" aria-hidden="true"><label for="company-website">Company website</label><input id="company-website" name="website" tabindex="-1" autocomplete="off" /></div>
+        </fieldset>
+        <fieldset id="photo-fields">
+          <legend><span class="step-number">02</span> Show us your pieces</legend>
+          <div id="drop-zone" class="drop-zone">
+            <svg width="36" height="36" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="4" y="7" width="24" height="20" rx="4" stroke="currentColor" stroke-width="1.5"/><path d="m4 22 7-7 8 8 4-4 5 5M19 7l-2-3h-5l-2 3" stroke="currentColor" stroke-width="1.5"/><circle cx="22" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
+            <p class="drop-title">Make room for something new.</p>
+            <p>Drag your photos here, or choose them below.</p>
+            <label class="intake-button secondary file-picker" for="photo-input">Choose photos</label>
+            <input id="photo-input" class="accessible-file" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="photo-help" />
+            <p id="photo-help" class="small-text">Up to 30 photos · JPG, PNG, or WebP · 20 MB per photo</p>
+          </div>
+          <div class="photo-counter"><span id="photo-count" aria-live="polite">0 of 30 photos</span><button id="clear-photos" class="text-button" type="button" hidden>Clear all</button></div>
+          <div id="photo-previews" class="photo-grid"></div>
+          <p id="photo-error" class="form-error" role="alert" hidden></p>
+        </fieldset>
+        <fieldset id="consent-fields">
+          <label class="consent-label" for="consent"><input id="consent" name="consent" type="checkbox" required /><span>I’m happy for Changing Places to review these photos and contact me about my items.</span></label>
+          <p class="privacy-note">Photos and notes may be reviewed with AI to help our team. Staff make all acceptance decisions. Submissions stay private and are kept for up to 90 days. Please leave personal documents out of photos. <a href="/privacy">Privacy policy</a></p>
+        </fieldset>
+        <div id="upload-progress" hidden><progress id="progress-bar" max="100" value="0" aria-label="Photo upload progress"></progress><p id="progress-label" class="field-help" role="status"></p></div>
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+        <button id="submit-button" class="intake-button submit-button" type="submit">Send for review <span aria-hidden="true">→</span></button>
+        <p class="submit-caption">We’ll be in touch after we’ve had a chance to look.</p>
+        <noscript><p class="form-error">Please enable JavaScript to upload photos, or contact the shop directly.</p></noscript>
+      </form>
+    </div>
+    <section id="intake-success" class="intake-success" tabindex="-1" hidden>
+      <span class="success-mark" aria-hidden="true">✓</span><p class="eyebrow">Your photos are in good hands</p><h1>Thanks for sharing<br />your pieces with us.</h1>
+      <p>We’ve received your items for review. We’ll contact you after we’ve had a chance to look them over.</p>
+      <a href="/" class="intake-button">Back to Changing Places</a>
+    </section>
+  </main>
+  <footer class="intake-footer"><p>Changing Places Consignment Shop · Urbandale, Iowa</p><a href="/privacy">Privacy</a></footer>
+</body>
+</html>

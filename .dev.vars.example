@@ -1,3 +1,4 @@
 # Copy this file to .dev.vars and replace the placeholder locally.
 # Never commit the real Page access token.
 FACEBOOK_PAGE_ACCESS_TOKEN="replace-with-a-page-access-token"
+OPENAI_API_KEY="replace-with-an-intake-project-api-key"

@@ -6,6 +6,7 @@ const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, "..");
 const productionOrigin = "https://changing-places-dsm.com";
 const excludedFromSearch = new Set([
+  "submit-items.html",
   "couch-dash.html",
   "tv/index.html",
   "tv/video.html",
