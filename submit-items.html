@@ -9,7 +9,7 @@
   <meta name="description" content="Send photos of your furniture and home decor for a personal review by Changing Places." />
   <link rel="icon" href="/images/favicon/favicon.ico" />
   <link rel="stylesheet" href="/styles.css" />
-  <link rel="stylesheet" href="/intake.css?v=20260905-audit" />
+  <link rel="stylesheet" href="/intake.css?v=20260905-contact" />
   <script src="/intake-form.js?v=20260905-launch" type="module"></script>
 </head>
 <body class="intake-page">
@@ -30,10 +30,9 @@
           <p>For each piece, include:</p>
           <ul>
             <li>A clear photo of the whole item</li>
-            <li>A different angle and any brand labels</li>
             <li>A close-up of wear, marks, or damage</li>
           </ul>
-          <p class="small-text">Natural light is best. Measurements and a little history are helpful, too.</p>
+          <p class="small-text">Natural light is best. Measurements and a little history are helpful, but not required.</p>
         </div>
         <p class="intake-reassurance">Every submission gets a personal review.<br />Please wait for approval before bringing items in.</p>
       </aside>
@@ -43,11 +42,11 @@
           <legend><span class="step-number">01</span> A little about you</legend>
           <label for="customer-name">Your name <span class="required-label">Required</span></label>
           <input id="customer-name" name="name" autocomplete="name" maxlength="120" required placeholder="First and last name" />
-          <p id="contact-help" class="field-help">Add a phone number or email so we can follow up. Both are welcome.</p>
           <div class="field-pair">
-            <div><label for="customer-phone">Phone number</label><input id="customer-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" aria-describedby="contact-help" placeholder="(515) 555-0123" /></div>
+            <div><label for="customer-phone">Phone number</label><input id="customer-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" aria-describedby="contact-help" placeholder="515-727-2117" /></div>
             <div><label for="customer-email">Email address</label><input id="customer-email" name="email" type="email" autocomplete="email" maxlength="254" aria-describedby="contact-help" placeholder="you@example.com" /></div>
           </div>
+          <p id="contact-help" class="field-help">Add a phone number or email so we can follow up. Both are welcome.</p>
           <label for="customer-notes">Anything we should know? <span class="optional-label">Optional</span></label>
           <textarea id="customer-notes" name="notes" rows="4" maxlength="4000" placeholder="Brands, measurements, age, condition, or your timing…"></textarea>
           <div class="intake-honeypot" aria-hidden="true"><label for="company-website">Company website</label><input id="company-website" name="website" tabindex="-1" autocomplete="off" /></div>

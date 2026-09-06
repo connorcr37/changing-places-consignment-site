@@ -32,7 +32,8 @@
 .intake-page input::placeholder, .intake-page textarea::placeholder { color: #898c82; }
 .intake-page textarea { resize: vertical; min-height: 100px; }
 .field-help { font-size: 11px; color: #737269; margin: 10px 0 16px; line-height: 1.75; }
-.field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0 0 20px; }
+.field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0 0; }
+#contact-help { margin: 6px 0 20px; }
 .drop-zone { text-align: center; padding: 26px 16px 22px; border: 1px dashed #b7c2af; border-radius: 6px; color: #53684f; background: #f5f7ef; }
 .drop-zone.dragover { background: #e4eddc; border-color: #294e43; }
 .drop-zone svg { margin-bottom: 12px; }

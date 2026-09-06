@@ -6,6 +6,8 @@ The consignor sees a thank-you once the complete batch has been durably saved. T
 
 The email starts with the consignor name, phone, email and notes, including in realistic synthetic tests. Each item has one brief sentence about visible cleanliness/condition and meaningful flaws. The analysis and email omit pricing, follow-up questions, and reply drafts.
 
+The contact header shows the phone number once with separate **☎️ Call** (`tel:`) and **💬 Text** (`sms:`) links, separated by spacing only. The email address appears below as a plain, pre-addressed `mailto:` link with no subject or body parameters; the submission timestamp follows. Missing phone details omit the call/text row, and missing email displays “No email provided”.
+
 A pale-green action panel follows the final photo, with a thin divider and 16px padding. It says “Ready to follow up?” and reminds the recipient to reply to contact the consignor by first name. Without an email, it instead gives the consignor's formatted phone number for calling or texting.
 
 The report sets `Reply-To` to the consignor's validated email address, so the store uses its mail app's normal **Reply** button. There are no compose buttons. Normal replies may quote the review body. Phone-only submissions omit Reply-To and show the provided phone number with “No email provided”. No message is sent automatically. After each intake-email update, send one fresh test submission to `connorcr37+cpcs@gmail.com` and confirm processing and notification delivery.

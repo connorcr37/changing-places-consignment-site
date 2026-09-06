@@ -210,7 +210,7 @@ test('email ignores legacy pricing, questions and drafts and preserves Reply-To'
   for (const assessment of [value, null]) {
     const email = buildReviewEmail({}, row, assessment, []);
     assert.equal(email.replyTo, row.email);
-    for (const output of [email.html, email.text]) for (const omitted of ['To ask the consignor', 'Reply draft', 'Legacy question', 'Legacy reply', 'mailto:', 'Email with suggested reply', 'Write my own email', 'Comparable new', 'Used resale', '$400']) assert.ok(!output.includes(omitted));
+    for (const output of [email.html, email.text]) for (const omitted of ['To ask the consignor', 'Reply draft', 'Legacy question', 'Legacy reply', '?subject=', '?body=', 'Email with suggested reply', 'Write my own email', 'Comparable new', 'Used resale', '$400']) assert.ok(!output.includes(omitted));
   }
   for (const invalid of ['', 'mary@example.com\\r\\nBcc:bad@example.com', 'mary@example.com,other@example.com']) {
     assert.ok(!Object.hasOwn(buildReviewEmail({}, { ...row, email: invalid }, value, []), 'replyTo'));
@@ -220,7 +220,8 @@ test('email header shows contact details and the actual submission time in Centr
   const row={id:4,name:'Mary Smith',phone:'5155550118',email:'mary@example.com',photo_count:1,submitted_at:Date.parse('2026-09-05T15:14:00Z')/1000};
   const email=buildReviewEmail({},row,sample(),[]);
   for (const body of [email.html,email.text]) {
-    assert.match(body,/515-555-0118 · mary@example.com/);
+    assert.match(body,/515-555-0118/);
+    assert.match(body,/mary@example.com/);
     assert.match(body,/Submitted September 5 at 10:14 AM CT/);
     assert.match(body,/PRELIMINARY PHOTO REVIEW/);
     assert.match(body,/AI-assisted guidance based on submitted photos\. Staff makes the final decision\./);
@@ -229,11 +230,19 @@ test('email header shows contact details and the actual submission time in Centr
     assert.ok(body.indexOf('Mary Smith')<body.indexOf('515-555-0118'));
     assert.ok(body.indexOf('mary@example.com')<body.indexOf('Submitted September'));
   }
+  assert.match(email.html, /href="tel:\+15155550118"/);
+  assert.match(email.html, /href="sms:\+15155550118"/);
+  assert.match(email.html, /<br \/>✉️ <a href="mailto:mary%40example.com"/);
+  assert.match(email.text, /515-555-0118  ☎️ Call  💬 Text\n✉️ mary@example.com/);
+  const plusAddress = buildReviewEmail({}, { ...row, email: 'connorcr37+cpcs@gmail.com' }, sample(), []);
+  assert.match(plusAddress.html, /href="mailto:connorcr37%2Bcpcs%40gmail.com"/);
   const winter=buildReviewEmail({}, {...row,submitted_at:Date.parse('2026-12-05T16:14:00Z')/1000,phone:''},sample(),[]);
   assert.match(winter.text,/Submitted December 5 at 10:14 AM CT/);
-  assert.ok(winter.text.startsWith('Mary Smith\nmary@example.com\nSubmitted'));
+  assert.ok(winter.text.startsWith('Mary Smith\n✉️ mary@example.com\nSubmitted'));
+  assert.ok(!winter.html.includes('href="tel:') && !winter.html.includes('href="sms:'));
   const phoneOnly=buildReviewEmail({}, {...row,email:''},sample(),[]);
-  for (const body of [phoneOnly.html,phoneOnly.text]) assert.match(body,/515-555-0118 · No email provided/);
+  for (const body of [phoneOnly.html,phoneOnly.text]) { assert.match(body,/515-555-0118/); assert.match(body,/No email provided/); }
+  assert.ok(!phoneOnly.html.includes('href="mailto:'));
   assert.ok(!Object.hasOwn(phoneOnly,'replyTo'));
 });
 test('email payload for 30 maximum-size previews remains below the sending limit', () => {
