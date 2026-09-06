@@ -109,6 +109,67 @@ const server = createServer(async (req, res) => {
     await batch.page.locator('#clear-photos').click();
     assert.equal(await batch.page.locator('.photo-preview').count(), 0);
     await batch.page.close();
+    const compression = await setup(390);
+    const preparedUploads = [];
+    await compression.page.route('**/api/intake/submissions/*/photos/*', async route => {
+      const request = route.request();
+      const form = await new Response(request.postDataBuffer(), { headers: { 'Content-Type': request.headers()['content-type'] } }).formData();
+      preparedUploads.push({ photo: form.get('photo').size, preview: form.get('preview').size });
+      await route.fulfill({ json: { ok: true } });
+    });
+    const detailedBytes = await compression.page.evaluate(async () => {
+      const tile = document.createElement('canvas'); tile.width = tile.height = 256;
+      const context = tile.getContext('2d'), pixels = context.createImageData(256, 256);
+      let seed = 1;
+      for (let i = 0; i < pixels.data.length; i += 4) {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        pixels.data[i] = seed & 255; pixels.data[i + 1] = (seed >>> 8) & 255; pixels.data[i + 2] = (seed >>> 16) & 255; pixels.data[i + 3] = 255;
+      }
+      context.putImageData(pixels, 0, 0);
+      const canvas = document.createElement('canvas'); canvas.width = 3024; canvas.height = 4032;
+      const ctx = canvas.getContext('2d');
+      for (let y = 0; y < canvas.height; y += 256) for (let x = 0; x < canvas.width; x += 256) ctx.drawImage(tile, x, y);
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', .2));
+      return Array.from(new Uint8Array(await blob.arrayBuffer()));
+    });
+    assert.ok(detailedBytes.length <= 3200000);
+    const phoneBytes = Buffer.alloc(3200000); Buffer.from(detailedBytes).copy(phoneBytes);
+    await compression.page.locator('#photo-input').setInputFiles({ name: 'IMG_9490.jpeg', mimeType: 'image/jpeg', buffer: phoneBytes });
+    await compression.page.waitForFunction(() => !document.getElementById('photo-fields').disabled);
+    assert.equal(await compression.page.locator('.photo-preview').count(), 1, 'A detailed 3.2 MB, 12 MP JPEG should be accepted');
+    // Simulate a browser encoder exceeding 100 KB at every size tried by the old
+    // preview loop, even when quality is reduced. The smaller fallback must work.
+    await compression.page.evaluate(() => {
+      const encode = HTMLCanvasElement.prototype.toBlob;
+      window.photoEncodingMode = 'oversize'; window.photoEncodingAttempts = 0;
+      HTMLCanvasElement.prototype.toBlob = function(callback, type, quality) {
+        window.photoEncodingAttempts++;
+        if (window.photoEncodingMode === 'null') { callback(null); return; }
+        const edge = Math.max(this.width, this.height);
+        encode.call(this, blob => callback(blob && edge >= 600 && edge <= 1200 ? new Blob([blob, new Uint8Array(100001)], { type: 'image/jpeg' }) : blob), type, quality);
+      };
+    });
+    await compression.page.locator('#photo-input').setInputFiles({ name: 'browser-encoder.jpeg', mimeType: 'image/jpeg', buffer: phoneBytes });
+    await compression.page.waitForFunction(() => !document.getElementById('photo-fields').disabled);
+    assert.equal(await compression.page.locator('.photo-preview').count(), 2, 'Preview over budget at 600px must shrink further automatically');
+    const fallbackSize = await compression.page.locator('.photo-preview img').last().evaluate(img => Math.max(img.naturalWidth, img.naturalHeight));
+    assert.ok(fallbackSize > 0 && fallbackSize < 600);
+    await compression.page.evaluate(() => { window.photoEncodingMode = 'null'; window.photoEncodingAttempts = 0; });
+    await compression.page.locator('#photo-input').setInputFiles(uploadFile('cannot-encode.jpg'));
+    await compression.page.waitForFunction(() => !document.getElementById('photo-fields').disabled);
+    assert.equal(await compression.page.locator('.photo-preview').count(), 2);
+    assert.match(await compression.page.locator('#photo-error').textContent(), /browser could not prepare this photo/);
+    assert.doesNotMatch(await compression.page.locator('#photo-error').textContent(), /smaller/);
+    assert.ok(await compression.page.evaluate(() => window.photoEncodingAttempts < 40), 'Failed encoding must stop after bounded retries');
+    await compression.page.locator('#submit-button').click();
+    await compression.page.locator('#intake-success').waitFor({ state: 'visible' });
+    assert.equal(preparedUploads.length, 2);
+    for (const upload of preparedUploads) {
+      assert.ok(upload.photo > 0 && upload.photo <= 600000);
+      assert.ok(upload.preview > 0 && upload.preview <= 100000);
+    }
+    assert.deepEqual(compression.violations, []);
+    await compression.page.close();
     const formats = await setup(390);
     let decoderLoads = 0;
     formats.page.on('request', request => { if (request.url().includes('/vendor/')) decoderLoads++; });
@@ -171,6 +232,6 @@ const server = createServer(async (req, res) => {
     }
     await texting.close();
     console.log('Texting page checks passed: validated SMS target, no automatic launch, no contact data in requests/history, and safe invalid-link recovery.');
-    console.log('Browser checks passed: mobile previews, retry/recovery, limits, mixed phone formats, EXIF orientation, lazy HEIC conversion under production CSP, damaged HEIC recovery, and 30 HEIC uploads.');
+    console.log('Browser checks passed: mobile previews, retry/recovery, limits, detailed 3.2 MB phone photo, oversized-preview fallback, bounded encoding failure, mixed phone formats, EXIF orientation, lazy HEIC conversion under production CSP, damaged HEIC recovery, and 30 HEIC uploads.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => server.close());

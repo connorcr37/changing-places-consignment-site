@@ -165,6 +165,37 @@ test('oversized streaming bodies without Content-Length are bounded', async () =
   await assert.rejects(readBoundedBody(new Response(new ReadableStream({ start(c) { c.enqueue(new Uint8Array(11)); c.close(); } })), 10));
 });
 
+test('unsupported submitted objects retain their count, red rating and explanation beside the photo', async () => {
+  const s = setup(), info = await s.start(); await s.upload(info, 1);
+  const bottle = { ...sample(), approximate_item_count: 1, overview: 'One water bottle.', items: [{
+    ...sample().items[0], item: 'Water Bottle', category: 'Drinkware', likely_brand: 'Unknown',
+    visible_condition: 'No obvious visible damage', obvious_flaws: [], recommendation: 'likely_decline',
+    assessment: 'This water bottle is outside the accepted furniture and home decor categories.',
+  }] };
+  const assessment = await analyzeSubmission({ ...s.env, OPENAI_API_KEY: 'test-secret' }, { notes: '' },
+    s.db.prepare('SELECT * FROM intake_photos').all(), async (url, options) => {
+      const { instructions } = JSON.parse(options.body);
+      assert.match(instructions, /Include every identifiable submitted item in items and in the piece count, even when it is outside the accepted categories/);
+      assert.match(instructions, /recommendation likely_decline/);
+      assert.doesNotMatch(instructions, /Return empty items and count 0 when no relevant items are shown/);
+      return Response.json({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify(bottle) }] }] });
+    });
+  const row = s.db.prepare('SELECT * FROM intake_submissions').get();
+  for (const items of [assessment.items, [...assessment.items, { ...sample().items[0], recommendation: 'likely_accept' }]]) {
+    const value = validateAssessment({ ...assessment, items }, 1);
+    assert.equal(value.approximate_item_count, items.length);
+    await sendReviewEmail(s.env, row, value);
+    const email = s.emails.at(-1);
+    assert.match(email.html, /aria-label="Unlikely fit" title="Unlikely fit"/);
+    const itemRow = email.html.slice(email.html.indexOf('src="cid:photo-1@changing-places"'), email.html.indexOf('Ready to follow up?'));
+    assert.ok(itemRow.includes('Water Bottle'));
+    assert.ok(itemRow.includes(assessment.items[0].assessment));
+    assert.match(email.text, /🔴 Water Bottle — Photos 1\nThis water bottle is outside/);
+    assert.equal(email.attachments.length, 1);
+  }
+  assert.equal(validateAssessment({ approximate_item_count: 0, overview: 'Blank photo; no submitted object is identifiable.', grouping_uncertainty: '', items: [] }, 1).approximate_item_count, 0);
+});
+
 test('email contains screening notes, contact, all numbered photos and consignor Reply-To', async () => {
   const s = setup(); const info = await s.start(30); for (let i = 1; i <= 30; i++) await s.upload(info, i);
   const row = s.db.prepare('SELECT * FROM intake_submissions').get(); row.notes = '<img src=x onerror=alert(1)>';

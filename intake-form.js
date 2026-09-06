@@ -1,5 +1,5 @@
 import { INTAKE_LIMITS, isValidEmail, isValidPhone } from './intake-shared.js';
-import { openPhoto } from './intake-photo.js';
+import { openPhoto, resizePhoto } from './intake-photo.js';
 
 (() => {
   'use strict';
@@ -47,23 +47,13 @@ import { openPhoto } from './intake-photo.js';
     if (file.size > INTAKE_LIMITS.maxSourceBytes) throw new Error(`${file.name}: please choose a photo smaller than 20 MB.`);
     const bitmap = await openPhoto(file);
     try {
-      const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
-      const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-      const context = canvas.getContext('2d'); context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height); context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-      let quality = .86;
-      let blob;
-      do { blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality)); quality -= .12; } while (blob && blob.size > 500000 && quality >= .25);
-      if (!blob || blob.size > INTAKE_LIMITS.maxPhotoBytes) throw new Error(`${file.name}: please choose a smaller or simpler photo.`);
-      const emailCanvas = document.createElement('canvas');
-      let emailBlob;
-      for (const edge of [1200, 1000, 800, 600]) {
-        const emailScale = Math.min(1, edge / Math.max(bitmap.width, bitmap.height));
-        emailCanvas.width = Math.max(1, Math.round(bitmap.width * emailScale)); emailCanvas.height = Math.max(1, Math.round(bitmap.height * emailScale));
-        const emailContext = emailCanvas.getContext('2d'); emailContext.fillStyle = '#fff'; emailContext.fillRect(0, 0, emailCanvas.width, emailCanvas.height); emailContext.drawImage(bitmap, 0, 0, emailCanvas.width, emailCanvas.height);
-        emailBlob = await new Promise(resolve => emailCanvas.toBlob(resolve, 'image/jpeg', .68));
-        if (emailBlob && emailBlob.size <= INTAKE_LIMITS.maxPreviewBytes) break;
+      let blob, emailBlob;
+      try {
+        blob = await resizePhoto(bitmap, { maxEdge: 1600, maxBytes: INTAKE_LIMITS.maxPhotoBytes, quality: .86 });
+        emailBlob = await resizePhoto(bitmap, { maxEdge: 1200, maxBytes: INTAKE_LIMITS.maxPreviewBytes, quality: .68 });
+      } catch {
+        throw new Error(`${file.name}: your browser could not prepare this photo. Please try again or save a new JPG copy.`);
       }
-      if (!emailBlob || emailBlob.size > INTAKE_LIMITS.maxPreviewBytes) throw new Error(`${file.name}: please choose a smaller photo.`);
       // Data previews work with both the shared and intake page image policies.
       const preview = await new Promise((resolve, reject) => {
         const reader = new FileReader();

@@ -1,3 +1,30 @@
+// Encode to the upload budget independently of the original file size. Browser
+// encoders differ, so reduce dimensions as well as quality for detailed photos.
+export async function resizePhoto(bitmap, { maxEdge, maxBytes, quality }) {
+  const canvas = document.createElement('canvas');
+  try {
+    for (let edge = maxEdge; ; edge = Math.max(240, Math.floor(edge * .8))) {
+      const scale = Math.min(1, edge / Math.max(bitmap.width, bitmap.height));
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('photo_encoding_failed');
+      context.fillStyle = '#fff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      for (const level of [quality, quality * .75, quality * .5]) {
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', level));
+        if (blob?.type === 'image/jpeg' && blob.size > 0 && blob.size <= maxBytes) return blob;
+      }
+      if (edge === 240) break;
+    }
+    throw new Error('photo_encoding_failed');
+  } finally {
+    // Release canvas backing memory before preparing the next phone photo.
+    canvas.width = canvas.height = 0;
+  }
+}
+
 // Decode locally; only the resized JPEG copies produced by the form are uploaded.
 export async function openPhoto(file) {
   const bytes = new Uint8Array(await file.slice(0, 64).arrayBuffer());
