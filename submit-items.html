@@ -64,7 +64,7 @@
           <textarea id="customer-notes" name="notes" rows="4" maxlength="4000" placeholder="Brands, measurements, age, condition, or your timing…"></textarea>
           <div class="intake-honeypot" aria-hidden="true"><label for="company-website">Company website</label><input id="company-website" name="website" tabindex="-1" autocomplete="off" /></div>
         </fieldset>
-        <fieldset id="photo-fields">
+        <fieldset id="photo-fields" disabled>
           <legend><span class="step-number">02</span> Show us your pieces</legend>
           <div id="drop-zone" class="drop-zone">
             <svg width="36" height="36" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="4" y="7" width="24" height="20" rx="4" stroke="currentColor" stroke-width="1.5"/><path d="m4 22 7-7 8 8 4-4 5 5M19 7l-2-3h-5l-2 3" stroke="currentColor" stroke-width="1.5"/><circle cx="22" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
@@ -84,7 +84,7 @@
         </fieldset>
         <div id="upload-progress" hidden><progress id="progress-bar" max="100" value="0" aria-label="Photo upload progress"></progress><p id="progress-label" class="field-help" role="status"></p></div>
         <p id="form-error" class="form-error" role="alert" hidden></p>
-        <button id="submit-button" class="intake-button submit-button" type="submit">Send for review <span aria-hidden="true">→</span></button>
+        <button id="submit-button" class="intake-button submit-button" type="submit" disabled>Send for review <span aria-hidden="true">→</span></button>
         <p class="submit-caption">We’ll be in touch after we’ve had a chance to look.</p>
         <p class="submit-caption">Prefer another way? <a href="sms:6202558901">Text photos to 620-255-8901</a> or <a href="mailto:ChangingPlacesDSM@gmail.com">email the shop</a>.</p>
         <noscript><p class="form-error">Please enable JavaScript to upload photos, or contact the shop directly.</p></noscript>

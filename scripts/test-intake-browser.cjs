@@ -26,6 +26,19 @@ const server = createServer(async (req, res) => {
   const browser = await chromium.launch({ headless: true });
   try {
     const origin = `http://127.0.0.1:${server.address().port}`;
+    const loading = await browser.newPage();
+    let releaseScript;
+    const scriptGate = new Promise(resolve => { releaseScript = resolve; });
+    await loading.route('**/intake-form.js*', async route => { await scriptGate; await route.continue(); });
+    await loading.route('**/api/intake/config', route => route.fulfill({ json: { enabled: true, maxPhotos: 30 } }));
+    await loading.goto(origin + '/submit-items.html', { waitUntil: 'commit' });
+    try {
+      assert.equal(await loading.locator('#submit-button').isDisabled(), true, 'Do not submit before initialization');
+      assert.equal(await loading.locator('#photo-input').isDisabled(), true, 'Do not lose photos selected before event handlers load');
+    } finally { releaseScript(); }
+    await loading.waitForFunction(() => !document.getElementById('submit-button').disabled);
+    assert.equal(await loading.locator('#photo-input').isDisabled(), false);
+    await loading.close();
     const bytes = await readFile(resolve(root, 'images/banner.jpg'));
     const uploadFile = name => ({ name, mimeType: 'image/jpeg', buffer: bytes });
     const setup = async (width, failure) => {
