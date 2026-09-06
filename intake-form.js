@@ -121,6 +121,6 @@ import { openPhoto, resizePhoto } from './intake-photo.js';
   $('submit-button').disabled = true;
   void api('/api/intake/config').then(config => {
     available = config.enabled; lock(busy);
-    if (!available) { $('availability').textContent = 'We’re putting the finishing touches on this form. Photo submissions will open soon.'; $('availability').hidden = false; }
-  }).catch(() => { $('availability').textContent = 'We couldn’t connect to the submission service. Please refresh this page to try again.'; $('availability').hidden = false; });
+    if (!available) { $('availability').textContent = 'We're putting the finishing touches on this form. Photo submissions will open soon.'; $('availability').hidden = false; }
+  }).catch(() => { $('availability').textContent = 'We couldn't connect to the submission service. Please refresh this page to try again.'; $('availability').hidden = false; });
 })();
