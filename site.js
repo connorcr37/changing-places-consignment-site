@@ -1,3 +1,14 @@
+// End the holiday notice at midnight in the store's Central time zone.
+document.querySelectorAll("[data-holiday-banner]").forEach((banner) => {
+  const remaining = Date.parse(banner.dataset.expires) - Date.now();
+  if (!Number.isFinite(remaining)) return;
+  if (remaining <= 0) {
+    banner.hidden = true;
+  } else {
+    window.setTimeout(() => { banner.hidden = true; }, Math.min(remaining, 2147483647));
+  }
+});
+
 document.querySelectorAll("[data-current-year]").forEach((year) => {
   year.textContent = String(new Date().getFullYear());
 });

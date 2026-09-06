@@ -138,6 +138,25 @@ main section {
   padding: 2rem;
 }
 
+/* ========== Holiday announcement ========== */
+.holiday-banner {
+  padding: 1.1rem clamp(1.25rem, 4vw, 3rem);
+  background: var(--color-forest-dark);
+  color: var(--color-cream);
+  border-bottom: 3px solid var(--color-peach);
+  font-size: 0.9375rem;
+  text-align: center;
+}
+
+.holiday-banner[hidden] {
+  display: none;
+}
+
+.holiday-banner strong {
+  color: var(--color-peach);
+  font-weight: 600;
+}
+
 /* ========== Header & Logo ========== */
 header {
   background: rgba(252, 251, 250, 0.94);
