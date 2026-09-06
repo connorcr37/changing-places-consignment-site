@@ -15,7 +15,7 @@ import { openPhoto, resizePhoto } from './intake-photo.js';
     busy = value;
     for (const id of ['contact-fields', 'photo-fields', 'consent-fields']) $(id).disabled = value || Boolean(session);
     $('submit-button').disabled = value || !available;
-    $('submit-button').textContent = value ? 'Sending your photos…' : session ? 'Retry sending photos →' : 'Send for review →';
+    $('submit-button').textContent = value ? 'Sending your photos…' : session ? 'Retry sending photos' : 'Send for review';
   };
   async function api(path, options = {}) {
     const response = await fetch(path, { ...options, signal: AbortSignal.timeout(90000) });

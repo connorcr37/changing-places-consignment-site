@@ -16,7 +16,7 @@ for (const line of readFileSync(resolve(root, '_headers'), 'utf8').split(/\r?\n/
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
 const server = createServer(async (req, res) => {
   const path = new URL(req.url, 'http://localhost').pathname;
-  if (!/^\/(submit-items\.html|text-consignor\.(html|js|css)|intake-[\w-]+\.js|intake\.css|styles\.css|vendor\/[\w/.-]+|images\/[\w/.-]+|fonts\/[\w/.-]+)$/.test(path) || path.includes('..')) { res.writeHead(404).end(); return; }
+  if (!/^\/(submit-items\.html|site\.js|text-consignor\.(html|js|css)|intake-[\w-]+\.js|intake\.css|styles\.css|vendor\/[\w/.-]+|images\/[\w/.-]+|fonts\/[\w/.-]+)$/.test(path) || path.includes('..')) { res.writeHead(404).end(); return; }
   if (path.endsWith('.html')) res.setHeader('Content-Security-Policy', policies.filter(p => p.pattern.endsWith('*') && path.startsWith(p.pattern.slice(0, -1))).map(p => p.value));
   try { res.setHeader('Content-Type', types[extname(path)] || 'application/octet-stream'); res.end(await readFile(resolve(root, '.' + path))); }
   catch { res.writeHead(404).end(); }
