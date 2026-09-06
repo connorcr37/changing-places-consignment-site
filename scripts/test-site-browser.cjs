@@ -38,6 +38,20 @@ const server = createServer(async (req, res) => {
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
+    const checkReplayHints = async () => {
+      for (const link of await page.locator('.facebook-card__link').all()) {
+        const hint = link.locator('.visually-hidden');
+        const style = await hint.evaluate(el => {
+          const css = getComputedStyle(el);
+          const bounds = el.getBoundingClientRect();
+          return { position: css.position, width: bounds.width, height: bounds.height, clipPath: css.clipPath };
+        });
+        assert.equal(style.position, 'absolute', 'Replay accessibility hints must not occupy card layout');
+        assert.ok(style.width <= 1 && style.height <= 1, 'Replay hints must be visually clipped');
+        assert.equal(style.clipPath, 'inset(50%)');
+        assert.match(await link.ariaSnapshot(), /on Facebook; opens in a new tab/, 'Keep the hint accessible');
+      }
+    };
     const checkNames = async () => {
       const mismatches = await page.locator('a[aria-label], button[aria-label]').evaluateAll(elements => {
         const normalize = s => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
@@ -57,6 +71,7 @@ const server = createServer(async (req, res) => {
       await checkNames();
     }
     await page.goto(origin + '/');
+    await checkReplayHints();
     for (const link of await page.locator('.facebook-card__link').all()) {
       const title = await link.locator('.facebook-card__title').innerText();
       assert.equal(await page.getByRole('link', { name: new RegExp(title) }).count(), 1);
@@ -71,6 +86,12 @@ const server = createServer(async (req, res) => {
     await page.waitForFunction(() => document.querySelector('[data-facebook-video-id="123456789"]'));
     const generated = page.locator('[data-facebook-video-id="123456789"] a');
     assert.match(await generated.ariaSnapshot(), /Replay.*12:34/);
+    await checkReplayHints();
+    await page.locator('.facebook-showcase').screenshot({ path: resolve(root, 'tmp/feedback-replays-desktop.png') });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await checkReplayHints();
+    await page.locator('.facebook-showcase').screenshot({ path: resolve(root, 'tmp/feedback-replays-mobile.png') });
+    await page.setViewportSize({ width: 1280, height: 720 });
     await checkNames();
     await page.unroute('**/api/facebook-live');
     await page.clock.install({ time: new Date('2030-01-01T12:00:00Z') });
