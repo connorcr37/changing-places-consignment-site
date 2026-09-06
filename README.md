@@ -11,6 +11,7 @@ The primary header and footer live in `partials/` and are expanded into each pub
 - Run `node scripts/sync-shared-shell.mjs` after editing either partial.
 - Run `node scripts/sync-shared-shell.mjs --check` to verify every page is synchronized.
 - `couch-dash.html` is intentionally excluded because the After Hours game has its own layout.
+- `submit-items.html` is a public standalone form; `text-consignor.html` is an unindexed texting helper. Both use their own layouts.
 - `tv/` contains the noindex, employee-facing in-store screensavers and has its own layout.
 
 The Remotion source for the prerendered screensaver is tracked in `tools/tv-video/`.
@@ -32,8 +33,8 @@ node --test tests/facebook-feed.test.mjs tests/intake.test.mjs
 
 The site audit verifies public-page metadata, canonical and social URLs, JSON-LD, sitemap coverage, internal routes and fragments, local assets, unique IDs, ARIA references, image dimensions, iframe titles, safe new-tab links, and common encoding problems.
 
-Photo intake setup, browser checks, delivery recovery, and the pending public-launch
-steps are documented in [INTAKE.md](INTAKE.md).
+Photo intake setup, browser checks, delivery recovery, and production recipient
+settings are documented in [INTAKE.md](INTAKE.md).
 
 ## Automatic Facebook Live feed
 

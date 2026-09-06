@@ -6,7 +6,6 @@ const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, "..");
 const productionOrigin = "https://changing-places-dsm.com";
 const excludedFromSearch = new Set([
-  "submit-items.html",
   "text-consignor.html",
   "couch-dash.html",
   "tv/index.html",
@@ -239,6 +238,9 @@ for (const [pageName, source] of pages) {
   const mainCount = (source.match(/<main\b/gi) ?? []).length;
 
   if (isSearchPage) {
+    if (/\b(noindex|nofollow|none)\b/i.test(getMetaContent(source, "name", "robots"))) {
+      issues.push(`${pageName}: public page blocks search indexing or link discovery`);
+    }
     if (!title) issues.push(`${pageName}: missing title`);
     if (!description) issues.push(`${pageName}: missing meta description`);
     if (!canonical.startsWith(`${productionOrigin}/`)) {

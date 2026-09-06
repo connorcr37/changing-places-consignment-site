@@ -1,6 +1,6 @@
 # Photo submissions by email
 
-`/submit-items` is a standalone, noindex page. Public links are held until the business recipient is verified (see launch status below). Consignors provide a name, phone and/or email, optional notes, consent, and 1–30 photos. JPG, PNG, WebP, and HEIC/HEIF are supported. The browser tries native decoding first, then lazily loads the pinned, self-hosted HEIC decoder when needed. Original photos are never sent to an external conversion service. RAW photos and videos are not supported.
+`/submit-items` is a public, indexable standalone page, linked from the homepage and included in the sitemap. Texting stays the primary option; the online form is a convenient alternative. Consignors provide a name, phone and/or email, optional notes, consent, and 1–30 photos. JPG, PNG, WebP, and HEIC/HEIF are supported. The browser tries native decoding first, then lazily loads the pinned, self-hosted HEIC decoder when needed. Original photos are never sent to an external conversion service. RAW photos and videos are not supported.
 
 The consignor sees a thank-you once the complete batch has been durably saved. The store receives **one private email** titled `Web Submission #… - Name - … Photos`. Its compact phone layout puts numbered photos beside item names, green/yellow/red dots, and brief AI screening notes. Items sharing a primary photo appear together; each primary photo stays beside its own descriptions. Additional views and unassigned photos are retained without repeating images. Known brands and meaningful flaws appear when relevant. The fuller structured assessment stays in private storage. There is no staff login or dashboard. The AI never sends a consignor reply.
 
@@ -19,8 +19,8 @@ The report sets `Reply-To` to the consignor's validated email address, so the st
 - Private R2 bucket: `changing-places-intake-photos`, binding `INTAKE_PHOTOS`. Do not enable public access.
 - Queue: `changing-places-intake`, binding `INTAKE_QUEUE`. Consumer concurrency and batch size are 1 to bound memory use.
 - Email binding `INTAKE_EMAIL` restricts delivery to `connorcr37+cpcs@gmail.com`. This destination is verified, and Email Routing is active on `changing-places-dsm.com`. The recipient confirmed that both photos display in the corrected test email on September 5, 2026. Send JPEG bytes to the Worker binding; pre-encoded base64 strings caused unreadable images.
-- `INTAKE_BCC_EMAIL` is the monitoring recipient. BCC is omitted when it matches To to avoid duplicate copies during the pilot. At public launch, To changes to `ChangingPlacesDSM@gmail.com`, with Connor remaining BCC. `INTAKE_ALERT_EMAIL` is a separate, restricted send binding for operational alerts to `INTAKE_ALERT_TO` (`connorcr37+cpcs@gmail.com`).
-- `INTAKE_ENABLED=true` opens the unlinked pilot form. Set it to `false` to pause new submissions.
+- `INTAKE_BCC_EMAIL` is the monitoring recipient. BCC is omitted while it matches To, so the current production reports reach Connor once. After a future switch to the verified business inbox, Connor remains BCC. `INTAKE_ALERT_EMAIL` is a separate, restricted send binding for operational alerts to `INTAKE_ALERT_TO` (`connorcr37+cpcs@gmail.com`).
+- `INTAKE_ENABLED=true` opens the public form. Set it to `false` to pause new submissions.
 - Model defaults to `gpt-5.6-luna` with low text verbosity and is configurable through `OPENAI_INTAKE_MODEL`.
 
 ## Processing and privacy
@@ -67,10 +67,14 @@ WHERE submitted_at IS NOT NULL AND notification_sent = 0;
 
 After fixing email configuration, reset `notification_attempts=0`, `processing_until=0`, and `updated_at=0` for only the affected submission IDs. The next scheduled run resends their emails using the saved assessments. Do not replay already-delivered submissions. Verify `notification_sent=1` after the retry.
 
-## Public launch status — September 5, 2026
+## Production routing — September 6, 2026
 
-The business address `ChangingPlacesDSM@gmail.com` has been sent a Cloudflare verification email but is still unverified. The user does not control that mailbox. Keep To set to Connor until verification is confirmed; public links remain unpublished.
+The user authorized public launch with all submission reports sent to the verified `connorcr37+cpcs@gmail.com` address. This is the current production destination. Because BCC is configured to the same address, it is omitted and only one copy is sent. Operational alerts also go to Connor.
 
-`launch/intake-public.patch` prepares the approved, small homepage/selling-page links and switches the report recipient to the business with Connor BCC. It retains text/email alternatives and makes no layout changes. Once Cloudflare confirms verification, apply the patch, run the site checks, deploy through GitHub, and submit a fresh form to verify business delivery plus BCC. Do not apply while the store cannot receive submissions. Keep the form out of the sitemap and header/footer navigation.
+The homepage's highlighted “Ready to consign?” line links the form as an alternative after texting, and its outlined **Use Our Online Form** button follows the filled **Text Photos to Get Started** button. The former **See the Full Selling Guide** button is removed from that area. No other texting links are replaced.
+
+The user will switch the default to `ChangingPlacesDSM@gmail.com` after the account owner verifies that address with Cloudflare. At that point update `INTAKE_NOTIFICATION_EMAIL` and add the verified business address to the `INTAKE_EMAIL.allowed_destination_addresses` binding in `wrangler.jsonc`; retain Connor's BCC until instructed otherwise. Deploy and send a fresh test. The former launch patch has been removed because it would have made texting secondary and changed routing prematurely.
+
+The public form has a canonical URL and social metadata and is included in `sitemap.xml`; neither its HTML nor its HTTP headers blocks indexing. The texting handoff page and private intake API responses remain noindex. Private R2 photos and submission records have no public read endpoint.
 
 The HEIC decoder and corresponding source/license materials are pinned in `vendor/heic-to/1.5.2/`; see its README before updating. JPEG/PNG/WebP submissions do not download the decoder. No `unsafe-eval` CSP allowance is used.
