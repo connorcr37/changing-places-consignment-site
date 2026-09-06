@@ -14,8 +14,10 @@
     "FACEBOOK_PAGE_ID": "2057064944306840",
     "INTAKE_ENABLED": "true",
     "INTAKE_NOTIFICATION_EMAIL": "connorcr37+cpcs@gmail.com",
+    "INTAKE_BCC_EMAIL": "connorcr37+cpcs@gmail.com",
+    "INTAKE_ALERT_TO": "connorcr37+cpcs@gmail.com",
     "INTAKE_EMAIL_FROM": "intake@changing-places-dsm.com",
-    "INTAKE_DAILY_LIMIT": "20",
+    "INTAKE_DAILY_LIMIT": "50",
     "OPENAI_INTAKE_MODEL": "gpt-5.6-luna"
   },
   "d1_databases": [{
@@ -29,7 +31,10 @@
     "producers": [{ "binding": "INTAKE_QUEUE", "queue": "changing-places-intake" }],
     "consumers": [{ "queue": "changing-places-intake", "max_batch_size": 1, "max_batch_timeout": 5, "max_retries": 4, "max_concurrency": 1 }]
   },
-  "send_email": [{ "name": "INTAKE_EMAIL", "destination_address": "connorcr37+cpcs@gmail.com" }],
+  "send_email": [
+    { "name": "INTAKE_EMAIL", "allowed_destination_addresses": ["connorcr37+cpcs@gmail.com"] },
+    { "name": "INTAKE_ALERT_EMAIL", "destination_address": "connorcr37+cpcs@gmail.com" }
+  ],
   "triggers": { "crons": ["*/5 * * * *"] },
   "secrets": {
     "required": ["FACEBOOK_PAGE_ACCESS_TOKEN", "OPENAI_API_KEY"]

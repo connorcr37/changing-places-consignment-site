@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { handleIntake, hash, processIntake, recoverIntake } from '../worker/intake.mjs';
 import { buildReviewEmail, sendReviewEmail } from '../worker/intake-email.mjs';
@@ -12,10 +12,14 @@ const origin = 'https://changing-places-dsm.com';
 const now = () => Math.floor(Date.now() / 1000);
 const sample = () => ({ approximate_item_count: 1, overview: 'One chair in two views.', grouping_uncertainty: '', items: [{ item: 'Chair', quantity: 1, category: 'Seating', likely_brand: 'Unknown / label needed', photo_numbers: [1], visible_condition: 'Light surface wear', obvious_flaws: ['Small scratch'], recommendation: 'needs_review', assessment: 'Clean-looking chair with a small scratch on the seat.' }] });
 function setup() {
-  const db = new DatabaseSync(':memory:'); db.exec('PRAGMA foreign_keys=ON'); db.exec(readFileSync(new URL('../migrations/intake/0001_intake.sql', import.meta.url), 'utf8'));
-  const objects = new Map(), messages = [], emails = [], pending = [];
+  const db = new DatabaseSync(':memory:'); db.exec('PRAGMA foreign_keys=ON');
+  const migrations = new URL('../migrations/intake/', import.meta.url);
+  for (const file of readdirSync(migrations).filter(file => file.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(file, migrations), 'utf8'));
+  const objects = new Map(), messages = [], emails = [], alerts = [], pending = [];
   const prepare = sql => ({ bind: (...args) => ({ first: async () => db.prepare(sql).get(...args) || null, all: async () => ({ results: db.prepare(sql).all(...args) }), run: async () => db.prepare(sql).run(...args) }) });
   const env = { OPENAI_API_KEY: 'test-key', INTAKE_ENABLED: 'true', INTAKE_NOTIFICATION_EMAIL: 'connorcr37+cpcs@gmail.com', INTAKE_EMAIL_FROM: 'intake@changing-places-dsm.com', INTAKE_DB: { prepare, batch: async stmts => Promise.all(stmts.map(stmt => stmt.run())) }, INTAKE_PHOTOS: { put: async (key, value) => objects.set(key, new Uint8Array(value)), get: async key => { const value = objects.get(key); return value ? { size: value.length, arrayBuffer: async () => value.buffer, body: value } : null; }, delete: async keys => { for (const key of Array.isArray(keys) ? keys : [keys]) objects.delete(key); } }, INTAKE_QUEUE: { send: async message => messages.push(message) }, INTAKE_EMAIL: { send: async message => emails.push(message) } };
+  env.INTAKE_ALERT_TO = 'connorcr37+cpcs@gmail.com';
+  env.INTAKE_ALERT_EMAIL = { send: async message => alerts.push(message) };
   const request = async (path, method = 'GET', body, extra = {}) => {
     const response = await handleIntake(new Request(origin + '/api/intake' + path, { method, headers: { Origin: origin, ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}), ...extra }, ...(body ? { body: body instanceof FormData ? body : JSON.stringify(body) } : {}) }), env, { waitUntil: p => pending.push(p) });
     return response;
@@ -24,7 +28,7 @@ function setup() {
   const photo = new Uint8Array(120); photo.set([255, 216, 255]);
   const upload = async (info, number) => { const form = new FormData(); form.append('photo', new Blob([photo], { type: 'image/jpeg' }), 'photo.jpg'); form.append('preview', new Blob([photo], { type: 'image/jpeg' }), 'preview.jpg'); return request(`/submissions/${info.uploadId}/photos/${number}`, 'PUT', form, { Authorization: `Bearer ${info.uploadToken}` }); };
   const complete = async info => request(`/submissions/${info.uploadId}/complete`, 'POST', null, { Authorization: `Bearer ${info.uploadToken}` });
-  return { db, env, objects, emails, messages, request, start, upload, complete, pending };
+  return { db, env, objects, emails, alerts, messages, request, start, upload, complete, pending };
 }
 
 test('there is no public inbox, staff dashboard, photo download, or assessment endpoint', async () => {
@@ -33,6 +37,58 @@ test('there is no public inbox, staff dashboard, photo download, or assessment e
     const response = await s.request(path, 'GET', null, { Authorization: `Bearer ${info.uploadToken}` }); assert.equal(response.status, 404); assert.equal(response.headers.get('cache-control'), 'no-store');
   }
   assert.equal((await s.request('/staff/submissions/1', 'DELETE')).status, 404);
+});
+
+test('reports BCC the monitor once while preserving the consignor Reply-To', () => {
+  const env = { INTAKE_NOTIFICATION_EMAIL: 'ChangingPlacesDSM@gmail.com', INTAKE_BCC_EMAIL: 'connorcr37+cpcs@gmail.com' };
+  const row = { id: 1, name: 'Mary', email: 'mary@example.com', photo_count: 1 };
+  const mail = buildReviewEmail(env, row, sample(), []);
+  assert.deepEqual(mail.bcc, ['connorcr37+cpcs@gmail.com']);
+  assert.equal(mail.to, 'ChangingPlacesDSM@gmail.com'); assert.equal(mail.replyTo, row.email);
+  assert.equal(buildReviewEmail({ ...env, INTAKE_NOTIFICATION_EMAIL: env.INTAKE_BCC_EMAIL }, row, sample(), []).bcc, undefined);
+});
+
+test('hourly and daily limits return their actual reset time and allow idempotent retries', async () => {
+  const s = setup(); const first = await s.start(); await s.start(); await s.start();
+  assert.equal((await s.request('/submissions', 'POST', first)).status, 200);
+  const newInfo = () => ({ ...first, uploadId: crypto.randomUUID(), uploadToken: crypto.randomUUID() + crypto.randomUUID() });
+  const hourly = await s.request('/submissions', 'POST', newInfo());
+  assert.equal(hourly.status, 429);
+  const hourlyBody = await hourly.json();
+  assert.equal(hourlyBody.retryAt, (Math.floor(now() / 3600) + 1) * 3600);
+  assert.ok(Math.abs(Number(hourly.headers.get('Retry-After')) - (hourlyBody.retryAt - now())) <= 1);
+  s.db.prepare('INSERT INTO intake_limits(key,count,expires_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET count=excluded.count').run(`daily-intake:${Math.floor(now() / 86400)}`, 50, now() + 86400);
+  const daily = await s.request('/submissions', 'POST', newInfo(), { 'CF-Connecting-IP': '192.0.2.10' });
+  assert.equal(daily.status, 429);
+  assert.equal((await daily.json()).retryAt, (Math.floor(now() / 86400) + 1) * 86400);
+});
+
+test('exhausted report retries send one monitoring alert, never a consignor message', async () => {
+  const s = setup(); const info = await s.start(); await s.upload(info, 1); await s.complete(info);
+  const deps = { analyze: async () => sample(), mail: async () => { throw Error('delivery failed'); } };
+  for (let i = 0; i < 5; i++) await assert.rejects(processIntake(s.env, info.uploadId, deps));
+  assert.equal(s.alerts.length, 1); assert.equal(s.alerts[0].to, 'connorcr37+cpcs@gmail.com');
+  assert.match(s.alerts[0].subject, /submission #1/);
+  assert.equal(s.alerts[0].replyTo, undefined);
+  await processIntake(s.env, info.uploadId, deps); await recoverIntake(s.env);
+  assert.equal(s.alerts.length, 1);
+});
+
+test('monitoring alerts survive email outages and expire with the submission', async () => {
+  const s = setup(); const info = await s.start(); await s.upload(info, 1); await s.complete(info);
+  s.db.prepare("UPDATE intake_submissions SET state='ready',notification_attempts=5").run();
+  const send = s.env.INTAKE_ALERT_EMAIL.send;
+  s.env.INTAKE_ALERT_EMAIL.send = async () => { throw Error('provider unavailable'); };
+  await recoverIntake(s.env);
+  assert.equal(s.alerts.length, 0);
+  assert.ok(s.db.prepare('SELECT alert_after FROM intake_submissions').get().alert_after > now());
+  s.env.INTAKE_ALERT_EMAIL.send = send;
+  await recoverIntake(s.env); assert.equal(s.alerts.length, 0, 'Respect alert backoff');
+  s.db.prepare('UPDATE intake_submissions SET alert_after=0').run();
+  await recoverIntake(s.env); assert.equal(s.alerts.length, 1);
+  s.db.prepare('UPDATE intake_submissions SET submitted_at=?,alert_sent=0,alert_after=0').run(now() - 30 * 86400);
+  await recoverIntake(s.env);
+  assert.equal(s.alerts.length, 1); assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_submissions').get().n, 0);
 });
 test('cross-origin mutations fail closed', async () => {
   const s = setup();

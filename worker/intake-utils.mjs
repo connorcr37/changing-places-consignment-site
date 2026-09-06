@@ -1,3 +1,4 @@
+export const INTAKE_RETENTION_SECONDS = 30 * 86400;
 export const photoKey = (uploadId, ordinal, preview = false) => `${uploadId}/${ordinal}${preview ? '-email' : ''}.jpg`;
 
 export async function readBoundedBody(source, maxBytes) {

@@ -10,7 +10,7 @@
   <link rel="icon" href="/images/favicon/favicon.ico" />
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/intake.css?v=20260905-audit" />
-  <script src="/intake-form.js?v=20260905-audit" type="module"></script>
+  <script src="/intake-form.js?v=20260905-launch" type="module"></script>
 </head>
 <body class="intake-page">
   <a class="skip-link" href="#main-content">Skip to form</a>
@@ -59,8 +59,8 @@
             <p class="drop-title">Make room for something new.</p>
             <p>Drag your photos here, or choose them below.</p>
             <label class="intake-button secondary file-picker" for="photo-input">Choose photos</label>
-            <input id="photo-input" class="accessible-file" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="photo-help" />
-            <p id="photo-help" class="small-text">Up to 30 photos · JPG, PNG, or WebP · 20 MB per photo</p>
+            <input id="photo-input" class="accessible-file" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" multiple aria-describedby="photo-help" />
+            <p id="photo-help" class="small-text">Up to 30 photos · JPG, PNG, WebP, or HEIC/HEIF · 20 MB per photo</p>
           </div>
           <div class="photo-counter"><span id="photo-count" aria-live="polite">0 of 30 photos</span><button id="clear-photos" class="text-button" type="button" hidden>Clear all</button></div>
           <div id="photo-previews" class="photo-grid"></div>
@@ -74,6 +74,7 @@
         <p id="form-error" class="form-error" role="alert" hidden></p>
         <button id="submit-button" class="intake-button submit-button" type="submit">Send for review <span aria-hidden="true">→</span></button>
         <p class="submit-caption">We’ll be in touch after we’ve had a chance to look.</p>
+        <p class="submit-caption">Prefer another way? <a href="sms:6202558901">Text photos to 620-255-8901</a> or <a href="mailto:ChangingPlacesDSM@gmail.com">email the shop</a>.</p>
         <noscript><p class="form-error">Please enable JavaScript to upload photos, or contact the shop directly.</p></noscript>
       </form>
     </div>

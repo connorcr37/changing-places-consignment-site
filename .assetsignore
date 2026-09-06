@@ -16,3 +16,8 @@
 !/tv/
 !/tv/**
 
+
+!/vendor/
+!/vendor/heic-to/
+!/vendor/heic-to/1.5.2/
+!/vendor/heic-to/1.5.2/**

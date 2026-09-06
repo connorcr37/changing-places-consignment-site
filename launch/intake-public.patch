@@ -1,0 +1,128 @@
+--- a/index.html
++++ b/index.html
+@@ -362,9 +362,9 @@
+           <div class="consign-copy">
+             <div class="consign-copy-section">
+               <h3>Getting Started</h3>
+-              <p>Thinking about consigning? It's easy. Text photos of your gently used furniture or home decor to <a href="sms:6202558901" class="portal-link">620-255-8901</a>. Once we've reviewed your items, we'll let you know what we're able to accept and schedule a drop-off during store hours. Items should arrive clean, in good condition, and ready for the sales floor — free of dirt, dust, stains, odors, and pet hair.</p>
++              <p>Thinking about consigning? It's easy. <a href="/submit-items" class="portal-link">Use our photo form</a> to share your gently used furniture or home decor. Once we've reviewed your items, we'll let you know what we're able to accept and schedule a drop-off during store hours. Items should arrive clean, in good condition, and ready for the sales floor — free of dirt, dust, stains, odors, and pet hair.</p>
+               <p>Need help moving? We're happy to recommend a trusted full-service mover for a seamless experience.</p>
+-              <p class="portal-note"><strong>Ready to consign?</strong> Text photos to <a href="sms:6202558901" class="portal-link">620-255-8901</a> for fastest approval, or email <a href="mailto:ChangingPlacesDSM@gmail.com" class="portal-link">ChangingPlacesDSM@gmail.com</a>.</p>
++              <p class="portal-note"><strong>Ready to consign?</strong> <a href="/submit-items" class="portal-link">Use our photo form</a>, text <a href="sms:6202558901" class="portal-link">620-255-8901</a>, or email <a href="mailto:ChangingPlacesDSM@gmail.com" class="portal-link">ChangingPlacesDSM@gmail.com</a>.</p>
+             </div>
+ 
+             <div class="consign-copy-section">
+@@ -376,7 +376,7 @@
+             </div>
+           </div>
+           <div class="shopper-actions" aria-label="Start selling furniture">
+-            <a class="button-link button-link--primary" href="sms:6202558901">Text Photos to Get Started</a>
++            <a class="button-link button-link--primary" href="/submit-items">Submit Photos for Review</a>
+             <a class="button-link button-link--secondary" href="/sell-furniture">See the Full Selling Guide</a>
+           </div>
+         </div>
+--- a/sell-furniture.html
++++ b/sell-furniture.html
+@@ -10,7 +10,7 @@
+     <link rel="canonical" href="https://changing-places-dsm.com/sell-furniture" />
+ 
+     <meta property="og:title" content="Sell Furniture Through Consignment | Changing Places" />
+-    <meta property="og:description" content="Sell quality furniture without managing listings or buyers. Text photos first; our team handles pricing, display, questions, and the sale." />
++    <meta property="og:description" content="Sell quality furniture without managing listings or buyers. Send photos first; our team handles pricing, display, questions, and the sale." />
+     <meta property="og:image" content="https://changing-places-dsm.com/images/seller-resources-og.png" />
+     <meta property="og:image:alt" content="Sell your furniture without turning it into a second job, with a curated chair and side table" />
+     <meta property="og:image:width" content="1200" />
+@@ -22,7 +22,7 @@
+ 
+     <meta name="twitter:card" content="summary_large_image" />
+     <meta name="twitter:title" content="Sell Furniture Through Consignment | Changing Places" />
+-    <meta name="twitter:description" content="Text photos first, then let our team handle pricing, display, shopper questions, and the sale." />
++    <meta name="twitter:description" content="Send photos first, then let our team handle pricing, display, shopper questions, and the sale." />
+     <meta name="twitter:image" content="https://changing-places-dsm.com/images/seller-resources-og.png" />
+     <meta name="twitter:image:alt" content="Sell your furniture without turning it into a second job, with a curated chair and side table" />
+ 
+@@ -157,7 +157,7 @@
+             <h1>Sell Your Furniture Without Turning It Into a Second Job</h1>
+             <p class="resource-lede">Letting go of quality furniture should feel simple. Send us a few photos first; if your pieces are a good fit, we'll arrange a time for you to bring them in. We handle the pricing, presentation, shopper questions, and sale from there.</p>
+             <div class="hero-actions">
+-              <a class="button-link button-link--primary" href="sms:6202558901">Text photos to get started</a>
++              <a class="button-link button-link--primary" href="/submit-items">Submit photos for review</a>
+               <a class="button-link button-link--secondary" href="#how-it-works">See how it works</a>
+               <a class="button-link button-link--secondary" href="#seller-resources">Find your guide</a>
+             </div>
+@@ -169,7 +169,7 @@
+         <div class="container">
+           <div class="fact">
+             <strong>Photo review first</strong>
+-            <span>Text us photos before bringing anything to our showroom.</span>
++            <span>Send us photos before bringing anything to our showroom.</span>
+           </div>
+           <div class="fact">
+             <strong>Staffed showroom</strong>
+@@ -215,12 +215,12 @@
+           <div class="section-heading">
+             <p class="eyebrow">The Process</p>
+             <h2>From Photos to Payout</h2>
+-            <p>Getting started takes one text. We'll confirm what may work before you make plans to move anything.</p>
++            <p>Start by sending a few photos. We'll confirm what may work before you make plans to move anything.</p>
+           </div>
+           <div class="process-grid">
+             <article class="process-step">
+-              <h3>Text us a few photos</h3>
+-              <p>Send clear photos of your furniture or home decor to <a href="sms:6202558901">620-255-8901</a>. A full view and a quick photo of any wear are a great start.</p>
++              <h3>Send us a few photos</h3>
++              <p>Send clear photos of your furniture or home decor through <a href="/submit-items">our photo form</a>, or text <a href="sms:6202558901">620-255-8901</a>. A full view and a quick photo of any wear are a great start.</p>
+             </article>
+             <article class="process-step">
+               <h3>Hear what may be a fit</h3>
+@@ -277,7 +277,7 @@
+             </article>
+             <article class="resource-card">
+               <h3>Time on the floor</h3>
+-              <p>Items are displayed for up to four months, though most sell sooner. If you have a firm move-out date, tell us when you text.</p>
++              <p>Items are displayed for up to four months, though most sell sooner. If you have a firm move-out date, mention it with your photos.</p>
+             </article>
+             <article class="resource-card">
+               <h3>Payouts and unsold items</h3>
+@@ -371,7 +371,7 @@
+               <div class="faq-item">
+                 <button class="faq-question" aria-expanded="false" aria-controls="hub-faq-approval">Can I bring furniture in without sending photos?</button>
+                 <div class="faq-answer" id="hub-faq-approval" hidden>
+-                  <p>Text us at <a href="sms:6202558901">620-255-8901</a> first. We'll let you know what may be a fit and arrange a time before you move anything.</p>
++                  <p><a href="/submit-items">Submit photos</a> or text <a href="sms:6202558901">620-255-8901</a> first. We'll let you know what may be a fit and arrange a time before you move anything.</p>
+                 </div>
+               </div>
+               <div class="faq-item">
+@@ -407,9 +407,9 @@
+         <div class="container">
+           <p class="eyebrow">Start With a Photo Review</p>
+             <h2>Send Us a Few Photos</h2>
+-            <p>Texting clear, current photos is the easiest way to begin. We'll let you know what may work before you spend time moving anything.</p>
+-          <p class="secondary-contact">We work with consignors across Greater Des Moines and Central Iowa. Have a large group or an entire house? Say so in your text. We may be able to arrange a quick look instead of asking you to send hundreds of photos. Approved drop-offs are arranged at our Urbandale showroom.</p>
+-          <a class="button-link button-link--primary" href="sms:6202558901">Text us at 620-255-8901</a>
++            <p>Sending clear, current photos is the easiest way to begin. We'll let you know what may work before you spend time moving anything.</p>
++          <p class="secondary-contact">We work with consignors across Greater Des Moines and Central Iowa. Have a large group or an entire house? Mention it with your photos. We may be able to arrange a quick look instead of asking you to send hundreds of photos. Approved drop-offs are arranged at our Urbandale showroom.</p>
++          <a class="button-link button-link--primary" href="/submit-items">Submit photos for review</a>
+         </div>
+       </section>
+     </main>
+--- a/wrangler.jsonc
++++ b/wrangler.jsonc
+@@ -13,7 +13,7 @@
+     "FACEBOOK_GRAPH_VERSION": "v26.0",
+     "FACEBOOK_PAGE_ID": "2057064944306840",
+     "INTAKE_ENABLED": "true",
+-    "INTAKE_NOTIFICATION_EMAIL": "connorcr37+cpcs@gmail.com",
++    "INTAKE_NOTIFICATION_EMAIL": "ChangingPlacesDSM@gmail.com",
+     "INTAKE_BCC_EMAIL": "connorcr37+cpcs@gmail.com",
+     "INTAKE_ALERT_TO": "connorcr37+cpcs@gmail.com",
+     "INTAKE_EMAIL_FROM": "intake@changing-places-dsm.com",
+@@ -32,7 +32,7 @@
+     "consumers": [{ "queue": "changing-places-intake", "max_batch_size": 1, "max_batch_timeout": 5, "max_retries": 4, "max_concurrency": 1 }]
+   },
+   "send_email": [
+-    { "name": "INTAKE_EMAIL", "allowed_destination_addresses": ["connorcr37+cpcs@gmail.com"] },
++    { "name": "INTAKE_EMAIL", "allowed_destination_addresses": ["ChangingPlacesDSM@gmail.com", "connorcr37+cpcs@gmail.com"] },
+     { "name": "INTAKE_ALERT_EMAIL", "destination_address": "connorcr37+cpcs@gmail.com" }
+   ],
+   "triggers": { "crons": ["*/5 * * * *"] },

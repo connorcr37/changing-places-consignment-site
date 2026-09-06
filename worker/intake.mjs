@@ -1,12 +1,12 @@
 import { analyzeSubmission } from './intake-ai.mjs';
-import { photoKey, readBoundedBody } from './intake-utils.mjs';
+import { photoKey, readBoundedBody, INTAKE_RETENTION_SECONDS as RETENTION_SECONDS } from './intake-utils.mjs';
 import { INTAKE_LIMITS, isValidEmail, isValidPhone } from '../intake-shared.js';
 import { sendReviewEmail } from './intake-email.mjs';
+import { alertDeliveryFailure } from './intake-alerts.mjs';
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 const tokenPattern = /^[a-f0-9-]{72}$/i;
 const DAY = 86400;
-const RETENTION_SECONDS = 30 * DAY;
 const UPLOAD_SESSION_SECONDS = 2 * 3600;
 const intakeEnabled = env => env.INTAKE_ENABLED === 'true' && Boolean(env.INTAKE_DB && env.OPENAI_API_KEY && env.INTAKE_EMAIL && env.INTAKE_QUEUE && env.INTAKE_PHOTOS);
 const isExpired = row => row.submitted_at != null && row.submitted_at <= now() - RETENTION_SECONDS;
@@ -42,7 +42,11 @@ export function validateContact(body) {
 async function limit(env, key, maximum, seconds) {
   const bucket = Math.floor(now() / seconds);
   const row = await query(env, 'INSERT INTO intake_limits(key,count,expires_at) VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1 RETURNING count', `${key}:${bucket}`, (bucket + 1) * seconds).first();
-  if (row.count > maximum) fail(429, 'Too many attempts. Please try again later.');
+  if (row.count > maximum) {
+    const error = new IntakeError(429, 'Please try again later, or text your photos to 620-255-8901 or email ChangingPlacesDSM@gmail.com.');
+    error.retryAt = (bucket + 1) * seconds;
+    throw error;
+  }
 }
 async function authorizedUpload(request, env, id) {
   const credential = request.headers.get('Authorization')?.replace(/^Bearer /, '') || '';
@@ -63,7 +67,7 @@ async function startUpload(request, env) {
     return json({ uploadId: body.uploadId });
   }
   await limit(env, `upload:${await hash(request.headers.get('CF-Connecting-IP') || 'local')}`, 3, 3600);
-  await limit(env, 'daily-intake', Number(env.INTAKE_DAILY_LIMIT) || 20, 86400);
+  await limit(env, 'daily-intake', Number(env.INTAKE_DAILY_LIMIT) || 50, 86400);
   await query(env, 'INSERT INTO intake_submissions(upload_id,token_hash,name,phone,email,notes,photo_count,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(upload_id) DO NOTHING', body.uploadId, digest, contact.name, contact.phone, contact.email, contact.notes, body.photoCount, now(), now()).run();
   const created = await query(env, 'SELECT token_hash FROM intake_submissions WHERE upload_id=?', body.uploadId).first();
   if (created?.token_hash !== digest) fail(409, 'Please reload the form and try again.');
@@ -120,7 +124,7 @@ export async function handleIntake(request, env, ctx) {
     }
     return json({ error: 'Not found.' }, 404);
   } catch (error) {
-    if (error instanceof IntakeError) return json({ error: error.message }, error.status, error.status === 429 ? { 'Retry-After': '900' } : {});
+    if (error instanceof IntakeError) return json({ error: error.message, ...(error.retryAt ? { retryAt: error.retryAt } : {}) }, error.status, error.retryAt ? { 'Retry-After': String(Math.max(1, error.retryAt - now())) } : {});
     safeLog('intake_request_failed');
     return json({ error: 'Something went wrong. Your photos may already be saved; please try again.' }, 503);
   }
@@ -144,7 +148,8 @@ export async function processIntake(env, uploadId, { analyze = analyzeSubmission
     }
   }
   row = await query(env, 'SELECT * FROM intake_submissions WHERE upload_id=?', uploadId).first();
-  if (!row || isExpired(row) || !['ready', 'needs_review'].includes(row.state) || row.notification_sent || row.notification_attempts >= 5) return;
+  if (!row || isExpired(row) || !['ready', 'needs_review'].includes(row.state) || row.notification_sent) return;
+  if (row.notification_attempts >= 5) { await alertDeliveryFailure(env, uploadId); return; }
   // Lease notifications too: queue delivery is at least once.
   const claim = await query(env, "UPDATE intake_submissions SET processing_until=?,notification_attempts=notification_attempts+1 WHERE upload_id=? AND state IN ('ready','needs_review') AND notification_sent=0 AND notification_attempts<5 AND processing_until<? RETURNING id", now() + 120, uploadId, now()).first();
   if (!claim) return;
@@ -155,6 +160,7 @@ export async function processIntake(env, uploadId, { analyze = analyzeSubmission
   } catch {
     await query(env, 'UPDATE intake_submissions SET processing_until=0,updated_at=? WHERE upload_id=?', now(), uploadId).run();
     safeLog('intake_notification_failed', row.id);
+    if (row.notification_attempts === 4) await alertDeliveryFailure(env, uploadId);
     throw new Error('retry_notification');
   }
 }
@@ -180,6 +186,11 @@ export async function recoverIntake(env) {
     catch { safeLog('intake_deletion_failed', row.id); }
   }
   await query(env, 'DELETE FROM intake_limits WHERE expires_at<?', now()).run();
+  const alerts = await query(env, "SELECT upload_id FROM intake_submissions WHERE state IN ('ready','needs_review') AND notification_sent=0 AND notification_attempts>=5 AND alert_sent=0 AND alert_after<=? AND submitted_at>? LIMIT 20", now(), now() - RETENTION_SECONDS).all();
+  for (const row of alerts.results) {
+    try { await alertDeliveryFailure(env, row.upload_id); }
+    catch { safeLog('intake_alert_recovery_failed'); }
+  }
   if (!env.INTAKE_QUEUE) return;
   await query(env, "UPDATE intake_submissions SET state='needs_review',processing_until=0 WHERE state IN ('submitted','processing') AND analysis_attempts>=3 AND processing_until<?", now()).run();
   const pending = await query(env, "SELECT id,upload_id FROM intake_submissions WHERE submitted_at>? AND processing_until<? AND updated_at<? AND (state IN ('submitted','processing') OR (state IN ('ready','needs_review') AND notification_sent=0 AND notification_attempts<5)) LIMIT 20", now() - RETENTION_SECONDS, now(), now() - 120).all();

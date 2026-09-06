@@ -27,10 +27,13 @@ node scripts/audit-site.mjs
 node --check site.js
 node --check game.js
 node --check worker/index.mjs
-node --test tests/facebook-feed.test.mjs
+node --test tests/facebook-feed.test.mjs tests/intake.test.mjs
 ```
 
 The site audit verifies public-page metadata, canonical and social URLs, JSON-LD, sitemap coverage, internal routes and fragments, local assets, unique IDs, ARIA references, image dimensions, iframe titles, safe new-tab links, and common encoding problems.
+
+Photo intake setup, browser checks, delivery recovery, and the pending public-launch
+steps are documented in [INTAKE.md](INTAKE.md).
 
 ## Automatic Facebook Live feed
 

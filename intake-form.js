@@ -1,4 +1,5 @@
 import { INTAKE_LIMITS, isValidEmail, isValidPhone } from './intake-shared.js';
+import { openPhoto } from './intake-photo.js';
 
 (() => {
   'use strict';
@@ -19,7 +20,14 @@ import { INTAKE_LIMITS, isValidEmail, isValidPhone } from './intake-shared.js';
   async function api(path, options = {}) {
     const response = await fetch(path, { ...options, signal: AbortSignal.timeout(90000) });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) { const error = new Error(data.error || 'We could not send your photos. Please try again.'); error.status = response.status; throw error; }
+    if (!response.ok) {
+      let message = data.error || 'We could not send your photos. Please try again.';
+      if (response.status === 429 && Number.isFinite(data.retryAt)) {
+        const retry = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(new Date(data.retryAt * 1000));
+        message = `Please try again after ${retry}. You can also send your photos directly to the shop using the contact options below.`;
+      }
+      const error = new Error(message); error.status = response.status; throw error;
+    }
     return data;
   }
   function renderPhotos() {
@@ -36,10 +44,8 @@ import { INTAKE_LIMITS, isValidEmail, isValidPhone } from './intake-shared.js';
     $('clear-photos').hidden = !files.length;
   }
   async function preparePhoto(file) {
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error(`${file.name}: please use JPG, PNG, or WebP. On an iPhone, export HEIC photos as JPEG first.`);
     if (file.size > INTAKE_LIMITS.maxSourceBytes) throw new Error(`${file.name}: please choose a photo smaller than 20 MB.`);
-    let bitmap;
-    try { bitmap = await createImageBitmap(file); } catch { throw new Error(`${file.name}: this photo could not be opened. Please choose another image.`); }
+    const bitmap = await openPhoto(file);
     try {
       const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
       const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale));
@@ -117,7 +123,7 @@ import { INTAKE_LIMITS, isValidEmail, isValidPhone } from './intake-shared.js';
       session = null; busy = false; files.length = 0;
       $('intake-content').hidden = true; $('intake-success').hidden = false; $('intake-success').focus(); window.scrollTo({ top: 0, behavior: 'instant' });
     } catch (error) {
-      if ([400, 401, 409, 413, 415].includes(error.status)) { session = null; files.forEach(photo => { photo.uploaded = false; }); }
+      if ([400, 401, 409, 413, 415, 429].includes(error.status)) { session = null; files.forEach(photo => { photo.uploaded = false; }); }
       showError('form-error', `${error.name === 'TimeoutError' || error.name === 'TypeError' ? 'The connection was interrupted. Your selected photos are still here.' : error.message} ${session ? 'Use Retry below to continue. Please keep this page open.' : ''}`);
       lock(false); $('form-error').scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
