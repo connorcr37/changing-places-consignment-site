@@ -6,6 +6,7 @@ const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, "..");
 const productionOrigin = "https://changing-places-dsm.com";
 const excludedFromSearch = new Set([
+  "404.html",
   "text-consignor.html",
   "couch-dash.html",
   "tv/index.html",
@@ -349,6 +350,9 @@ if (wrangler) {
   }
   if (wrangler.assets?.html_handling !== "drop-trailing-slash") {
     issues.push('wrangler.jsonc: expected html_handling "drop-trailing-slash"');
+  }
+  if (wrangler.assets?.not_found_handling !== "404-page" || !pages.has("404.html")) {
+    issues.push('wrangler.jsonc: custom 404 handling requires "404-page" and 404.html');
   }
   if (!wrangler.secrets?.required?.includes("FACEBOOK_PAGE_ACCESS_TOKEN")) {
     issues.push('wrangler.jsonc: Facebook Page access token must be a required secret');

@@ -296,7 +296,19 @@
   let collectibles = [];
   let dust = [];
   let wallHelpers = [];
-  let best = Number(localStorage.getItem("couchDashBest") || 0);
+  // Storage can be blocked or full; gameplay keeps its state in memory.
+  function readPreference(key) {
+    try { return window.localStorage.getItem(key); }
+    catch { return null; }
+  }
+
+  function writePreference(key, value) {
+    try { window.localStorage.setItem(key, value); }
+    catch { /* Saving preferences is optional. */ }
+  }
+
+  const savedBest = Number(readPreference("couchDashBest"));
+  let best = Number.isSafeInteger(savedBest) && savedBest >= 0 ? savedBest : 0;
   const player = { x: 112, y: ground - 88, w: 190, h: 88, vy: 0, grounded: true };
   const playerCollisionBox = { x: 0, y: 0, w: 0, h: 0 };
   const clearanceCollisionBox = { x: 0, y: 0, w: 0, h: 0 };
@@ -304,7 +316,7 @@
   const musicSilence = 0.00001;
   const musicScheduleAhead = 0.34;
   const musicPumpInterval = 150;
-  let soundEnabled = localStorage.getItem("couchDashSound") !== "off";
+  let soundEnabled = readPreference("couchDashSound") !== "off";
   let audioContext = null;
   let audioMasterGain = null;
   let audioLimiter = null;
@@ -361,7 +373,7 @@
       chordVolume: 0.004, bassVolume: 0.008, melodyVolume: 0.0042,
     },
   };
-  let activeRadio = localStorage.getItem("couchDashRadio") || "boardwalk";
+  let activeRadio = readPreference("couchDashRadio") || "boardwalk";
   if (!shopRadios[activeRadio]) activeRadio = "boardwalk";
 
   function updateSoundButton() {
@@ -630,9 +642,9 @@
   function selectShopRadio(stationKey) {
     if (!shopRadios[stationKey]) return;
     activeRadio = stationKey;
-    localStorage.setItem("couchDashRadio", stationKey);
+    writePreference("couchDashRadio", stationKey);
     soundEnabled = true;
-    localStorage.setItem("couchDashSound", "on");
+    writePreference("couchDashSound", "on");
     updateSoundButton();
     stopMusic();
     retireAudioContext();
@@ -721,7 +733,7 @@
   function toggleSound() {
     if (!AudioContextClass) return;
     soundEnabled = !soundEnabled;
-    localStorage.setItem("couchDashSound", soundEnabled ? "on" : "off");
+    writePreference("couchDashSound", soundEnabled ? "on" : "off");
     updateSoundButton();
     if (soundEnabled) {
       playSound("enabled");
@@ -812,6 +824,7 @@
   }
 
   function start() {
+    canvas.focus({ preventScroll: true });
     reset();
     ensureAudio();
     startMusic();
@@ -828,6 +841,7 @@
   }
 
   function jump() {
+    if (!crewModal.hidden) return;
     if (state === "ready" || state === "over") {
       start();
       return;
@@ -866,6 +880,7 @@
 
   function resume() {
     if (state !== "paused") return;
+    canvas.focus({ preventScroll: true });
     state = "running";
     message.hidden = true;
     last = performance.now();
@@ -966,7 +981,7 @@
     const score = Math.floor(distance) + tagPoints + clearancePoints + heroPoints;
     if (score > best) {
       best = score;
-      localStorage.setItem("couchDashBest", String(best));
+      writePreference("couchDashBest", String(best));
       bestNode.textContent = String(best).padStart(5, "0");
       messageKicker.textContent = "New showroom record!";
       messageTitle.textContent = "What a run!";
@@ -5791,14 +5806,18 @@
   jumpButton.addEventListener("click", (event) => {
     if (event.detail === 0) jump();
   });
-  canvas.addEventListener("pointerdown", jump);
-  document.addEventListener("keydown", (event) => {
+  canvas.addEventListener("pointerdown", () => {
+    canvas.focus({ preventScroll: true });
+    jump();
+  });
+  canvas.addEventListener("keydown", (event) => {
+    if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || !crewModal.hidden) return;
     if (["Space", "ArrowUp"].includes(event.code)) {
       event.preventDefault();
-      jump();
+      if (!event.repeat) jump();
     } else if (event.code === "KeyP") {
       event.preventDefault();
-      state === "paused" ? resume() : pause();
+      if (!event.repeat) state === "paused" ? resume() : pause();
     }
   });
   document.addEventListener("visibilitychange", () => {

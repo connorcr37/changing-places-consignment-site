@@ -6,8 +6,8 @@
     <title>Corey's Couch Dash | Changing Places</title>
     <meta name="description" content="Help Corey and his moving partner carry a couch through the Changing Places showroom in this hidden mini game." />
     <meta name="robots" content="noindex" />
-    <link rel="stylesheet" href="game.css?v=cosmic-overdrive-92" />
-    <script src="game.js?v=cosmic-overdrive-92" defer></script>
+    <link rel="stylesheet" href="game.css?v=20260906-1" />
+    <script src="game.js?v=20260906-1" defer></script>
     <link rel="icon" href="images/favicon/favicon.ico" type="image/x-icon" />
   </head>
   <body>
@@ -35,7 +35,7 @@
             <strong id="game-toast-title"></strong>
             <span id="game-toast-copy"></span>
           </div>
-          <canvas id="game" width="960" height="420" role="img" aria-label="A side-scrolling game where Corey and his moving partner carry a couch, jump over obstacles, and get bonus help from Brenda, Kamden, and a few surprise helpers.">
+          <canvas id="game" tabindex="0" aria-describedby="game-keyboard-help" width="960" height="420" role="img" aria-label="A side-scrolling game where Corey and his moving partner carry a couch, jump over obstacles, and get bonus help from Brenda, Kamden, and a few surprise helpers.">
             Your browser doesn't support the Couch Dash game.
           </canvas>
           <div class="game-message" id="game-message">
@@ -51,11 +51,11 @@
         </div>
 
         <div class="controls">
-          <button class="jump-button" id="jump-button" type="button" aria-label="Jump over an obstacle">Jump!</button>
+          <button class="jump-button" id="jump-button" type="button" aria-label="Jump! Over an obstacle">Jump!</button>
           <button class="fullscreen-button" id="fullscreen-button" type="button" aria-pressed="false">Full screen</button>
           <button class="sound-button" id="sound-button" type="button" aria-pressed="true">Sound: On</button>
           <p class="rotate-hint"><span aria-hidden="true">↻</span> If needed, rotate sideways for a wider view</p>
-          <p><kbd>Space</kbd> / <kbd>↑</kbd> to jump · <kbd>P</kbd> to pause</p>
+          <p id="game-keyboard-help">Focus the game, then <kbd>Space</kbd> / <kbd>↑</kbd> to jump · <kbd>P</kbd> to pause</p>
         </div>
 
         <div class="crew-modal" id="crew-modal" role="dialog" aria-modal="true" aria-labelledby="crew-title" hidden>

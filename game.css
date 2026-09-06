@@ -64,6 +64,7 @@ body {
 button, a { font: inherit; }
 
 a:focus-visible,
+canvas:focus-visible,
 button:focus-visible {
   outline: 3px solid var(--clay);
   outline-offset: 4px;

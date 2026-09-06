@@ -70,7 +70,7 @@ const renderHeader = (pageName) => {
 
   return headerTemplate
     .replaceAll("{{homeHref}}", isHomePage ? "#home" : "/")
-    .replaceAll("{{homeLabel}}", isHomePage ? "Go to top" : "Changing Places home")
+    .replaceAll("{{homeLabel}}", isHomePage ? "Changing Places Consignment Shop — go to top" : "Changing Places Consignment Shop home")
     .replaceAll("{{sectionPrefix}}", isHomePage ? "" : "/");
 };
 

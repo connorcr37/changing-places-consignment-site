@@ -207,12 +207,6 @@ const facebookDateFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Chicago",
 });
 
-const facebookLinkDateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "long",
-  day: "numeric",
-  timeZone: "America/Chicago",
-});
-
 const facebookVideoHubUrl = "https://www.facebook.com/ChangingPlacesDSM/videos";
 const FACEBOOK_REPLAY_FALLBACK_MAX_AGE_MS = 29 * 24 * 60 * 60 * 1000;
 
@@ -335,10 +329,7 @@ const makeFacebookFallbackDurable = (showcase) => {
       const link = card.querySelector(".facebook-card__link");
       if (!link) return;
       link.href = facebookVideoHubUrl;
-      link.setAttribute(
-        "aria-label",
-        "Browse recent Changing Places videos on Facebook; opens in a new tab",
-      );
+      link.removeAttribute("aria-label");
 
       const meta = card.querySelector(".facebook-card__meta");
       const label = meta?.querySelector("span");
@@ -365,10 +356,6 @@ const createFacebookCard = (video, index, total) => {
   link.href = video.permalinkUrl;
   link.target = "_blank";
   link.rel = "noopener";
-  link.setAttribute(
-    "aria-label",
-    `Watch the ${facebookLinkDateFormatter.format(video.createdTime)} live floor walk on Facebook; opens in a new tab`,
-  );
 
   const media = document.createElement("span");
   media.className = "facebook-card__media";
@@ -414,7 +401,10 @@ const createFacebookCard = (video, index, total) => {
   title.className = "facebook-card__title";
   title.textContent = facebookDateFormatter.format(video.createdTime);
   body.append(meta, title);
-  link.append(media, body);
+  const linkHint = document.createElement("span");
+  linkHint.className = "visually-hidden";
+  linkHint.textContent = " on Facebook; opens in a new tab";
+  link.append(media, body, linkHint);
   article.append(link);
   return article;
 };

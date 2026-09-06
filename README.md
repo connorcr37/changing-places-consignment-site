@@ -45,6 +45,18 @@ node --test tests/facebook-feed.test.mjs tests/intake.test.mjs
 
 The site audit verifies public-page metadata, canonical and social URLs, JSON-LD, sitemap coverage, internal routes and fragments, local assets, unique IDs, ARIA references, image dimensions, iframe titles, safe new-tab links, and common encoding problems.
 
+Run `node scripts/test-site-browser.cjs` with Playwright installed (or available
+through `NODE_PATH`) for browser regressions covering visible control labels,
+generated and stale replay cards, the 404 layout, and game storage/keyboard behavior.
+It uses a loopback server and mocked external requests. To also check Cloudflare's
+actual asset routing, set `SITE_TEST_ORIGIN` to a local Wrangler origin; set
+`SITE_TEST_SKIP_GAME=1` to repeat only the page and routing checks.
+
+`404.html` uses the shared shell and is excluded from search. Cloudflare's
+`assets.not_found_handling: "404-page"` serves it with a 404 status for unknown
+paths. Keep its assets and shared-shell image URLs root-relative so nested missing
+URLs render correctly.
+
 Photo intake setup, browser checks, delivery recovery, and production recipient
 settings are documented in [INTAKE.md](INTAKE.md).
 
