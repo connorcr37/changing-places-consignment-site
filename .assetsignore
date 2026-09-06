@@ -4,7 +4,8 @@
 !/*.html
 !/*.css
 !/*.js
-!/*.txt
+!/robots.txt
+!/llms.txt
 !/*.xml
 !/_headers
 

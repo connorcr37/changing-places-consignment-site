@@ -21,6 +21,8 @@ node_modules/
 .wrangler/
 
 # Generated output and temporary files
+/INTAKE-AUDIT-*.md
+/local-notes/
 dist/
 coverage/
 tmp/

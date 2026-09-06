@@ -356,10 +356,13 @@ if (wrangler) {
 }
 
 const assetIgnore = await readFile(path.join(projectRoot, ".assetsignore"), "utf8");
-for (const requiredRule of ["!/*.html", "!/*.css", "!/*.js", "!/*.txt", "!/*.xml", "!/_headers", "!/fonts/**", "!/images/**", "!/tv/**"]) {
+for (const requiredRule of ["!/*.html", "!/*.css", "!/*.js", "!/robots.txt", "!/llms.txt", "!/*.xml", "!/_headers", "!/fonts/**", "!/images/**", "!/tv/**"]) {
   if (!assetIgnore.includes(requiredRule)) {
     issues.push(`.assetsignore: missing required allow rule "${requiredRule}"`);
   }
+}
+if (assetIgnore.includes('!/*.txt')) {
+  issues.push('.assetsignore: allow public text files by name instead of publishing development requirements and notes');
 }
 
 const gitIgnore = await readFile(path.join(projectRoot, ".gitignore"), "utf8");

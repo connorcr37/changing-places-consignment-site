@@ -2,7 +2,19 @@
 
 Static website for Changing Places Consignment Shop, a curated furniture and home decor consignment store based in Urbandale and serving Greater Des Moines and Central Iowa.
 
-The site is intentionally lightweight: plain HTML, CSS, one shared JavaScript file, image assets, and SEO metadata.
+The site uses plain HTML, CSS, JavaScript, image assets, and a Cloudflare Worker for the photo intake and Facebook feed.
+
+## Repository and deployment files
+
+GitHub tracks source code, tests, dependency manifests, required licenses, and
+maintenance guides. Keep one-off audit notes and working reports local; dated
+`INTAKE-AUDIT-*.md` files and `local-notes/` are ignored, along with temporary
+files, installed dependencies, and real environment secrets. `.dev.vars.example`
+contains placeholders only and is safe to track.
+
+`.assetsignore` controls what Cloudflare serves publicly, separately from Git.
+Development files and Markdown guides are excluded. Only the public `robots.txt`
+and `llms.txt` files are allowed at the root; `requirements-dev.txt` is not a web asset.
 
 ## Shared site shell
 
@@ -41,6 +53,9 @@ settings are documented in [INTAKE.md](INTAKE.md).
 The home-page carousel is static-first. Five checked-in cards render immediately and remain as the last-known-good fallback. Near the carousel, `site.js` requests the same-origin `/api/facebook-live` endpoint and replaces those cards only when it receives a complete, valid feed.
 
 The checked-in replay JPEGs have 320px and 540px AVIF/WebP variants for responsive delivery. After replacing a `images/facebook-live-*.jpg` fallback, regenerate those variants with the development image dependency:
+
+`requirements-dev.txt` lists Pillow for this optional local image-generation step.
+It is not installed by the website or required by the Cloudflare Worker.
 
 ```powershell
 python -m pip install -r requirements-dev.txt
