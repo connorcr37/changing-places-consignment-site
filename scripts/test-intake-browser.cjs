@@ -7,12 +7,17 @@ const { readFileSync } = require('node:fs');
 const { resolve, extname } = require('node:path');
 const assert = require('node:assert/strict');
 const root = resolve(__dirname, '..');
-const policies = readFileSync(resolve(root, '_headers'), 'utf8').split(/\r?\n/).filter(line => line.trim().startsWith('Content-Security-Policy:')).map(line => line.trim().slice('Content-Security-Policy:'.length).trim());
+const policies = [];
+let headerPattern = '';
+for (const line of readFileSync(resolve(root, '_headers'), 'utf8').split(/\r?\n/)) {
+  if (line.startsWith('/')) headerPattern = line.trim();
+  if (line.trim().startsWith('Content-Security-Policy:')) policies.push({ pattern: headerPattern, value: line.trim().slice('Content-Security-Policy:'.length).trim() });
+}
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
 const server = createServer(async (req, res) => {
   const path = new URL(req.url, 'http://localhost').pathname;
-  if (!/^\/(submit-items\.html|intake-[\w-]+\.js|intake\.css|styles\.css|vendor\/[\w/.-]+|images\/[\w/.-]+|fonts\/[\w/.-]+)$/.test(path) || path.includes('..')) { res.writeHead(404).end(); return; }
-  if (path.endsWith('.html')) res.setHeader('Content-Security-Policy', policies);
+  if (!/^\/(submit-items\.html|text-consignor\.(html|js|css)|intake-[\w-]+\.js|intake\.css|styles\.css|vendor\/[\w/.-]+|images\/[\w/.-]+|fonts\/[\w/.-]+)$/.test(path) || path.includes('..')) { res.writeHead(404).end(); return; }
+  if (path.endsWith('.html')) res.setHeader('Content-Security-Policy', policies.filter(p => p.pattern.endsWith('*') && path.startsWith(p.pattern.slice(0, -1))).map(p => p.value));
   try { res.setHeader('Content-Type', types[extname(path)] || 'application/octet-stream'); res.end(await readFile(resolve(root, '.' + path))); }
   catch { res.writeHead(404).end(); }
 });
@@ -134,6 +139,25 @@ const server = createServer(async (req, res) => {
     assert.equal(await limited.page.locator('.photo-preview').count(), 1);
     assert.equal(await limited.page.locator('a[href="sms:6202558901"]').count(), 1);
     await limited.page.close();
+    const texting = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const requests = [];
+    texting.on('request', request => requests.push(request.url()));
+    await texting.goto(origin + '/text-consignor.html#phone=%2B15155550118');
+    await texting.locator('#text-contact').waitFor({ state: 'visible' });
+    assert.equal(await texting.locator('#text-number').textContent(), '515-555-0118');
+    assert.equal(await texting.locator('#open-message').getAttribute('href'), 'sms:+15155550118');
+    assert.equal(new URL(texting.url()).hash, '', 'Remove phone from browser history');
+    assert.ok(requests.every(url => !url.includes('5155550118') && url.startsWith(origin)), 'No contact data or external requests');
+    assert.equal(await texting.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    for (const fragment of ['', '#phone=javascript%3Aalert(1)', '#phone=%2B15155550118%3Fbody%3Dprivate', '#phone=%3Cimg%20src%3Dx%3E']) {
+      await texting.goto(origin + '/text-consignor.html' + fragment);
+      await texting.waitForFunction(() => document.readyState === 'complete' && !location.hash);
+      assert.equal(await texting.locator('#text-contact').isVisible(), false);
+      assert.equal(await texting.locator('#text-error').isVisible(), true);
+      assert.equal(await texting.locator('#open-message').getAttribute('href'), null);
+    }
+    await texting.close();
+    console.log('Texting page checks passed: validated SMS target, no automatic launch, no contact data in requests/history, and safe invalid-link recovery.');
     console.log('Browser checks passed: mobile previews, retry/recovery, limits, mixed phone formats, EXIF orientation, lazy HEIC conversion under production CSP, damaged HEIC recovery, and 30 HEIC uploads.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => server.close());

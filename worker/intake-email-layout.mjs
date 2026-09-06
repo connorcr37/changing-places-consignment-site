@@ -1,12 +1,7 @@
-import { isValidEmail } from '../intake-shared.js';
+import { isValidEmail, formatPhone } from '../intake-shared.js';
 
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 
-const formatPhone = value => {
-  const digits = String(value || '').replace(/\D/g, '');
-  const local = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
-  return local.length === 10 ? `${local.slice(0, 3)}-${local.slice(3, 6)}-${local.slice(6)}` : value;
-};
 const submittedLabel = seconds => {
   if (!Number.isFinite(seconds) || seconds <= 0) return '';
   const date = new Date(seconds * 1000);
@@ -67,11 +62,13 @@ export function buildReviewEmail(env, row, assessment, attachments) {
   const phone = formatPhone(row.phone);
   const digits = String(row.phone || '').replace(/\D/g, '');
   const phoneTarget = digits.length === 10 ? `+1${digits}` : digits.length === 11 && digits.startsWith('1') ? `+${digits}` : `${String(row.phone || '').startsWith('+') ? '+' : ''}${digits}`;
-  const contact = [phone ? `${phone}  ☎️ Call  💬 Text` : '', row.email ? `✉️ ${row.email}` : 'No email provided'].filter(Boolean).join('\n');
-  const contactLink = (href, label, action) => `<a href="${escape(href)}" aria-label="${escape(action)}" style="color:#294e43;text-decoration:underline">${escape(label)}</a>`;
+  const textUrl = `https://changing-places-dsm.com/text-consignor#phone=${encodeURIComponent(phoneTarget)}`;
+  const contact = [phone, row.email || 'No email provided'].filter(Boolean).join('\n');
+  const contactLink = (href, label, action, style = '') => `<a href="${escape(href)}" aria-label="${escape(action)}" style="color:#294e43;text-decoration:underline;${style}">${escape(label)}</a>`;
+  const actionStyle = 'display:inline-block;white-space:nowrap;margin-left:8px;padding:3px 9px;border:1px solid #dce4d6;border-radius:4px;background:#f1f3ec;text-decoration:none;font-size:12px';
   const contactHtml = [
-    phone ? `<span style="white-space:nowrap">${escape(phone)}</span><span style="display:inline-block;white-space:nowrap;margin-left:12px">${contactLink(`tel:${phoneTarget}`, '☎️ Call', `Call ${row.name}`)}</span><span style="display:inline-block;white-space:nowrap;margin-left:12px">${contactLink(`sms:${phoneTarget}`, '💬 Text', `Text ${row.name}`)}</span>` : '',
-    row.email ? `✉️ ${contactLink(`mailto:${encodeURIComponent(row.email)}`, row.email, `Email ${row.name}`)}` : 'No email provided',
+    phone ? `${contactLink(`tel:${phoneTarget}`, phone, `Call ${row.name}`, 'white-space:nowrap;text-decoration:none')}${contactLink(`tel:${phoneTarget}`, 'Call', `Call ${row.name}`, actionStyle)}${contactLink(textUrl, 'Text', `Text ${row.name}`, actionStyle)}` : '',
+    row.email ? contactLink(`mailto:${encodeURIComponent(row.email)}`, row.email, `Email ${row.name}`, 'display:inline-block;margin-top:4px') : 'No email provided',
   ].filter(Boolean).join('<br />');
   const submitted = submittedLabel(row.submitted_at);
   const firstName = String(row.name || '').trim().split(/\s+/)[0];

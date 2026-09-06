@@ -231,14 +231,16 @@ test('email header shows contact details and the actual submission time in Centr
     assert.ok(body.indexOf('mary@example.com')<body.indexOf('Submitted September'));
   }
   assert.match(email.html, /href="tel:\+15155550118"/);
-  assert.match(email.html, /href="sms:\+15155550118"/);
-  assert.match(email.html, /<br \/>✉️ <a href="mailto:mary%40example.com"/);
-  assert.match(email.text, /515-555-0118  ☎️ Call  💬 Text\n✉️ mary@example.com/);
+  assert.match(email.html, /href="https:\/\/changing-places-dsm.com\/text-consignor#phone=%2B15155550118"/);
+  assert.ok(!email.html.includes('href="sms:'), 'Gmail strips direct SMS links');
+  assert.match(email.html, /<br \/><a href="mailto:mary%40example.com"/);
+  assert.match(email.text, /515-555-0118\nmary@example.com/);
+  assert.ok(!/[☎💬✉]/u.test(email.html));
   const plusAddress = buildReviewEmail({}, { ...row, email: 'connorcr37+cpcs@gmail.com' }, sample(), []);
   assert.match(plusAddress.html, /href="mailto:connorcr37%2Bcpcs%40gmail.com"/);
   const winter=buildReviewEmail({}, {...row,submitted_at:Date.parse('2026-12-05T16:14:00Z')/1000,phone:''},sample(),[]);
   assert.match(winter.text,/Submitted December 5 at 10:14 AM CT/);
-  assert.ok(winter.text.startsWith('Mary Smith\n✉️ mary@example.com\nSubmitted'));
+  assert.ok(winter.text.startsWith('Mary Smith\nmary@example.com\nSubmitted'));
   assert.ok(!winter.html.includes('href="tel:') && !winter.html.includes('href="sms:'));
   const phoneOnly=buildReviewEmail({}, {...row,email:''},sample(),[]);
   for (const body of [phoneOnly.html,phoneOnly.text]) { assert.match(body,/515-555-0118/); assert.match(body,/No email provided/); }
