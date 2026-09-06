@@ -1,12 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { handleIntake, hash, processIntake, recoverIntake } from '../worker/intake.mjs';
 import { buildReviewEmail, sendReviewEmail } from '../worker/intake-email.mjs';
 import { analyzeSubmission, assessmentSchema, validateAssessment } from '../worker/intake-ai.mjs';
 import { readBoundedBody } from '../worker/intake-utils.mjs';
 import { isValidEmail, INTAKE_LIMITS } from '../intake-shared.js';
+
+test('public intake scripts parse as browser ES modules', () => {
+  for (const file of ['intake-form.js', 'intake-photo.js', 'intake-shared.js']) {
+    // Explicit module mode catches syntax errors that Node's automatic detection can miss.
+    const result = spawnSync(process.execPath, ['--input-type=module', '--check'], {
+      input: readFileSync(new URL(`../${file}`, import.meta.url), 'utf8'),
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, `${file}: ${result.error?.message || result.stderr}`);
+  }
+});
 
 const origin = 'https://changing-places-dsm.com';
 const now = () => Math.floor(Date.now() / 1000);
