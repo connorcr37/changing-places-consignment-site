@@ -210,6 +210,12 @@ header {
   top: 10%;
 }
 
+.seasonal-logo-flair {
+  position: absolute;
+  z-index: 21;
+  pointer-events: none;
+}
+
 /* ========== Navigation ========== */
 nav ul {
   list-style: none;
@@ -2486,7 +2492,8 @@ footer a:focus-visible,
   }
 
   .after-hours-spark,
-  .after-hours-couch {
+  .after-hours-couch,
+  .seasonal-logo-flair {
     display: none;
   }
 

@@ -30,6 +30,52 @@ The Remotion source for the prerendered screensaver is tracked in `tools/tv-vide
 Run its `pnpm lint` and `pnpm run render` commands from that directory. Rendered
 AVC and HEVC files are written directly to `tv/media/`.
 
+## Seasonal logo accents
+
+The shared header plays a small decoration beside the logo during eleven annual
+windows, based on the store's date in `America/Chicago`:
+
+- February 12–14: floating Valentine's hearts.
+- March 15–17: spinning St. Patrick's clovers with gold flecks.
+- Friday–Sunday of Easter weekend: bobbing, patterned pastel eggs.
+- April 22: green leaves swirling upward for Earth Day.
+- Friday–Sunday of Mother's Day weekend: gently blooming flowers. Mother's Day
+  is the second Sunday in May.
+- Friday–Sunday of Father's Day weekend: swaying, striped ties. Father's Day
+  is the third Sunday in June.
+- July 1–5: Independence Day fireworks.
+- October 29–31: fluttering Halloween bats with amber flecks.
+- Monday–Sunday of Thanksgiving week: tumbling autumn leaves. The window is
+  calculated from November's fourth Thursday each year, including years when
+  that Sunday falls on December 1.
+- December 20–26: winter holiday snow.
+- December 31–January 2: New Year confetti.
+
+Movable holidays are calculated each year. Easter uses the Gregorian calculation
+published by the [U.S. Naval Observatory](https://aa.usno.navy.mil/faq/easter).
+Earth Day takes priority on April 22 if it overlaps Easter weekend; only one
+effect plays at a time.
+
+The animation lasts 4.2 seconds and runs once per holiday per tab session. It
+stays outside the logo, ignores clicks, and stops on scrolling, resizing, or
+leaving the page. Reduced-motion preferences skip it entirely. No extra library,
+image, cookie, or third-party request is used.
+
+The schedule and effects live in `seasonal-logo.js`. Preview any effect at any
+time by adding `?logo-flair=` followed by `valentines-day`, `st-patricks-day`,
+`easter`, `earth-day`, `mothers-day`, `fathers-day`, `independence-day`,
+`halloween`, `thanksgiving`, `winter-holidays`, or `new-year`
+to a page URL. Preview links replay on reload without
+changing the normal visit's playback history; they still respect reduced motion.
+Use `?logo-flair=off` to view the regular logo during a holiday window. Unknown
+values use the normal schedule. These links only affect the current page view.
+
+The symbol effects load vector paths from `seasonal-icons.js` only when
+needed. They use [Tabler Icons](https://github.com/tabler/tabler-icons/tree/55f87a73f45cf1d9eaf16d7da705065483a9e4f9),
+whose MIT license and source revision are included in that file. Bat and tie
+outer paths are filled to create silhouettes; eggs, flowers, and ties receive
+small color details. No icon CDN or font is required.
+
 ## Pre-production checks
 
 Run these checks before publishing:
@@ -38,6 +84,8 @@ Run these checks before publishing:
 node scripts/sync-shared-shell.mjs --check
 node scripts/audit-site.mjs
 node --check site.js
+node --check seasonal-logo.js
+node --check seasonal-icons.js
 node --check game.js
 node --check worker/index.mjs
 node --test tests/facebook-feed.test.mjs tests/intake.test.mjs

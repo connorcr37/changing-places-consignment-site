@@ -634,3 +634,10 @@ listenForMediaChange(desktop, () => {
 
 window.addEventListener("scroll", queueLogoUpdate, { passive: true });
 updateLogo();
+
+// Keep this optional decoration independent of navigation and other site features.
+if (logo) {
+  import("./seasonal-logo.js?v=20260907-4")
+    .then(({ setupSeasonalLogo }) => setupSeasonalLogo(logo))
+    .catch(() => { /* The normal logo remains if the decoration cannot load. */ });
+}
