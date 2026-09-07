@@ -569,36 +569,6 @@ nav a.active {
 }
 
 /* ========== Social Highlights ========== */
-.instagram-frame {
-  padding: clamp(0.4rem, 0.75vw, 0.65rem);
-  border-radius: 1.25rem;
-  background: #f3efe9;
-  overflow: hidden;
-}
-
-.lightwidget-widget {
-  display: block;
-  width: 100%;
-  min-height: 22rem;
-}
-
-.widget-fallback {
-  margin-top: 1rem;
-  color: var(--color-muted);
-  font-size: 0.95rem;
-  text-align: center;
-}
-
-.widget-fallback a {
-  color: var(--color-forest);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.widget-fallback a:hover {
-  text-decoration: underline;
-}
-
 .facebook-showcase {
   margin-top: 0;
   padding: clamp(1.25rem, 3vw, 2.25rem);
@@ -2235,10 +2205,6 @@ footer a:focus-visible,
   .section-heading h2,
   .section-heading h3 {
     line-height: 1.25;
-  }
-
-  .lightwidget-widget {
-    min-height: 18rem;
   }
 
   .facebook-showcase {
