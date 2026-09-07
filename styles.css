@@ -1314,6 +1314,10 @@ nav a.active {
   min-width: 0;
 }
 
+.not-found-page {
+  background-color: #f1ebe3;
+}
+
 .not-found-page .not-found-explanation {
   max-width: 34rem;
   margin-top: 1.6rem;
@@ -1324,6 +1328,10 @@ nav a.active {
 
 .not-found-page .resource-hero .hero-actions {
   margin-top: 1rem;
+}
+
+.not-found-page footer {
+  margin-top: 3rem;
 }
 
 .not-found-illustration {
