@@ -232,9 +232,15 @@ nav a:hover {
 }
 
 a:focus-visible,
-button:focus-visible {
+button:focus-visible,
+.header-flex > a:focus-visible > .logo-img {
   outline: 0.125rem solid var(--color-forest);
   outline-offset: 0.25rem;
+}
+
+/* Follow the positioned logo instead of its empty desktop link box. */
+.header-flex > a:focus-visible {
+  outline: none;
 }
 
 nav a.button,
