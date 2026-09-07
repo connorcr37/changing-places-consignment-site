@@ -1303,6 +1303,47 @@ nav a.active {
   background: rgba(252, 251, 250, 0.62);
 }
 
+.not-found-page .resource-hero .container {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(18rem, 1fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
+}
+
+.not-found-page .resource-hero-copy {
+  min-width: 0;
+}
+
+.not-found-page .not-found-explanation {
+  max-width: 34rem;
+  margin-top: 1.6rem;
+  color: var(--color-muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.not-found-page .resource-hero .hero-actions {
+  margin-top: 1rem;
+}
+
+.not-found-illustration {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@media (max-width: 800px) {
+  .not-found-page .resource-hero .container {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .not-found-illustration {
+    max-width: 26rem;
+    justify-self: center;
+  }
+}
+
 .resource-section .container {
   max-width: 72rem;
   padding-top: clamp(4rem, 8vw, 7rem);
