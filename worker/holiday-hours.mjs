@@ -77,8 +77,8 @@ async function sendInvite(env, email) {
   try {
     if (!env.ADMIN_EMAIL) throw Error('not_configured');
     await env.ADMIN_EMAIL.send({ from: env.ADMIN_EMAIL_FROM || 'intake@changing-places-dsm.com', to: email,
-      subject: 'Your Changing Places website staff invitation',
-      text: `You have been invited to manage holiday hours and announcements for Changing Places Consignment Shop.\n\nOpen ${appOrigin(env)}/admin and sign in with this Google account: ${email}\n\nStaff can manage announcements, Google Business Profile updates, and invite other staff. If you were not expecting this invitation, contact the shop.`,
+      subject: 'Your Changing Places website admin invitation',
+      text: `You have been invited to manage holiday hours and announcements for Changing Places Consignment Shop.\n\nOpen ${appOrigin(env)}/admin and sign in with this Google account: ${email}\n\nAdmins can manage announcements, Google Business Profile updates, and invite other admins. If you were not expecting this invitation, contact the shop.`,
     });
     await query(env, "UPDATE holiday_staff SET email_status='sent' WHERE email=?", email).run();
   } catch {
@@ -87,12 +87,12 @@ async function sendInvite(env, email) {
 }
 async function inviteStaff(env, body, admin) {
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
-  if (!isValidEmail(email)) fail(400, 'Enter the staff member’s Google email address.');
+  if (!isValidEmail(email)) fail(400, 'Enter the admin’s Google email address.');
   if (allowedEmails(env).includes(email)) fail(409, 'That account already has owner access.');
   const count = await query(env, 'SELECT COUNT(*) AS count FROM holiday_staff WHERE invited_at>?', nowSeconds() - 86400).first();
   if (count.count >= 20) fail(429, 'The daily invitation limit has been reached.');
   const row = await query(env, "INSERT INTO holiday_staff(email,invited_by,invited_at) VALUES(?,?,?) ON CONFLICT(email) DO UPDATE SET invited_by=excluded.invited_by,invited_at=excluded.invited_at,accepted_at=NULL,revoked_at=NULL,email_status='pending',email_error='' WHERE holiday_staff.revoked_at IS NOT NULL RETURNING email", email, admin.email, nowSeconds()).first();
-  if (!row) fail(409, 'That person already has an active invitation or staff access.');
+  if (!row) fail(409, 'That person already has an active invitation or admin access.');
   await sendInvite(env, email);
 }
 export async function handleHolidayRequest(request, env, ctx) {
@@ -170,7 +170,7 @@ export async function handleHolidayRequest(request, env, ctx) {
   } catch (error) {
     if (error instanceof HolidayError || error instanceof GoogleError) {
       if (path === '/api/admin/oauth/callback') console.warn(JSON.stringify({ event: 'holiday_oauth_failed', status: error.status, reason: error instanceof GoogleError ? error.code : 'validation' }));
-      if (path === '/api/admin/oauth/callback') return new Response(`<!doctype html><title>Staff sign-in</title><p>${error.status === 403 ? 'This Google account is not authorized for staff access.' : 'Sign-in or connection could not finish. Check the Google configuration and try again.'}</p><p><a href="/admin">Return to staff sign-in</a></p>`, { status: error.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "default-src 'none'; base-uri 'none'; frame-ancestors 'none'" } });
+      if (path === '/api/admin/oauth/callback') return new Response(`<!doctype html><title>Admin sign-in</title><p>${error.status === 403 ? 'This Google account is not authorized for admin access.' : 'Sign-in or connection could not finish. Check the Google configuration and try again.'}</p><p><a href="/admin">Return to admin sign-in</a></p>`, { status: error.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "default-src 'none'; base-uri 'none'; frame-ancestors 'none'" } });
       return json({ error: error.message }, error.status);
     }
     console.error(JSON.stringify({ event: 'holiday_request_failed' }));

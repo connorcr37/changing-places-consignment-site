@@ -50,7 +50,7 @@ export function appOrigin(env) {
 export const callbackURL = env => `${appOrigin(env)}/api/admin/oauth/callback`;
 export const oauthReady = env => Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 export function authorizationURL(env, { state, nonce, challenge, connect }) {
-  if (!oauthReady(env)) fail(503, 'Google sign-in needs to be configured. See HOLIDAY-HOURS.md.');
+  if (!oauthReady(env)) fail(503, 'Google sign-in is unavailable. Please contact the website owner.');
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   Object.entries({ client_id: env.GOOGLE_CLIENT_ID, redirect_uri: callbackURL(env), response_type: 'code',
     scope: connect ? BUSINESS_SCOPE : 'openid email', state, nonce, code_challenge: challenge,

@@ -21,7 +21,9 @@ node_modules/
 .wrangler/
 
 # Generated output and temporary files
-/INTAKE-AUDIT-*.md
+# The root README is the only Markdown document published to GitHub.
+*.[mM][dD]
+!/README.md
 /local-notes/
 dist/
 coverage/

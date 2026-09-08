@@ -7,10 +7,10 @@ The site uses plain HTML, CSS, JavaScript, image assets, and a Cloudflare Worker
 ## Repository and deployment files
 
 GitHub tracks source code, tests, dependency manifests, required licenses, and
-maintenance guides. Keep one-off audit notes and working reports local; dated
-`INTAKE-AUDIT-*.md` files and `local-notes/` are ignored, along with temporary
-files, installed dependencies, and real environment secrets. `.dev.vars.example`
-contains placeholders only and is safe to track.
+this root README. All other Markdown files and `local-notes/` stay local and are
+ignored, along with temporary files, installed dependencies, and real environment
+secrets. Do not force-add local setup guides or notes. `.dev.vars.example` contains
+placeholders only and is safe to track.
 
 `.assetsignore` controls what Cloudflare serves publicly, separately from Git.
 Development files and Markdown guides are excluded. Only the public `robots.txt`
@@ -88,7 +88,7 @@ node --check seasonal-logo.js
 node --check seasonal-icons.js
 node --check game.js
 node --check worker/index.mjs
-node --test tests/facebook-feed.test.mjs tests/intake.test.mjs
+node --test tests/facebook-feed.test.mjs tests/intake.test.mjs tests/holiday-hours.test.mjs
 ```
 
 The site audit verifies public-page metadata, canonical and social URLs, JSON-LD, sitemap coverage, internal routes and fragments, local assets, unique IDs, ARIA references, image dimensions, iframe titles, safe new-tab links, and common encoding problems.
@@ -105,20 +105,45 @@ actual asset routing, set `SITE_TEST_ORIGIN` to a local Wrangler origin; set
 paths. Keep its assets and shared-shell image URLs root-relative so nested missing
 URLs render correctly.
 
-Photo intake setup, browser checks, delivery recovery, and production recipient
-settings are documented in [INTAKE.md](INTAKE.md).
+Private photo intake setup, delivery recovery, and recipient notes are kept in
+the local, ignored intake guide. Production settings belong in Cloudflare and
+the existing environment configuration; never copy personal account information
+into this README.
 
-## Holiday hours and staff admin
+## Holiday hours and admin access
 
-`/admin` manages scheduled website banners, store-date overrides, staff invitations,
+`/admin` manages scheduled website banners, store-date overrides, admin invitations,
 and optional Google Business Profile special hours and announcement posts. It uses
 the existing Worker, D1 database, email binding pattern, and Node test framework.
 The public site reads `/api/holiday-hours`; it never calls Google for these values.
-The editor includes a live banner preview, the existing seasonal logo calendar,
-and an optional snow/icy-roads closure animation.
+The editor includes a full-width banner and logo preview, the existing seasonal
+logo calendar, and an optional snow/icy-roads closure animation. Choose a snow
+closure, holiday closure, or special-hours template to prefill an editable
+announcement, or start from scratch. Templates leave affected dates unselected
+and Google options off. Existing announcements open for editing on sign-in.
+Admin access lists owners, active admins, and pending invitations. Owners and
+your own account cannot be removed through the admin UI.
 
-See [HOLIDAY-HOURS.md](HOLIDAY-HOURS.md) for the dedicated Google project, exact
-OAuth settings, API approval, secrets, migration, release and staff instructions.
+Private Google project and release notes stay in the local, ignored holiday-hours
+guide. The application uses a Web OAuth client with these redirect URIs:
+
+- Production: `https://changing-places-dsm.com/api/admin/oauth/callback`
+- Local: `http://localhost:8787/api/admin/oauth/callback`
+
+Admin sign-in requests `openid email`; connecting Business Profile separately
+requests `https://www.googleapis.com/auth/business.manage` with offline access.
+Google Business Profile API access approval is required before enabling the
+Account Management, Business Information, and Google My Business (v4 posts) APIs.
+After approval, connect the account and select its location in the admin. OAuth
+testing also requires invited accounts to be configured as Google test users.
+Keep `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and
+`GOOGLE_TOKEN_ENCRYPTION_KEY` in Cloudflare secrets and ignored local configuration.
+The initial owner allowlist uses `ADMIN_EMAILS`; invitations are stored in D1.
+Migration `migrations/intake/0004_holiday_hours.sql` adds the admin tables to the
+existing intake database. Google failures are stored for retry independently of
+website publishing. Banner start is inclusive and stop is exclusive in Central
+Time; actual store dates and hours are independent of that display window.
+
 Run `node --test tests/holiday-hours.test.mjs` and
 `node scripts/test-holiday-browser.cjs` (with Playwright installed or on `NODE_PATH`).
 The loopback-only `node scripts/holiday-test-server.mjs --preview` opens a fixture

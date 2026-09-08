@@ -22,14 +22,14 @@ export async function session(request, env) {
 }
 export async function requireAdmin(request, env) {
   const admin = await session(request, env);
-  if (!admin) fail(401, 'Please sign in with an approved staff Google account.');
+  if (!admin) fail(401, 'Please sign in with an approved admin Google account.');
   return admin;
 }
 export async function startOAuth(request, env, purpose) {
   if (new URL(request.url).origin !== appOrigin(env)) fail(403, 'Use the configured website address to sign in.');
   let admin;
   if (purpose === 'connect') { sameOrigin(request, env); admin = await requireAdmin(request, env); await encryptToken(env, 'configuration-check'); }
-  if (!allowedEmails(env).length || !oauthReady(env)) fail(503, 'Staff sign-in needs configuration. See HOLIDAY-HOURS.md.');
+  if (!allowedEmails(env).length || !oauthReady(env)) fail(503, 'Admin sign-in is unavailable. Please contact the website owner.');
   const now = nowSeconds(), ip = await digest(request.headers.get('CF-Connecting-IP') || 'local');
   const count = await query(env, 'INSERT INTO holiday_auth_limits(key,count,expires_at) VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1 RETURNING count', `${ip}:${Math.floor(now / 600)}`, now + 1200).first();
   if (count.count > 20) fail(429, 'Too many sign-in attempts. Please try again in ten minutes.');
@@ -63,7 +63,7 @@ export async function finishOAuth(request, env, fetchImpl) {
   const tokens = await exchangeCode(env, code, state.verifier, fetchImpl);
   if (state.purpose === 'login') {
     const email = await verifyIdentity(tokens.id_token, env, state.nonce, fetchImpl);
-    if (!await hasAccess(env, email)) fail(403, 'This Google account has not been invited to the staff area.');
+    if (!await hasAccess(env, email)) fail(403, 'This Google account has not been invited to the admin area.');
     await query(env, 'UPDATE holiday_staff SET accepted_at=COALESCE(accepted_at,?) WHERE email=? AND revoked_at IS NULL', nowSeconds(), email).run();
     const token = randomToken();
     await env.INTAKE_DB.batch([
