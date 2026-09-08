@@ -2,8 +2,9 @@
 
 ## Current setup and remaining activation
 
-The feature uses the existing Cloudflare Worker and D1 database and has passed its
-local implementation checks. Production releases follow the repository's Git workflow.
+The feature is live at `https://changing-places-dsm.com/admin` as of September 8,
+2026, using the existing Cloudflare Worker and D1 database. Production releases
+follow the repository's Git workflow.
 The new **CPCS Website** Google Cloud project was created on September 8, 2026:
 
 - Project ID: `cpcs-website-508013`
@@ -22,7 +23,8 @@ estimates 7–10 business days for review. The production Google secrets and add
 database migration are configured. Business Profile API approval and enabling the
 required APIs remain outstanding.
 Real Google listing writes and real invitation delivery have not been tested or performed.
-Real Google staff sign-in was verified locally through the Cloudflare Worker and D1.
+Real Google staff sign-in was verified locally and in production through the
+Cloudflare Worker and D1.
 All 81 Node tests, both site/admin browser suites, the site/shared-shell audits, and
 the Cloudflare deployment dry run pass.
 
