@@ -108,6 +108,24 @@ URLs render correctly.
 Photo intake setup, browser checks, delivery recovery, and production recipient
 settings are documented in [INTAKE.md](INTAKE.md).
 
+## Holiday hours and staff admin
+
+`/admin` manages scheduled website banners, store-date overrides, staff invitations,
+and optional Google Business Profile special hours and announcement posts. It uses
+the existing Worker, D1 database, email binding pattern, and Node test framework.
+The public site reads `/api/holiday-hours`; it never calls Google for these values.
+The editor includes a live banner preview, the existing seasonal logo calendar,
+and an optional snow/icy-roads closure animation.
+
+See [HOLIDAY-HOURS.md](HOLIDAY-HOURS.md) for the dedicated Google project, exact
+OAuth settings, API approval, secrets, migration, release and staff instructions.
+Run `node --test tests/holiday-hours.test.mjs` and
+`node scripts/test-holiday-browser.cjs` (with Playwright installed or on `NODE_PATH`).
+The loopback-only `node scripts/holiday-test-server.mjs --preview` opens a fixture
+admin at `http://127.0.0.1:8790/admin`; its data is temporary and it sends no real
+invitations or Google updates. This server, its fixtures, and screenshots are
+excluded from public assets.
+
 ## Automatic Facebook Live feed
 
 The home-page carousel is static-first. Five checked-in cards render immediately and remain as the last-known-good fallback. Near the carousel, `site.js` requests the same-origin `/api/facebook-live` endpoint and replaces those cards only when it receives a complete, valid feed.

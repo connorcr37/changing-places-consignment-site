@@ -210,6 +210,12 @@ header {
   top: 10%;
 }
 
+.holiday-banner p { white-space: pre-line; overflow-wrap: anywhere; }
+.holiday-banner p + p { margin-top: .5rem; }
+.special-hours { padding: 1rem; margin: 1rem 0; border-left: 3px solid var(--color-clay); background: var(--color-sand); }
+.special-hours[hidden] { display: none; }
+.special-hours p { margin-top: .4rem; }
+
 .seasonal-logo-flair {
   position: absolute;
   z-index: 21;

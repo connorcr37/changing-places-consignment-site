@@ -2,3 +2,12 @@
 # Never commit the real Page access token.
 FACEBOOK_PAGE_ACCESS_TOKEN="replace-with-a-page-access-token"
 OPENAI_API_KEY="replace-with-an-intake-project-api-key"
+
+# Holiday admin: use a dedicated CPCS Website Google Cloud OAuth Web client.
+# Put real values in .dev.vars locally / Wrangler secrets in production.
+GOOGLE_CLIENT_ID="replace-with-web-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="replace-with-google-client-secret"
+# 32 random bytes encoded as base64. Keep this stable; changing it requires reconnecting.
+GOOGLE_TOKEN_ENCRYPTION_KEY="replace-with-base64-32-byte-key"
+# For local OAuth use: wrangler dev --var APP_ORIGIN:http://localhost:8787
+# APP_ORIGIN is a normal Wrangler variable, not a secret loaded from this file.

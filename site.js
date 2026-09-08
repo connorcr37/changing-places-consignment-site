@@ -1,13 +1,4 @@
-// End the holiday notice at midnight in the store's Central time zone.
-document.querySelectorAll("[data-holiday-banner]").forEach((banner) => {
-  const remaining = Date.parse(banner.dataset.expires) - Date.now();
-  if (!Number.isFinite(remaining)) return;
-  if (remaining <= 0) {
-    banner.hidden = true;
-  } else {
-    window.setTimeout(() => { banner.hidden = true; }, Math.min(remaining, 2147483647));
-  }
-});
+import('./holiday-banner.js?v=20260908-1').then(({ setupHolidayHours }) => setupHolidayHours()).catch(() => {});
 
 document.querySelectorAll("[data-current-year]").forEach((year) => {
   year.textContent = String(new Date().getFullYear());
@@ -635,9 +626,5 @@ listenForMediaChange(desktop, () => {
 window.addEventListener("scroll", queueLogoUpdate, { passive: true });
 updateLogo();
 
-// Keep this optional decoration independent of navigation and other site features.
-if (logo) {
-  import("./seasonal-logo.js?v=20260907-4")
-    .then(({ setupSeasonalLogo }) => setupSeasonalLogo(logo))
-    .catch(() => { /* The normal logo remains if the decoration cannot load. */ });
-}
+// Holiday-hours initialization chooses the scheduled logo effect independently
+// of navigation and other site features.

@@ -105,7 +105,7 @@ const server = createServer(async (req, res) => {
     for (const pathname of ['/missing-feedback-page', '/missing/nested/page']) {
       const response = await page.goto(origin + pathname);
       assert.equal(response.status(), 404);
-      assert.equal(await page.getByRole('heading', { level: 1 }).innerText(), "Let's get you back to the shop.");
+      assert.equal(await page.getByRole('heading', { level: 1 }).innerText(), "Well. The page changed places.");
       assert.equal(await page.locator('.logo-img').evaluate(img => img.complete && img.naturalWidth > 0), true);
       assert.equal(await page.getByRole('link', { name: 'Back to home', exact: true }).getAttribute('href'), '/');
       assert.ok(await page.locator('.resource-hero').evaluate(el => parseFloat(getComputedStyle(el.querySelector('.container')).paddingTop)) > 0);

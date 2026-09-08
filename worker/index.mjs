@@ -1,4 +1,5 @@
 import { handleIntake, handleIntakeQueue, recoverIntake } from './intake.mjs';
+import { handleHolidayRequest, recoverHolidays } from './holiday-hours.mjs';
 
 const GRAPH_RESPONSE_LIMIT_BYTES = 500_000;
 const FEED_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
@@ -806,6 +807,10 @@ export const handleFacebookFeed = async (
 export const handleWorkerRequest = async (request, env, ctx, dependencies) => {
   const url = new URL(request.url);
 
+  if (url.pathname === '/admin' || url.pathname.startsWith('/admin/') || url.pathname.startsWith('/api/admin/') || url.pathname === '/api/holiday-hours') {
+    return handleHolidayRequest(request, env, ctx);
+  }
+
   if (url.pathname.startsWith('/api/intake/')) {
     return handleIntake(request, env, ctx);
   }
@@ -826,5 +831,8 @@ export default {
     return handleWorkerRequest(request, env, ctx);
   },
   async queue(batch, env) { await handleIntakeQueue(batch, env); },
-  async scheduled(_event, env, ctx) { ctx.waitUntil(recoverIntake(env)); },
+  async scheduled(_event, env, ctx) {
+    ctx.waitUntil(recoverIntake(env));
+    ctx.waitUntil(recoverHolidays(env));
+  },
 };

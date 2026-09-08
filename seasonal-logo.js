@@ -9,6 +9,20 @@ const occasions = [
   { id: "winter-holidays", effect: "snow", start: 1220, end: 1226 },
 ];
 
+export const seasonalCalendar = [
+  { name: 'New Year confetti', window: 'December 31–January 2' },
+  { name: 'Valentine’s hearts', window: 'February 12–14' },
+  { name: 'St. Patrick’s clovers', window: 'March 15–17' },
+  { name: 'Easter eggs', window: 'Friday–Sunday of Easter weekend' },
+  { name: 'Earth Day leaves', window: 'April 22' },
+  { name: 'Mother’s Day flowers', window: 'Friday–Sunday of Mother’s Day weekend' },
+  { name: 'Father’s Day ties', window: 'Friday–Sunday of Father’s Day weekend' },
+  { name: 'Independence Day fireworks', window: 'July 1–5' },
+  { name: 'Halloween bats', window: 'October 29–31' },
+  { name: 'Thanksgiving leaves', window: 'Monday–Sunday of Thanksgiving week' },
+  { name: 'Winter holiday snow', window: 'December 20–26' },
+];
+
 const nthWeekday = (year, monthIndex, weekday, occurrence) => {
   const firstWeekday = new Date(Date.UTC(year, monthIndex, 1)).getUTCDay();
   const day = 1 + (weekday - firstWeekday + 7) % 7 + (occurrence - 1) * 7;
@@ -63,6 +77,7 @@ const storeDate = new Intl.DateTimeFormat("en-US", {
 
 export const getSeasonalOccasion = (date = new Date(), preview = null) => {
   if (preview === "off" || !Number.isFinite(date.getTime())) return null;
+  if (preview === 'snow-closure') return { id: 'snow-closure', effect: 'ice-snow', year: date.getFullYear(), preview: true };
 
   const parts = Object.fromEntries(
     storeDate.formatToParts(date).map(({ type, value }) => [type, value]),
@@ -163,7 +178,7 @@ const makeParticles = (effect, radius, padding) => {
     });
   }
 
-  const colors = effect === "snow"
+  const colors = effect === 'ice-snow' ? ['#719cae', '#a6c7d4', '#4e8199'] : effect === "snow"
     ? ["#f4f5ed", "#b3cdd5", "#7e9fa7"]
     : ["#bc832f", "#e9bc62", "#416d5b", "#d08f74"];
   const count = radius < 50 ? 24 : 42;
@@ -178,7 +193,7 @@ const makeParticles = (effect, radius, padding) => {
       drift: side * padding * 0.15,
       angle: Math.random() * TAU,
       delay: index * 0.014,
-      life: (effect === "snow" ? 3.4 : 3.1) + Math.random() * 0.15,
+      life: (effect === "snow" || effect === 'ice-snow' ? 3.4 : 3.1) + Math.random() * 0.15,
       size: particleScale * (effect === "snow" ? 1.7 + Math.random() * 1.6 : 3 + Math.random() * 2),
       color: colors[index % colors.length],
     };
@@ -308,7 +323,20 @@ const drawParticles = (context, particles, effect, elapsed, radius, padding, siz
     } else {
       const x = particle.x + Math.sin(progress * 5 + particle.angle) * padding * 0.18 + particle.drift * progress;
       const y = particle.y + progress * (radius * 2 + padding * 1.5);
-      if (effect === "snow") {
+      if (effect === 'ice-snow') {
+        // Small wind-blown six-arm snowflakes, interspersed with ice crystals.
+        context.save();
+        context.translate(x + progress * padding * .3, y);
+        context.rotate(particle.angle + progress);
+        context.lineWidth = 1.1;
+        context.beginPath();
+        for (let arm = 0; arm < 6; arm++) {
+          const angle = arm * TAU / 6;
+          context.moveTo(0, 0);
+          context.lineTo(Math.cos(angle) * particle.size, Math.sin(angle) * particle.size);
+        }
+        context.stroke(); context.restore();
+      } else if (effect === "snow") {
         context.beginPath();
         context.arc(x, y, particle.size, 0, TAU);
         context.fill();
@@ -325,17 +353,17 @@ const drawParticles = (context, particles, effect, elapsed, radius, padding, siz
   context.restore();
 };
 
-export const setupSeasonalLogo = async (logo) => {
-  const occasion = getSeasonalOccasion(
+export const setupSeasonalLogo = async (logo, options = {}) => {
+  const occasion = 'occasion' in options ? options.occasion : getSeasonalOccasion(
     new Date(), new URLSearchParams(window.location.search).get("logo-flair"),
   );
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const header = logo.closest(".header-flex");
+  const header = logo.closest(options.preview ? '.preview-logo' : '.header-flex');
   if (!occasion || motion.matches || !header) return;
 
   const storageKey = `changing-places:logo-flair:${occasion.id}:${occasion.year}`;
   try {
-    if (!occasion.preview && window.sessionStorage.getItem(storageKey)) return;
+    if (!options.preview && !occasion.preview && window.sessionStorage.getItem(storageKey)) return;
   } catch {
     // Decorations still work when browser storage is unavailable.
   }
@@ -363,7 +391,7 @@ export const setupSeasonalLogo = async (logo) => {
   motion.addEventListener("change", stop, { signal });
 
   const start = () => {
-    if (stopped || motion.matches || document.hidden || window.scrollY > 80 || !logo.naturalWidth) {
+    if (stopped || motion.matches || document.hidden || (!options.preview && window.scrollY > 80) || !logo.naturalWidth) {
       stop();
       return;
     }
@@ -397,7 +425,7 @@ export const setupSeasonalLogo = async (logo) => {
     header.append(canvas);
 
     try {
-      if (!occasion.preview) window.sessionStorage.setItem(storageKey, "seen");
+      if (!options.preview && !occasion.preview) window.sessionStorage.setItem(storageKey, "seen");
     } catch {
       // Storage is optional; no cookie or network request is needed.
     }
@@ -435,4 +463,5 @@ export const setupSeasonalLogo = async (logo) => {
     logo.addEventListener("load", schedule, { once: true, signal });
     logo.addEventListener("error", stop, { once: true, signal });
   }
+  return stop;
 };
