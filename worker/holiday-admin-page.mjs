@@ -7,7 +7,7 @@ export function adminPage(head = false) {
   <link rel="icon" href="/images/favicon.ico">
   <link rel="stylesheet" href="/styles.css?v=20260908-1">
   <link rel="stylesheet" href="/admin-hours.css?v=20260908-2">
-  <script type="module" src="/admin-hours.js?v=20260908-2"></script>
+  <script type="module" src="/admin-hours.js?v=20260908-3"></script>
 </head>
 <body class="admin-body is-signed-out">
   <a class="skip-link" href="#admin-main">Skip to main content</a>

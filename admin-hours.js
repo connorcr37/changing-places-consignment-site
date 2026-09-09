@@ -102,7 +102,7 @@ function chooseTemplate() {
 function edit(entry, template = templates.blank) {
   selected = entry ? structuredClone(entry) : { id: crypto.randomUUID(), version: 0, state: 'draft' };
   dirty = false; stopPreview?.(); ++previewRun;
-  $('entry-form').hidden = false; $('template-picker').hidden = true; $('new-entry').hidden = false; $('cancel-new').hidden = true;
+  $('entry-form').hidden = false; $('template-picker').hidden = true; $('new-entry').hidden = false; $('cancel-new').hidden = Boolean(entry);
   $('editor-state').textContent = entry ? entry.state === 'published' ? 'Published' : entry.state === 'removed' ? 'Removed' : 'Draft' : 'Unsaved announcement';
   $('editor-title').textContent = 'Announcement details';
   $('entry-name').value = entry?.name ?? template.name; $('entry-message').value = entry?.message ?? template.message;
@@ -188,7 +188,11 @@ async function loadStaff() {
   }
 }
 $('new-entry').addEventListener('click', action(() => { if (discardChanges()) { chooseTemplate(); document.querySelector('[data-template]').focus(); } }));
-$('cancel-new').addEventListener('click', action(() => { edit(entries.find(entry => entry.state !== 'removed')); $('entry-name').focus(); }));
+$('cancel-new').addEventListener('click', action(() => {
+  if (!discardChanges()) return;
+  if (selected) { chooseTemplate(); document.querySelector('[data-template]').focus(); }
+  else { edit(entries.find(entry => entry.state !== 'removed')); $('entry-name').focus(); }
+}));
 document.querySelectorAll('[data-template]').forEach(control => control.addEventListener('click', action(async () => {
   edit(null, templates[control.dataset.template]); $('entry-name').focus(); await replay();
 })));
