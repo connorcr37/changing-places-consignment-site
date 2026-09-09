@@ -94,7 +94,7 @@ function chooseTemplate() {
   selected = null; dirty = false; stopPreview?.(); ++previewRun;
   $('entry-form').hidden = true; $('template-picker').hidden = false; $('new-entry').hidden = true;
   $('editor-state').textContent = 'Get started'; $('editor-title').textContent = 'Create an announcement';
-  $('cancel-new').hidden = !entries.some(entry => entry.state !== 'removed');
+  $('cancel-template-picker').hidden = !entries.some(entry => entry.state !== 'removed');
   $('preview-banner').hidden = true; $('preview-animation-note').textContent = '';
   $('preview-schedule').textContent = 'Choose an announcement or template to preview. All times are Central.';
   $('replay-animation').disabled = true; renderEntries();
@@ -102,7 +102,8 @@ function chooseTemplate() {
 function edit(entry, template = templates.blank) {
   selected = entry ? structuredClone(entry) : { id: crypto.randomUUID(), version: 0, state: 'draft' };
   dirty = false; stopPreview?.(); ++previewRun;
-  $('entry-form').hidden = false; $('template-picker').hidden = true; $('new-entry').hidden = false; $('cancel-new').hidden = Boolean(entry);
+  $('entry-form').hidden = false; $('template-picker').hidden = true; $('new-entry').hidden = !entry; $('cancel-new').hidden = Boolean(entry);
+  $('cancel-template-picker').hidden = true;
   $('editor-state').textContent = entry ? entry.state === 'published' ? 'Published' : entry.state === 'removed' ? 'Removed' : 'Draft' : 'Unsaved announcement';
   $('editor-title').textContent = 'Announcement details';
   $('entry-name').value = entry?.name ?? template.name; $('entry-message').value = entry?.message ?? template.message;
@@ -190,9 +191,9 @@ async function loadStaff() {
 $('new-entry').addEventListener('click', action(() => { if (discardChanges()) { chooseTemplate(); document.querySelector('[data-template]').focus(); } }));
 $('cancel-new').addEventListener('click', action(() => {
   if (!discardChanges()) return;
-  if (selected) { chooseTemplate(); document.querySelector('[data-template]').focus(); }
-  else { edit(entries.find(entry => entry.state !== 'removed')); $('entry-name').focus(); }
+  chooseTemplate(); document.querySelector('[data-template]').focus();
 }));
+$('cancel-template-picker').addEventListener('click', action(() => { edit(entries.find(entry => entry.state !== 'removed')); $('entry-name').focus(); }));
 document.querySelectorAll('[data-template]').forEach(control => control.addEventListener('click', action(async () => {
   edit(null, templates[control.dataset.template]); $('entry-name').focus(); await replay();
 })));
