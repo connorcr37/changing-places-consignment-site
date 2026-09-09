@@ -92,9 +92,8 @@ function dateRow(day = {}) {
 function discardChanges() { return !dirty || window.confirm('Discard your unsaved changes?'); }
 function chooseTemplate() {
   selected = null; dirty = false; stopPreview?.(); ++previewRun;
-  $('entry-form').hidden = true; $('template-picker').hidden = false; $('new-entry').hidden = true;
+  $('entry-form').hidden = true; $('template-picker').hidden = false;
   $('editor-state').textContent = 'Get started'; $('editor-title').textContent = 'Create an announcement';
-  $('cancel-template-picker').hidden = !entries.some(entry => entry.state !== 'removed');
   $('preview-banner').hidden = true; $('preview-animation-note').textContent = '';
   $('preview-schedule').textContent = 'Choose an announcement or template to preview. All times are Central.';
   $('replay-animation').disabled = true; renderEntries();
@@ -102,8 +101,7 @@ function chooseTemplate() {
 function edit(entry, template = templates.blank) {
   selected = entry ? structuredClone(entry) : { id: crypto.randomUUID(), version: 0, state: 'draft' };
   dirty = false; stopPreview?.(); ++previewRun;
-  $('entry-form').hidden = false; $('template-picker').hidden = true; $('new-entry').hidden = !entry; $('cancel-new').hidden = Boolean(entry);
-  $('cancel-template-picker').hidden = true;
+  $('entry-form').hidden = false; $('template-picker').hidden = true;
   $('editor-state').textContent = entry ? entry.state === 'published' ? 'Published' : entry.state === 'removed' ? 'Removed' : 'Draft' : 'Unsaved announcement';
   $('editor-title').textContent = 'Announcement details';
   $('entry-name').value = entry?.name ?? template.name; $('entry-message').value = entry?.message ?? template.message;
@@ -188,12 +186,10 @@ async function loadStaff() {
     item.append(identity, actions); $(person.revoked_at ? 'removed-staff-list' : 'staff-list').append(item);
   }
 }
-$('new-entry').addEventListener('click', action(() => { if (discardChanges()) { chooseTemplate(); document.querySelector('[data-template]').focus(); } }));
 $('cancel-new').addEventListener('click', action(() => {
   if (!discardChanges()) return;
-  chooseTemplate(); document.querySelector('[data-template]').focus();
+  chooseTemplate(); $('editor-title').focus();
 }));
-$('cancel-template-picker').addEventListener('click', action(() => { edit(entries.find(entry => entry.state !== 'removed')); $('entry-name').focus(); }));
 document.querySelectorAll('[data-template]').forEach(control => control.addEventListener('click', action(async () => {
   edit(null, templates[control.dataset.template]); $('entry-name').focus(); await replay();
 })));
@@ -205,7 +201,7 @@ $('replay-animation').addEventListener('click', action(replay));
 $('entry-form').addEventListener('submit', action(async event => {
   const state = event.submitter?.value || 'draft';
   if (state === 'draft' && selected.state === 'published' && !window.confirm('Unpublish this announcement from the website and remove its Google updates?')) return;
-  await api(`/holidays/${selected.id}`, 'PUT', readEntry(state)); await refreshEntries(); edit(entries.find(entry => entry.id === selected.id));
+  await api(`/holidays/${selected.id}`, 'PUT', readEntry(state)); await refreshEntries(); chooseTemplate(); $('editor-title').focus();
   notice(state === 'published' ? 'Website: Published. Google updates, when selected, are queued separately.' : 'Draft saved.');
 }));
 $('remove-entry').addEventListener('click', action(async () => {
@@ -243,7 +239,7 @@ try {
     currentEmail = info.email; document.body.classList.remove('is-signed-out');
     $('signed-in').textContent = info.email; $('logout').hidden = false; $('login-panel').hidden = true; $('workspace').hidden = false;
     await Promise.all([refreshEntries(), loadGoogle(), loadStaff()]);
-    const first = entries.find(entry => entry.state !== 'removed'); if (first) edit(first); else chooseTemplate();
+    chooseTemplate();
     const status = new URLSearchParams(window.location.search).get('notice');
     if (status) { notice(status === 'connected' ? 'Google connected. Choose the store location below.' : 'Google sign-in or connection was cancelled.'); history.replaceState(null,'','/admin'); }
     window.setInterval(() => { if (!document.hidden && !busy) refreshEntries().catch(error => notice(error.message,true)); }, 15000);

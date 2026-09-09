@@ -6,8 +6,8 @@ export function adminPage(head = false) {
   <title>Admin | Changing Places</title><meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="/images/favicon.ico">
   <link rel="stylesheet" href="/styles.css?v=20260908-1">
-  <link rel="stylesheet" href="/admin-hours.css?v=20260908-3">
-  <script type="module" src="/admin-hours.js?v=20260908-4"></script>
+  <link rel="stylesheet" href="/admin-hours.css?v=20260908-4">
+  <script type="module" src="/admin-hours.js?v=20260908-5"></script>
 </head>
 <body class="admin-body is-signed-out">
   <a class="skip-link" href="#admin-main">Skip to main content</a>
@@ -35,12 +35,12 @@ export function adminPage(head = false) {
       </section>
       <div class="admin-layout">
         <section class="admin-card entry-list" aria-labelledby="announcements-heading">
-          <div class="admin-section-heading"><h2 id="announcements-heading">Announcements</h2><button id="new-entry" type="button" hidden>New announcement</button></div>
+          <div class="admin-section-heading"><h2 id="announcements-heading">Announcements</h2></div>
           <div id="entries"></div>
           <label class="admin-check removed-toggle"><input id="show-removed" type="checkbox"> Show removed</label>
         </section>
         <section class="admin-card editor" aria-labelledby="editor-title">
-          <div class="admin-section-heading"><div><p id="editor-state" class="eyebrow">Get started</p><h2 id="editor-title">Create an announcement</h2></div><button id="cancel-template-picker" type="button" hidden>Cancel</button></div>
+          <div class="admin-section-heading"><div><p id="editor-state" class="eyebrow">Get started</p><h2 id="editor-title" tabindex="-1">Create an announcement</h2></div></div>
           <div id="template-picker">
             <p class="admin-help">Start with a template, then edit the message and choose your dates.</p>
             <div class="template-grid">
@@ -67,7 +67,7 @@ export function adminPage(head = false) {
               <label class="admin-check"><input id="google-post" type="checkbox"> Publish the message as a Google announcement post</label>
               <p class="admin-help">Google updates start when you publish. Posts use their own timing; the website banner schedule does not remove them.</p>
             </fieldset>
-            <div class="admin-actions editor-actions"><button type="submit" name="intent" value="published" class="button" id="publish">Publish announcement</button><div class="admin-actions"><button type="submit" name="intent" value="draft" id="save-draft">Save draft</button><button id="cancel-new" type="button" hidden>Cancel</button></div><button type="button" id="remove-entry" class="danger" hidden>Remove entry</button></div>
+            <div class="admin-actions editor-actions"><button type="submit" name="intent" value="published" class="button" id="publish">Publish announcement</button><div class="admin-actions"><button type="submit" name="intent" value="draft" id="save-draft">Save draft</button><button id="cancel-new" type="button">Cancel</button></div><button type="button" id="remove-entry" class="danger" hidden>Remove entry</button></div>
             <p class="admin-help" id="entry-meta" hidden></p>
           </form>
         </section>

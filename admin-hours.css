@@ -54,7 +54,6 @@
 .entry-item h3 { font-size: 1rem; margin-bottom: .65rem; }
 .entry-item p { font-size: .7rem; margin: .3rem 0; }
 .entry-item .admin-actions { margin-top: .75rem; }
-.entry-list .admin-section-heading { flex-wrap: wrap; }
 .entry-list .removed-toggle { border-top: 1px solid var(--color-border); padding-top: 1rem; margin: 1.1rem 0 0; font-size: .75rem; }
 .entry-empty { padding: 1.1rem 0 1.5rem; }
 .entry-empty strong { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .4rem; }
