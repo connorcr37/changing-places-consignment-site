@@ -22,9 +22,9 @@
   <meta name="twitter:image" content="https://changing-places-dsm.com/images/seller-resources-og.png" />
   <link rel="icon" href="/images/favicon/favicon.ico" />
   <link rel="stylesheet" href="/styles.css?v=20260908-1" />
-  <link rel="stylesheet" href="/intake.css?v=20260913-notes-9" />
+  <link rel="stylesheet" href="/intake.css?v=20260913-notes-10" />
   <script src="/site.js?v=20260908-1" defer></script>
-  <script src="/intake-form.js?v=20260913-notes-5" type="module"></script>
+  <script src="/intake-form.js?v=20260913-notes-6" type="module"></script>
 </head>
 <body class="intake-page">
   <a class="skip-link" href="#main-content">Skip to form</a>
@@ -102,9 +102,13 @@
           </div>
           <p id="contact-help" class="field-help">Add a phone number or email so we can follow up. Both are welcome.</p>
           <label for="customer-notes">Anything we should know? <span class="optional-label">Optional</span></label>
-          <textarea id="customer-notes" name="notes" rows="9" aria-describedby="notes-help notes-count" placeholder="Brands, measurements, age, condition, or your timing…&#10;&#10;Example: Ethan Allen table, 72 × 42&quot;, purchased new around 2015 for about $2,200. Includes 2 leaves. Some scratches on top shown in photos. My husband could bring it in Tuesday or Thursday next week."></textarea>
+          <textarea id="customer-notes" name="notes" rows="5" aria-describedby="notes-help notes-count" placeholder="Brands, measurements, age, condition, or your timing…"></textarea>
           <p id="notes-help" class="field-help">Please avoid lengthy AI-generated sales descriptions — brief, factual details are best.</p>
-          <p id="notes-count" class="field-help notes-counter" aria-live="polite" aria-atomic="true">0 / 2,000 characters</p>
+          <div class="notes-meta">
+            <button id="notes-example-toggle" class="notes-example-toggle" type="button" aria-expanded="false" aria-controls="notes-example">See an example</button>
+            <p id="notes-count" class="field-help notes-counter" aria-live="polite" aria-atomic="true" hidden>0 / 2,000 characters</p>
+          </div>
+          <p id="notes-example" class="field-help" hidden>Ethan Allen table, 72 × 42&quot;, purchased new around 2015 for about $2,200. Includes 2 leaves. Some scratches on top shown in photos. My husband could bring it in Tuesday or Thursday next week.</p>
           <div class="intake-honeypot" aria-hidden="true"><label for="company-website">Company website</label><input id="company-website" name="website" tabindex="-1" autocomplete="off" /></div>
         </fieldset>
         <fieldset id="photo-fields" disabled>

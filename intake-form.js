@@ -17,13 +17,22 @@ import { openPhoto, resizePhoto } from './intake-photo.js';
     const maximum = INTAKE_LIMITS.maxNotesLength.toLocaleString('en-US');
     $('notes-count').textContent = `${count.toLocaleString('en-US')} / ${maximum} characters`;
     $('notes-count').classList.toggle('is-over-limit', overLimit);
+    $('notes-count').hidden = count === 0 && document.activeElement !== notes;
     notes.setAttribute('aria-invalid', String(overLimit));
     return !overLimit;
   }
   // Preserve all typed and pasted text; validate instead of using maxlength.
   notes.addEventListener('input', validateNotes);
+  notes.addEventListener('focus', validateNotes);
+  notes.addEventListener('blur', validateNotes);
   window.addEventListener('pageshow', validateNotes);
   validateNotes();
+  $('notes-example-toggle').addEventListener('click', () => {
+    const example = $('notes-example');
+    example.hidden = !example.hidden;
+    $('notes-example-toggle').setAttribute('aria-expanded', String(!example.hidden));
+    $('notes-example-toggle').textContent = example.hidden ? 'See an example' : 'Hide example';
+  });
   const progress = (value, message) => { $('upload-progress').hidden = false; $('progress-bar').value = value; $('progress-label').textContent = message; };
   const lock = (value) => {
     busy = value;
