@@ -110,6 +110,24 @@ test('requires contact, consent, and 1–30 photos, rejects invalid or oversize 
   const s = setup(); const base = { name: 'Mary', phone: '5155550123', consent: true, photoCount: 1 };
   for (const bad of [{ phone: '' }, { consent: false }, { photoCount: 31 }, { photoCount: 0 }, { name: 'a'.repeat(121) }, { email: 'bad' }, { website: 'spam' }]) assert.equal((await s.request('/submissions', 'POST', { ...base, ...bad })).status, 400);
 });
+test('notes accept up to 2,000 characters and reject longer submissions without saving truncated text', async () => {
+  for (const length of [0, 1999, 2000, 2001, 5001]) {
+    const s = setup();
+    const notes = 'a'.repeat(length);
+    const info = { uploadId: crypto.randomUUID(), uploadToken: crypto.randomUUID() + crypto.randomUUID(), name: 'Mary', phone: '5155550123', consent: true, photoCount: 1, notes };
+    const response = await s.request('/submissions', 'POST', info);
+    if (length <= 2000) {
+      assert.equal(response.status, 201);
+      assert.equal(s.db.prepare('SELECT notes FROM intake_submissions').get().notes, notes);
+    } else {
+      assert.equal(response.status, 400);
+      assert.equal((await response.json()).error, 'Please shorten your notes to 2,000 characters or fewer.');
+      assert.equal(s.db.prepare('SELECT COUNT(*) AS n FROM intake_submissions').get().n, 0);
+    }
+    s.db.close();
+  }
+});
+
 test('thirty photos upload privately, finish idempotently and return only a receipt', async () => {
   const s = setup(); const info = await s.start(30);
   assert.equal((await s.complete(info)).status, 409);

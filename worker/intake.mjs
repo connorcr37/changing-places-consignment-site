@@ -23,13 +23,13 @@ const getJson = async (request, limit = 16000) => {
   try { return JSON.parse(new TextDecoder().decode(await readBoundedBody(request, limit))); }
   catch { fail(400, 'Please check the submitted information.'); }
 };
-const textField = (value, max) => typeof value === 'string' && value.length <= max ? value.trim() : fail(400, 'Please shorten the information entered.');
+const textField = (value, max, message = 'Please shorten the information entered.') => typeof value === 'string' && value.length <= max ? value.trim() : fail(400, message);
 export function validateContact(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) fail(400, 'Please check the submitted information.');
   const name = textField(body.name, 120);
   const phone = textField(body.phone ?? '', 40);
   const email = textField(body.email ?? '', 254);
-  const notes = textField(body.notes ?? '', 4000);
+  const notes = textField(body.notes ?? '', INTAKE_LIMITS.maxNotesLength, `Please shorten your notes to ${INTAKE_LIMITS.maxNotesLength.toLocaleString('en-US')} characters or fewer.`);
   if (!name || /[\r\n\x00-\x1f]/.test(name)) fail(400, 'Please enter your name.');
   if (!phone && !email) fail(400, 'Please enter a phone number or email address.');
   if (email && !isValidEmail(email)) fail(400, 'Please check your email address.');

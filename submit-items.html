@@ -22,9 +22,9 @@
   <meta name="twitter:image" content="https://changing-places-dsm.com/images/seller-resources-og.png" />
   <link rel="icon" href="/images/favicon/favicon.ico" />
   <link rel="stylesheet" href="/styles.css?v=20260908-1" />
-  <link rel="stylesheet" href="/intake.css?v=5f25a71161de" />
+  <link rel="stylesheet" href="/intake.css?v=20260913-notes-9" />
   <script src="/site.js?v=20260908-1" defer></script>
-  <script src="/intake-form.js?v=20260906-quote-fix" type="module"></script>
+  <script src="/intake-form.js?v=20260913-notes-5" type="module"></script>
 </head>
 <body class="intake-page">
   <a class="skip-link" href="#main-content">Skip to form</a>
@@ -77,7 +77,7 @@
       <aside class="intake-intro">
         <p class="eyebrow">A new chapter for your pieces</p>
         <h1>Good pieces.<br />New possibilities.</h1>
-        <p class="intake-lead">Thinking of consigning? Show us what you have. We'll take a look and get in touch about the next step.</p>
+        <p class="intake-lead">Thinking of consigning? Show us what you have. We'll take a look and get in touch.</p>
         <div class="photo-tips">
           <span class="tips-icon" aria-hidden="true">✧</span>
           <h2>A few photos go a long way.</h2>
@@ -88,7 +88,7 @@
           </ul>
           <p class="small-text">Natural light is best. Measurements and a little history are helpful, but not required.</p>
         </div>
-        <p class="intake-reassurance">Every submission gets a personal review.<br />Please wait for approval before bringing items in.</p>
+        <p class="intake-reassurance">Every submission is personally reviewed.<br />Please wait for approval before bringing items in.</p>
       </aside>
       <form id="intake-form" class="intake-card" action="/api/intake/submissions" method="post">
         <div id="availability" class="notice" role="status" hidden></div>
@@ -102,7 +102,9 @@
           </div>
           <p id="contact-help" class="field-help">Add a phone number or email so we can follow up. Both are welcome.</p>
           <label for="customer-notes">Anything we should know? <span class="optional-label">Optional</span></label>
-          <textarea id="customer-notes" name="notes" rows="4" maxlength="4000" placeholder="Brands, measurements, age, condition, or your timing…"></textarea>
+          <textarea id="customer-notes" name="notes" rows="9" aria-describedby="notes-help notes-count" placeholder="Brands, measurements, age, condition, or your timing…&#10;&#10;Example: Ethan Allen table, 72 × 42&quot;, purchased new around 2015 for about $2,200. Includes 2 leaves. Some scratches on top shown in photos. My husband could bring it in Tuesday or Thursday next week."></textarea>
+          <p id="notes-help" class="field-help">Please avoid lengthy AI-generated sales descriptions — brief, factual details are best.</p>
+          <p id="notes-count" class="field-help notes-counter" aria-live="polite" aria-atomic="true">0 / 2,000 characters</p>
           <div class="intake-honeypot" aria-hidden="true"><label for="company-website">Company website</label><input id="company-website" name="website" tabindex="-1" autocomplete="off" /></div>
         </fieldset>
         <fieldset id="photo-fields" disabled>

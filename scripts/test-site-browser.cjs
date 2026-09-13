@@ -74,7 +74,8 @@ const server = createServer(async (req, res) => {
     await checkReplayHints();
     for (const link of await page.locator('.facebook-card__link').all()) {
       const title = await link.locator('.facebook-card__title').innerText();
-      assert.equal(await page.getByRole('link', { name: new RegExp(title) }).count(), 1);
+      // Expired cards can share a title; check each link's own accessible name.
+      assert.equal(await link.and(page.getByRole('link', { name: new RegExp(title) })).count(), 1);
     }
     // Exercise generated cards, including the visible duration and weekday.
     await page.route('**/api/facebook-live', route => route.fulfill({ json: { videos: [

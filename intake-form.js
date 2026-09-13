@@ -1,15 +1,29 @@
-import { INTAKE_LIMITS, isValidEmail, isValidPhone } from './intake-shared.js';
+import { INTAKE_LIMITS, isValidEmail, isValidPhone } from './intake-shared.js?v=20260913-notes-5';
 import { openPhoto, resizePhoto } from './intake-photo.js';
 
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const form = $('intake-form');
+  const notes = $('customer-notes');
   const files = [];
   let busy = false;
   let session = null;
   let available = false;
   const showError = (id, message) => { $(id).textContent = message; $(id).hidden = !message; };
+  function validateNotes() {
+    const count = notes.value.length;
+    const overLimit = count > INTAKE_LIMITS.maxNotesLength;
+    const maximum = INTAKE_LIMITS.maxNotesLength.toLocaleString('en-US');
+    $('notes-count').textContent = `${count.toLocaleString('en-US')} / ${maximum} characters`;
+    $('notes-count').classList.toggle('is-over-limit', overLimit);
+    notes.setAttribute('aria-invalid', String(overLimit));
+    return !overLimit;
+  }
+  // Preserve all typed and pasted text; validate instead of using maxlength.
+  notes.addEventListener('input', validateNotes);
+  window.addEventListener('pageshow', validateNotes);
+  validateNotes();
   const progress = (value, message) => { $('upload-progress').hidden = false; $('progress-bar').value = value; $('progress-label').textContent = message; };
   const lock = (value) => {
     busy = value;
@@ -88,6 +102,7 @@ import { openPhoto, resizePhoto } from './intake-photo.js';
     event.preventDefault(); if (busy || !available) return;
     showError('form-error', '');
     if (!session) {
+      if (!validateNotes()) { notes.focus(); return; }
       if (!form.reportValidity()) return;
       if (!$('customer-phone').value.trim() && !$('customer-email').value.trim()) { showError('form-error', 'Please add a phone number or email address so we can get in touch.'); $('customer-phone').focus(); return; }
       for (const [id, validate, label] of [['customer-email', isValidEmail, 'email address'], ['customer-phone', isValidPhone, 'phone number']]) {

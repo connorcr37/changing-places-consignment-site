@@ -1,5 +1,6 @@
 // Public rules shared by the form and Worker. No credentials or environment settings.
 export const INTAKE_LIMITS = Object.freeze({
+  maxNotesLength: 2000,
   maxPhotos: 30,
   maxSourceBytes: 20 * 1024 * 1024,
   maxPhotoBytes: 600000,

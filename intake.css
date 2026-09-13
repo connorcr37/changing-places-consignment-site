@@ -28,7 +28,12 @@
 .intake-page textarea { resize: vertical; min-height: 100px; }
 .field-help { font-size: 13px; color: var(--color-muted); margin: 10px 0 16px; line-height: 1.75; }
 .field-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin: 20px 0 0; }
+#contact-help, #notes-help { font-size: 12px; font-weight: 400; }
 #contact-help { margin: 6px 0 20px; }
+#notes-help { margin: 6px 0 8px; }
+.notes-counter { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.notes-counter.is-over-limit { color: #9c382e; font-weight: 600; }
+.intake-page textarea[aria-invalid="true"] { border-color: #9c382e; outline-color: #9c382e; }
 .drop-zone { text-align: center; padding: 26px 16px 22px; border: 1px dashed rgba(46, 92, 80, .5); border-radius: 18px; color: var(--color-forest); background: rgba(46, 92, 80, .045); }
 .drop-zone.dragover { background: #e4eddc; border-color: var(--color-charcoal); }
 .drop-zone svg { margin-bottom: 12px; }
