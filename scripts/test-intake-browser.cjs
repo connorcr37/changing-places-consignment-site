@@ -88,7 +88,7 @@ const server = createServer(async (req, res) => {
       assert.equal(await example.isVisible(), false);
       await exampleToggle.press('Enter');
       assert.equal(await example.isVisible(), true, 'The full example can be opened with the keyboard');
-      assert.match(await example.textContent(), /My husband could bring it in Tuesday or Thursday next week\./);
+      assert.match(await example.textContent(), /I could bring it in Tuesday or Thursday next week\./);
       assert.equal(await notes.inputValue(), '', 'Opening the example must not fill in the notes');
       await notesForm.page.getByRole('button', { name: 'Hide example', exact: true }).press('Space');
       assert.equal(await example.isVisible(), false);
