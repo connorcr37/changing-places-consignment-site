@@ -88,13 +88,15 @@ export function buildReviewEmail(env, row, assessment, attachments) {
   const reviewIntro = assessment ? `<div style="margin:24px 0 14px"><h2 style="margin:0 0 7px;font:bold 11px/1.5 Arial,sans-serif;letter-spacing:1.3px;color:#8a4c36">PRELIMINARY PHOTO REVIEW</h2><p style="margin:0 0 6px;font:13px/1.6 Arial,sans-serif;color:#5d5852">${reviewNote}</p><p style="margin:0;font:12px/1.6 Arial,sans-serif;color:#2b2b2b">${legend}</p></div>` : '';
   // Keep essential styling inline and the photo layout table-based. Media queries
   // only tighten spacing; the email remains usable when a client strips the head.
+  // Clip the accent strip to the card's curve; rounding its short cells separately
+  // produces smaller corners that extend outside the card.
   const html = `<!doctype html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>@media screen and (max-width:600px){.email-gutter{padding:12px 8px!important}.email-content{padding:22px 18px!important}.email-name{font-size:29px!important}.contact-gap{width:12px!important}.photo-gap{padding-right:10px!important}.item-note{font-size:13px!important}}</style>
 </head><body style="margin:0;padding:0;background:#f8f5f1;color:#2b2b2b;font:14px/1.5 Arial,sans-serif">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f8f5f1"><tr><td class="email-gutter" align="center" style="padding:28px 12px">
 <!--[if mso]><table role="presentation" width="640" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width:640px;table-layout:fixed;border:1px solid #e5ded5;border-radius:24px;border-collapse:separate;text-align:left">
-<tr><td style="padding:0"><table role="presentation" aria-hidden="true" width="100%" cellpadding="0" cellspacing="0"><tr><td width="60%" height="7" bgcolor="#2e5c50" style="height:7px;line-height:7px;font-size:0;border-top-left-radius:24px">&nbsp;</td><td width="20%" height="7" bgcolor="#8da597" style="height:7px;line-height:7px;font-size:0">&nbsp;</td><td width="20%" height="7" bgcolor="#f5c7aa" style="height:7px;line-height:7px;font-size:0;border-top-right-radius:24px">&nbsp;</td></tr></table></td></tr>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width:640px;table-layout:fixed;border:1px solid #e5ded5;border-radius:24px;overflow:hidden;border-collapse:separate;text-align:left">
+<tr><td style="padding:0"><table role="presentation" aria-hidden="true" width="100%" cellpadding="0" cellspacing="0"><tr><td width="60%" height="7" bgcolor="#2e5c50" style="height:7px;line-height:7px;font-size:0">&nbsp;</td><td width="20%" height="7" bgcolor="#8da597" style="height:7px;line-height:7px;font-size:0">&nbsp;</td><td width="20%" height="7" bgcolor="#f5c7aa" style="height:7px;line-height:7px;font-size:0">&nbsp;</td></tr></table></td></tr>
 <tr><td class="email-content" style="padding:26px;word-wrap:break-word;overflow-wrap:anywhere">
 <h1 class="email-name" style="margin:0;font:bold 32px/1.2 Georgia,serif;color:#2b2b2b">${escape(row.name)}</h1>
 <div style="margin:14px 0 8px">${contactHtml}</div>
