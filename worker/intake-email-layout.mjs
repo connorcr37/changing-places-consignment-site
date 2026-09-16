@@ -20,12 +20,12 @@ const dot = item => {
   const [color, label] = fit[item.recommendation];
   return `<span role="img" aria-label="${label}" title="${label}" style="color:${color};font:20px/1 Arial,sans-serif">●</span>`;
 };
-const image = (photo, width) => `<img src="cid:${escape(photo.attachment.contentId)}" width="${width}" alt="Photo ${photo.number}" style="display:block;width:100%;max-width:${width}px;height:auto;border:0;border-radius:4px" />`;
-const caption = photo => `<div style="font:11px/1.4 Arial,sans-serif;color:#74796e;margin-top:3px">Photo ${photo.number}</div>`;
+const image = (photo, width) => `<img src="cid:${escape(photo.attachment.contentId)}" width="${width}" alt="Photo ${photo.number}" style="display:block;width:100%;max-width:${width}px;height:auto;border:0;border-radius:10px" />`;
+const caption = photo => `<div style="font:11px/1.4 Arial,sans-serif;color:#5d5852;margin-top:6px">Photo ${photo.number}</div>`;
 const gallery = photos => {
   let rows = '';
   for (let index = 0; index < photos.length; index += 2) {
-    rows += `<tr>${photos.slice(index, index + 2).map(photo => `<td width="50%" valign="top" style="width:50%;padding:4px">${image(photo, 290)}${caption(photo)}</td>`).join('')}${photos.length - index === 1 ? '<td width="50%"></td>' : ''}</tr>`;
+    rows += `<tr>${photos.slice(index, index + 2).map(photo => `<td width="50%" valign="top" style="width:50%;padding:6px">${image(photo, 290)}${caption(photo)}</td>`).join('')}${photos.length - index === 1 ? '<td width="50%"></td>' : ''}</tr>`;
   }
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed">${rows}</table>`;
 };
@@ -53,9 +53,9 @@ export function buildReviewEmail(env, row, assessment, attachments) {
     const primary = matching[0];
     const notes = group.map(item => {
       const brand = item.likely_brand && !/unknown|label needed|not (visible|identified|clear)|unbranded/i.test(item.likely_brand) ? item.likely_brand : '';
-      return `<div style="margin-bottom:9px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="22" valign="top" style="width:22px;padding-top:1px">${dot(item)}</td><td valign="top"><div style="font:bold 16px/1.3 Arial,sans-serif;color:#294e43">${escape(name(item))}</div>${brand ? `<div style="font-size:12px;color:#6c7568;margin-top:3px">${escape(brand)}</div>` : ''}<p style="margin:5px 0 0;font-size:13px;line-height:1.4;color:#606858">${escape(item.assessment)}</p></td></tr></table></div>`;
+      return `<div style="margin-bottom:12px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed"><tr><td width="20" valign="top" style="width:20px;padding-top:2px">${dot(item)}</td><td valign="top"><div style="font:bold 16px/1.35 Arial,sans-serif;color:#2e5c50">${escape(name(item))}</div>${brand ? `<div style="font-size:12px;color:#5d5852;margin-top:4px">${escape(brand)}</div>` : ''}<p class="item-note" style="margin:7px 0 0;font:14px/1.5 Arial,sans-serif;color:#5d5852">${escape(item.assessment)}</p></td></tr></table></div>`;
     }).join('');
-    return `<tr><td style="padding:10px 0;border-bottom:1px solid #e6e7df"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed"><tr>${primary ? `<td width="46%" valign="top" style="width:46%;padding-right:12px">${image(primary, 270)}${caption(primary)}</td>` : ''}<td valign="top" style="overflow-wrap:anywhere">${notes}</td></tr></table>${matching.length > 1 ? gallery(matching.slice(1)) : ''}</td></tr>`;
+    return `<tr><td style="padding:0 0 12px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;border:1px solid #e5ded5;border-radius:16px;border-collapse:separate;background:#ffffff"><tr><td style="padding:12px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed"><tr>${primary ? `<td class="photo-gap" width="46%" valign="top" style="width:46%;padding-right:14px">${image(primary, 270)}${caption(primary)}</td>` : ''}<td valign="top" style="word-wrap:break-word;overflow-wrap:anywhere">${notes}</td></tr></table>${matching.length > 1 ? gallery(matching.slice(1)) : ''}</td></tr></table></td></tr>`;
   }).join('');
   const remaining = photos.filter(photo => !shown.has(photo.number));
   const notes = row.notes ? `“${row.notes}”` : 'None provided';
@@ -64,26 +64,48 @@ export function buildReviewEmail(env, row, assessment, attachments) {
   const phoneTarget = digits.length === 10 ? `+1${digits}` : digits.length === 11 && digits.startsWith('1') ? `+${digits}` : `${String(row.phone || '').startsWith('+') ? '+' : ''}${digits}`;
   const textUrl = `https://changing-places-dsm.com/text-consignor#phone=${encodeURIComponent(phoneTarget)}`;
   const contact = [phone, row.email || 'No email provided'].filter(Boolean).join('\n');
-  const contactLink = (href, label, action, style = '') => `<a href="${escape(href)}" aria-label="${escape(action)}" style="color:#294e43;text-decoration:underline;${style}">${escape(label)}</a>`;
-  const actionStyle = 'display:inline-block;white-space:nowrap;margin-left:8px;padding:3px 9px;border:1px solid #dce4d6;border-radius:4px;background:#f1f3ec;text-decoration:none;font-size:12px';
-  const contactHtml = [
-    phone ? `${contactLink(`tel:${phoneTarget}`, phone, `Call ${row.name}`, 'white-space:nowrap;text-decoration:none')}${contactLink(`tel:${phoneTarget}`, 'Call', `Call ${row.name}`, actionStyle)}${contactLink(textUrl, 'Text', `Text ${row.name}`, actionStyle)}` : '',
-    row.email ? contactLink(`mailto:${encodeURIComponent(row.email)}`, row.email, `Email ${row.name}`, 'display:inline-block;margin-top:4px') : 'No email provided',
-  ].filter(Boolean).join('<br />');
+  const contactLink = (href, label, action, style = '') => `<a href="${escape(href)}" aria-label="${escape(action)}" style="color:#2e5c50;text-decoration:underline;${style}">${escape(label)}</a>`;
+  const actionStyle = 'display:inline-block;min-width:28px;white-space:nowrap;vertical-align:middle;text-align:center;padding:5px 14px;border:1px solid #2e5c50;border-radius:999px;background:#ffffff;text-decoration:none;font:bold 13px/20px Arial,sans-serif;';
+  const contactDetails = [
+    phone ? contactLink(`tel:${phoneTarget}`, phone, `Call ${row.name}`, 'display:block;white-space:nowrap;text-decoration:none;font-weight:bold') : '',
+    row.email ? contactLink(`mailto:${encodeURIComponent(row.email)}`, row.email, `Email ${row.name}`, `display:block;max-width:100%;margin-top:${phone ? 2 : 0}px;word-wrap:break-word;overflow-wrap:anywhere`) : '<span style="display:block;margin-top:2px">No email provided</span>',
+  ].join('');
+  // A separate action column keeps button height out of the phone/email spacing.
+  const contactHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed"><tr><td valign="top" style="padding:0;font:14px/1.6 Arial,sans-serif;word-wrap:break-word;overflow-wrap:anywhere">${contactDetails}</td>${phone ? `<td class="contact-gap" width="16" style="width:16px;padding:0"></td><td class="contact-actions" width="124" align="right" valign="middle" style="width:124px;padding:0;white-space:nowrap;font-size:0;line-height:0">${contactLink(`tel:${phoneTarget}`, 'Call', `Call ${row.name}`, actionStyle)}${contactLink(textUrl, 'Text', `Text ${row.name}`, `${actionStyle}margin-left:8px;background:#2e5c50;color:#ffffff`)}</td>` : ''}</tr></table>`;
   const submitted = submittedLabel(row.submitted_at);
   const firstName = String(row.name || '').trim().split(/\s+/)[0];
   const followUp = isValidEmail(row.email)
     ? `Reply to this email to contact ${firstName} directly.`
     : `No email was provided. Call or text ${firstName} at ${formatPhone(row.phone)}.`;
-  const actionPanel = `<div style="margin-top:16px;border-top:1px solid #dce4d6;background:#f1f3ec;padding:16px"><h2 style="margin:0 0 4px;font:bold 14px/1.4 Arial,sans-serif;color:#294e43">Ready to follow up?</h2><p style="margin:0;font-size:13px;line-height:1.5;color:#606858">${escape(followUp)}</p></div>`;
+  const actionPanel = `<div style="margin-top:12px;border-top:4px solid #f5c7aa;border-radius:16px;background:#2e5c50;padding:20px"><h2 style="margin:0 0 8px;font:bold 23px/1.25 Georgia,serif;color:#ffffff">Ready to follow up?</h2><p style="margin:0;font:14px/1.6 Arial,sans-serif;color:#fcfbfa">${escape(followUp)}</p></div>`;
   const summary = `${row.photo_count} ${row.photo_count === 1 ? 'photo' : 'photos'}${assessment ? ` · Approximately ${assessment.approximate_item_count} ${assessment.approximate_item_count === 1 ? 'item' : 'items'}` : ' · Manual review needed'}`;
-  const reviewNote = 'AI-assisted guidance based on submitted photos. Staff makes the final decision.';
+  const reviewNote = 'AI-assisted guidance based on submitted photos. The final decision is yours.';
+  const legendBackground = { likely_accept: '#edf5ef', needs_review: '#fff5df', likely_decline: '#fceee8' };
   const legend = ['likely_accept', 'needs_review', 'likely_decline'].map(key => {
     const [color, label] = fit[key];
-    return `<span style="display:inline-block;white-space:nowrap;margin-right:12px"><span aria-hidden="true" style="color:${color};font-size:16px">●</span> ${label}</span>`;
+    return `<span style="display:inline-block;white-space:nowrap;margin:4px 6px 0 0;padding:4px 9px;border-radius:999px;background:${legendBackground[key]}"><span aria-hidden="true" style="color:${color};font-size:14px">●</span> ${label}</span>`;
   }).join(' ');
-  const reviewIntro = assessment ? `<div style="margin:12px 0 8px;padding:10px 12px;background:#f1f3ec;border-radius:4px"><h2 style="margin:0 0 4px;font:bold 11px/1.4 Arial,sans-serif;letter-spacing:0.7px;color:#294e43">PRELIMINARY PHOTO REVIEW</h2><p style="margin:0 0 5px;font-size:12px;line-height:1.5;color:#606858">${reviewNote}</p><p style="margin:0;font-size:12px;line-height:1.6;color:#303a30">${legend}</p></div>` : '';
-  const html = `<!doctype html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /></head><body style="margin:0;padding:0;background:#f7f5ef;color:#303a30;font:14px/1.4 Arial,sans-serif"><div style="max-width:600px;margin:0 auto;padding:16px;background:#fffefa"><h1 style="margin:0;font:bold 25px/1.2 Georgia,serif;color:#294e43">${escape(row.name)}</h1><p style="margin:6px 0 3px;font-size:13px;line-height:1.5;overflow-wrap:anywhere">${contactHtml}</p>${submitted ? `<p style="margin:0 0 14px;font-size:12px;line-height:1.5;color:#74796e">${escape(submitted)}</p>` : ''}<p style="margin:8px 0;font-size:13px"><strong>Notes:</strong> ${escape(notes).replace(/\n/g, '<br />')}</p>${reviewIntro}<p style="margin:10px 0 0;font-size:12px;color:#74796e">${escape(summary)}</p>${items.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed">${itemRows}</table>` : `<p style="margin:10px 0;font-size:13px">${escape(assessment?.overview || 'AI review unavailable. Please screen the photos below.')}</p>`}${remaining.length ? `${items.length ? '<p style="margin:12px 0 2px;font-size:12px;font-weight:bold">More submitted photos</p>' : ''}${gallery(remaining)}` : ''}${actionPanel}</div></body></html>`;
+  const reviewIntro = assessment ? `<div style="margin:24px 0 14px"><h2 style="margin:0 0 7px;font:bold 11px/1.5 Arial,sans-serif;letter-spacing:1.3px;color:#8a4c36">PRELIMINARY PHOTO REVIEW</h2><p style="margin:0 0 6px;font:13px/1.6 Arial,sans-serif;color:#5d5852">${reviewNote}</p><p style="margin:0;font:12px/1.6 Arial,sans-serif;color:#2b2b2b">${legend}</p></div>` : '';
+  // Keep essential styling inline and the photo layout table-based. Media queries
+  // only tighten spacing; the email remains usable when a client strips the head.
+  const html = `<!doctype html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>@media screen and (max-width:600px){.email-gutter{padding:12px 8px!important}.email-content{padding:22px 18px!important}.email-name{font-size:29px!important}.contact-gap{width:12px!important}.photo-gap{padding-right:10px!important}.item-note{font-size:13px!important}}</style>
+</head><body style="margin:0;padding:0;background:#f8f5f1;color:#2b2b2b;font:14px/1.5 Arial,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f8f5f1"><tr><td class="email-gutter" align="center" style="padding:28px 12px">
+<!--[if mso]><table role="presentation" width="640" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width:640px;table-layout:fixed;border:1px solid #e5ded5;border-radius:24px;border-collapse:separate;text-align:left">
+<tr><td style="padding:0"><table role="presentation" aria-hidden="true" width="100%" cellpadding="0" cellspacing="0"><tr><td width="60%" height="7" bgcolor="#2e5c50" style="height:7px;line-height:7px;font-size:0;border-top-left-radius:24px">&nbsp;</td><td width="20%" height="7" bgcolor="#8da597" style="height:7px;line-height:7px;font-size:0">&nbsp;</td><td width="20%" height="7" bgcolor="#f5c7aa" style="height:7px;line-height:7px;font-size:0;border-top-right-radius:24px">&nbsp;</td></tr></table></td></tr>
+<tr><td class="email-content" style="padding:26px;word-wrap:break-word;overflow-wrap:anywhere">
+<h1 class="email-name" style="margin:0;font:bold 32px/1.2 Georgia,serif;color:#2b2b2b">${escape(row.name)}</h1>
+<div style="margin:14px 0 8px">${contactHtml}</div>
+${submitted ? `<p style="margin:0 0 20px;font:12px/1.5 Arial,sans-serif;color:#5d5852">${escape(submitted)}</p>` : ''}
+<div style="margin:18px 0 0;padding:14px 16px;border-left:3px solid #f5c7aa;border-radius:0 12px 12px 0;background:#fff3ea"><p style="margin:0;font:14px/1.6 Arial,sans-serif;color:#2b2b2b"><strong style="color:#8a4c36">Notes:</strong> ${escape(notes).replace(/\n/g, '<br />')}</p></div>
+${reviewIntro}<p style="margin:18px 0 10px;font:12px/1.5 Arial,sans-serif;color:#5d5852">${escape(summary)}</p>
+${items.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed">${itemRows}</table>` : `<p style="margin:10px 0;font:14px/1.6 Arial,sans-serif;color:#5d5852">${escape(assessment?.overview || 'AI review unavailable. Please screen the photos below.')}</p>`}
+${remaining.length ? `${items.length ? '<p style="margin:12px 0 6px;font: bold 13px/1.5 Arial,sans-serif;color:#2e5c50">More submitted photos</p>' : ''}${gallery(remaining)}` : ''}
+${actionPanel}<p style="margin:20px 0 0;text-align:center;font:11px/1.5 Arial,sans-serif;letter-spacing:1px;color:#5d5852">CHANGING PLACES CONSIGNMENT SHOP</p>
+</td></tr></table><!--[if mso]></td></tr></table><![endif]-->
+</td></tr></table></body></html>`;
   const text = `${row.name}\n${contact}${submitted ? `\n${submitted}` : ''}\nNotes: ${notes}\n${title}${assessment ? `\n\nPRELIMINARY PHOTO REVIEW\n${reviewNote}\n🟢 Promising  🟡 Review  🔴 Unlikely fit` : ''}\n${summary}\n\n${items.map(item => `${fit[item.recommendation][2]} ${name(item)} — Photos ${item.photo_numbers.join(', ')}\n${item.assessment}`).join('\n\n') || 'Please screen the attached photos.'}\n\nAll ${row.photo_count} numbered photos are included.\n\nReady to follow up?\n${followUp}`;
   return { from: env.INTAKE_EMAIL_FROM, to: env.INTAKE_NOTIFICATION_EMAIL, ...(isValidEmail(env.INTAKE_BCC_EMAIL) && env.INTAKE_BCC_EMAIL.toLowerCase() !== env.INTAKE_NOTIFICATION_EMAIL.toLowerCase() ? { bcc: [env.INTAKE_BCC_EMAIL] } : {}), ...(isValidEmail(row.email) ? { replyTo: row.email } : {}), subject: title, html, text, attachments };
 }

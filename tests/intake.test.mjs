@@ -285,7 +285,7 @@ test('email header shows contact details and the actual submission time in Centr
     assert.match(body,/mary@example.com/);
     assert.match(body,/Submitted September 5 at 10:14 AM CT/);
     assert.match(body,/PRELIMINARY PHOTO REVIEW/);
-    assert.match(body,/AI-assisted guidance based on submitted photos\. Staff makes the final decision\./);
+    assert.match(body,/AI-assisted guidance based on submitted photos\. The final decision is yours\./);
     assert.ok(body.indexOf('Submitted September')<body.indexOf('PRELIMINARY PHOTO REVIEW'));
     assert.ok(body.indexOf('PRELIMINARY PHOTO REVIEW')<body.indexOf('Approximately 1 item'));
     assert.ok(body.indexOf('Mary Smith')<body.indexOf('515-555-0118'));
@@ -294,7 +294,7 @@ test('email header shows contact details and the actual submission time in Centr
   assert.match(email.html, /href="tel:\+15155550118"/);
   assert.match(email.html, /href="https:\/\/changing-places-dsm.com\/text-consignor#phone=%2B15155550118"/);
   assert.ok(!email.html.includes('href="sms:'), 'Gmail strips direct SMS links');
-  assert.match(email.html, /<br \/><a href="mailto:mary%40example.com"/);
+  assert.match(email.html, /href="mailto:mary%40example.com"/);
   assert.match(email.text, /515-555-0118\nmary@example.com/);
   assert.ok(!/[☎💬✉]/u.test(email.html));
   const plusAddress = buildReviewEmail({}, { ...row, email: 'connorcr37+cpcs@gmail.com' }, sample(), []);
@@ -325,7 +325,6 @@ test('action panel follows the last photo and switches to phone instructions wit
       assert.equal(body.split('Ready to follow up?').length - 1, 1);
     }
     assert.ok(message.html.indexOf('Ready to follow up?') > message.html.lastIndexOf('<img '));
-    assert.match(message.html, /background:#f1f3ec;padding:16px/);
   }
 });
 test('preview upload limits reject oversized images and replaced photo slots', async () => {
