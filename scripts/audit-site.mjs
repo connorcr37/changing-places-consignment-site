@@ -8,7 +8,6 @@ const productionOrigin = "https://changing-places-dsm.com";
 const excludedFromSearch = new Set([
   "404.html",
   "text-consignor.html",
-  "couch-dash.html",
   "tv/index.html",
   "tv/video.html",
 ]);

@@ -22,7 +22,7 @@ The primary header and footer live in `partials/` and are expanded into each pub
 
 - Run `node scripts/sync-shared-shell.mjs` after editing either partial.
 - Run `node scripts/sync-shared-shell.mjs --check` to verify every page is synchronized.
-- `couch-dash.html` is intentionally excluded because the After Hours game has its own layout.
+- `couch-dash.html` has its own layout and is excluded from shared-shell syncing. The After Hours game is indexable and included in the public sitemap at `/couch-dash`.
 - `submit-items.html` uses the shared header and footer with its own form layout; `text-consignor.html` is an unindexed texting helper with its own layout.
 - `tv/` contains the noindex, employee-facing in-store screensavers and has its own layout.
 
